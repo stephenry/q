@@ -42,8 +42,7 @@ module qs_ucode_rom (
    // Instruction
    , output qs_insts_pkg::inst_t                  rout
 );
-
-  // Import all encode routines for readability.
+  // Import everything in this scope for readability.
   import qs_insts_pkg::*;
 
   // ------------------------------------------------------------------------ //
@@ -178,6 +177,9 @@ module qs_ucode_rom (
   // Quicksort subroutine.
   localparam pc_t SYM_QUICKSORT = 'd96;
 
+  // Quicksort subroutine.
+  localparam pc_t SYN_ERR = 'd128;
+
   always_comb begin : quicksort_prog_PROC
 
     // Control Store
@@ -189,72 +191,75 @@ module qs_ucode_rom (
     
     case (ra)
       // Reset vector
-      SYM_RESET          : rout = inst_j(SYM_START);
+      SYM_RESET          : rout = j(SYM_START);
 
       // Parition subroutine entry point
-      SYM_PARTITION      : rout = inst_push(R2);
-      SYM_PARTITION +   1: rout = inst_push(R3);
-      SYM_PARTITION +   2: rout = inst_push(R4);
-      SYM_PARTITION +   3: rout = inst_push(R5);
-      SYM_PARTITION +   4: rout = inst_push(R6);
-      SYM_PARTITION +   5: rout = inst_ld(R2, R1);
-      SYM_PARTITION +   6: rout = inst_mov(R3, R0);
-      SYM_PARTITION +   7: rout = inst_mov(R4, R0);
-      SYM_PARTITION +   8: rout = inst_sub(R0, R1, R4, .dst_en('b0));
-      SYM_PARTITION +   9: rout = inst_j(SYM_PARTITION + 19, .cc(EQ));
-      SYM_PARTITION +  10: rout = inst_ld(R5, R4);
-      SYM_PARTITION +  11: rout = inst_sub(R0, R5, R2, .dst_en('b0));
-      SYM_PARTITION +  12: rout = inst_j(SYM_PARTITION + 17, .cc(GT));
-      SYM_PARTITION +  13: rout = inst_ld(R6, R3);
-      SYM_PARTITION +  14: rout = inst_st(R3, R5);
-      SYM_PARTITION +  15: rout = inst_st(R4, R6);
-      SYM_PARTITION +  16: rout = inst_addi(R3, R3, 'b1);
-      SYM_PARTITION +  17: rout = inst_addi(R4, R4, 'b1);
-      SYM_PARTITION +  18: rout = inst_j(SYM_PARTITION + 8);
-      SYM_PARTITION +  19: rout = inst_ld(R0, R3);
-      SYM_PARTITION +  20: rout = inst_ld(R1, R4);
-      SYM_PARTITION +  21: rout = inst_st(R3, R1);
-      SYM_PARTITION +  22: rout = inst_st(R4, R0);
-      SYM_PARTITION +  23: rout = inst_mov(R0, R3);
-      SYM_PARTITION +  24: rout = inst_pop(R6);
-      SYM_PARTITION +  25: rout = inst_pop(R5);
-      SYM_PARTITION +  26: rout = inst_pop(R4);
-      SYM_PARTITION +  27: rout = inst_pop(R3);
-      SYM_PARTITION +  28: rout = inst_pop(R2);
-      SYM_PARTITION +  29: rout = inst_ret();
+      SYM_PARTITION      : rout = push(R2);
+      SYM_PARTITION +   1: rout = push(R3);
+      SYM_PARTITION +   2: rout = push(R4);
+      SYM_PARTITION +   3: rout = push(R5);
+      SYM_PARTITION +   4: rout = push(R6);
+      SYM_PARTITION +   5: rout = ld(R2, R1);
+      SYM_PARTITION +   6: rout = mov(R3, R0);
+      SYM_PARTITION +   7: rout = mov(R4, R0);
+      SYM_PARTITION +   8: rout = sub(R0, R1, R4, .dst_en('b0));
+      SYM_PARTITION +   9: rout = j(SYM_PARTITION + 19, .cc(EQ));
+      SYM_PARTITION +  10: rout = ld(R5, R4);
+      SYM_PARTITION +  11: rout = sub(R0, R5, R2, .dst_en('b0));
+      SYM_PARTITION +  12: rout = j(SYM_PARTITION + 17, .cc(GT));
+      SYM_PARTITION +  13: rout = ld(R6, R3);
+      SYM_PARTITION +  14: rout = st(R3, R5);
+      SYM_PARTITION +  15: rout = st(R4, R6);
+      SYM_PARTITION +  16: rout = addi(R3, R3, 'b1);
+      SYM_PARTITION +  17: rout = addi(R4, R4, 'b1);
+      SYM_PARTITION +  18: rout = j(SYM_PARTITION + 8);
+      SYM_PARTITION +  19: rout = ld(R0, R3);
+      SYM_PARTITION +  20: rout = ld(R1, R4);
+      SYM_PARTITION +  21: rout = st(R3, R1);
+      SYM_PARTITION +  22: rout = st(R4, R0);
+      SYM_PARTITION +  23: rout = mov(R0, R3);
+      SYM_PARTITION +  24: rout = pop(R6);
+      SYM_PARTITION +  25: rout = pop(R5);
+      SYM_PARTITION +  26: rout = pop(R4);
+      SYM_PARTITION +  27: rout = pop(R3);
+      SYM_PARTITION +  28: rout = pop(R2);
+      SYM_PARTITION +  29: rout = ret();
 
       // Quicksort subroutine entry point
-      SYM_QUICKSORT      : rout = inst_push(BLINK);
-      SYM_QUICKSORT +   1: rout = inst_push(R2);
-      SYM_QUICKSORT +   2: rout = inst_push(R3);
-      SYM_QUICKSORT +   3: rout = inst_push(R4);
-      SYM_QUICKSORT +   4: rout = inst_mov(R2, R0);
-      SYM_QUICKSORT +   5: rout = inst_mov(R4, R1);
-      SYM_QUICKSORT +   6: rout = inst_sub(R0, R0, R1, .dst_en('b0));
-      SYM_QUICKSORT +   7: rout = inst_j(SYM_QUICKSORT + 16, GT);
-      SYM_QUICKSORT +   8: rout = inst_call(SYM_PARTITION);
-      SYM_QUICKSORT +   9: rout = inst_mov(R3, R0);
-      SYM_QUICKSORT +  10: rout = inst_mov(R0, R2);
-      SYM_QUICKSORT +  11: rout = inst_subi(R1, R3, 'd1);
-      SYM_QUICKSORT +  12: rout = inst_call(SYM_QUICKSORT);
-      SYM_QUICKSORT +  13: rout = inst_addi(R0, R3, 'd1);
-      SYM_QUICKSORT +  14: rout = inst_mov(R1, R4);
-      SYM_QUICKSORT +  15: rout = inst_call(SYM_QUICKSORT);
-      SYM_QUICKSORT +  16: rout = inst_pop(R4);
-      SYM_QUICKSORT +  17: rout = inst_pop(R3);
-      SYM_QUICKSORT +  18: rout = inst_pop(R2);
-      SYM_QUICKSORT +  19: rout = inst_pop(BLINK);
-      SYM_QUICKSORT +  20: rout = inst_ret();
+      SYM_QUICKSORT      : rout = push(BLINK);
+      SYM_QUICKSORT +   1: rout = push(R2);
+      SYM_QUICKSORT +   2: rout = push(R3);
+      SYM_QUICKSORT +   3: rout = push(R4);
+      SYM_QUICKSORT +   4: rout = mov(R2, R0);
+      SYM_QUICKSORT +   5: rout = mov(R4, R1);
+      SYM_QUICKSORT +   6: rout = sub(R0, R0, R1, .dst_en('b0));
+      SYM_QUICKSORT +   7: rout = j(SYM_QUICKSORT + 16, GT);
+      SYM_QUICKSORT +   8: rout = call(SYM_PARTITION);
+      SYM_QUICKSORT +   9: rout = mov(R3, R0);
+      SYM_QUICKSORT +  10: rout = mov(R0, R2);
+      SYM_QUICKSORT +  11: rout = subi(R1, R3, 'd1);
+      SYM_QUICKSORT +  12: rout = call(SYM_QUICKSORT);
+      SYM_QUICKSORT +  13: rout = addi(R0, R3, 'd1);
+      SYM_QUICKSORT +  14: rout = mov(R1, R4);
+      SYM_QUICKSORT +  15: rout = call(SYM_QUICKSORT);
+      SYM_QUICKSORT +  16: rout = pop(R4);
+      SYM_QUICKSORT +  17: rout = pop(R3);
+      SYM_QUICKSORT +  18: rout = pop(R2);
+      SYM_QUICKSORT +  19: rout = pop(BLINK);
+      SYM_QUICKSORT +  20: rout = ret();
 
       // Algorithm start label.
-      SYM_START          : rout = inst_wait();
-      SYM_START +       1: rout = inst_movi(R0, '0);
-      SYM_START +       2: rout = inst_movs(R1, REG_N);
-      SYM_START +       3: rout = inst_call(SYM_QUICKSORT);
-      SYM_START +       4: rout = inst_emit();
-      SYM_START +       5: rout = inst_j(SYM_START);
-      
-      default:             rout = inst_nop();
+      SYM_START          : rout = await();
+      SYM_START +       1: rout = movi(R0, '0);
+      SYM_START +       2: rout = movs(R1, REG_N);
+      SYM_START +       3: rout = call(SYM_QUICKSORT);
+      SYM_START +       4: rout = emit();
+      SYM_START +       5: rout = j(SYM_START);
+
+      // Error lable (jump to self for all enternity).
+      SYM_ERR            : rout = j(SYM_ERR);
+            
+      default:             rout = j(SYM_ERR);
       
     endcase // case (pa)
 

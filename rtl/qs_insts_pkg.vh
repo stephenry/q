@@ -33,27 +33,34 @@ package qs_insts_pkg;
   // Program counter type.
   typedef logic [7:0] pc_t;
 
-  typedef enum   logic [1:0] { UNCOND  = 2'b00,
-                               EQ      = 2'b01,
-                               GT      = 2'b10,
-                               LE      = 2'b11
-                               } cc_t;
+  // Condition codes
+  typedef enum logic [1:0] { UNCOND  = 2'b00,
+                             EQ      = 2'b01,
+                             GT      = 2'b10,
+                             LE      = 2'b11
+                             } cc_t;
 
+  // Immediate field
   typedef logic [2:0] imm_t;
+
+  // 'A'-type field definition.
   typedef logic [7:0] field_A_t;
 
-  typedef enum        logic [2:0] { R0     = 3'b000,
-                                    R1     = 3'b001,
-                                    R2     = 3'b010,
-                                    R3     = 3'b011,
-                                    R4     = 3'b100,
-                                    R5     = 3'b101,
-                                    R6     = 3'b110,
-                                    BLINK  = 3'b111} reg_t;
+  // Register synonyms:
+  typedef enum logic [2:0] { R0     = 3'b000,
+                             R1     = 3'b001,
+                             R2     = 3'b010,
+                             R3     = 3'b011,
+                             R4     = 3'b100,
+                             R5     = 3'b101,
+                             R6     = 3'b110,
+                             BLINK  = 3'b111
+			     } reg_t;
 
-  typedef enum        logic [2:0] { REG_N
-                                    } reg_special_t;
+  typedef enum logic [2:0] { REG_N
+                             } reg_special_t;
 
+  // Instruction oprands:
   typedef enum logic [3:0] { NOP    = 4'b0000,
                              JCC    = 4'b0001,
                              PP     = 4'b0010,
@@ -64,6 +71,7 @@ package qs_insts_pkg;
                              CNTRL  = 4'b1111
                             } opcode_t;
 
+  // Packet instruction encoding
   typedef struct packed {
     opcode_t opcode;
     union packed {
@@ -140,8 +148,8 @@ package qs_insts_pkg;
     } u;
   } inst_t;
 
-
-  typedef struct     packed {
+  // Decoded horizontal microcode.
+  typedef struct packed {
     logic            is_emit;
     logic            is_wait;
     logic            is_call;
@@ -232,6 +240,8 @@ package qs_insts_pkg;
     return inst[7:0];
   endfunction // CC_field
 
+  // Procedure to decode an instruction; convert packed instruction to
+  // horizontal microcode.
   function automatic ucode_t decode(inst_t inst); begin
     logic sel      = SEL_field(inst);
     ucode_t ucode  = '0;
@@ -344,143 +354,139 @@ package qs_insts_pkg;
     return ucode;
   end endfunction
 
-  function automatic inst_t inst_default; begin
-    inst_default  = '0;
-  end endfunction
-
-  function automatic inst_t inst_j (pc_t dest, cc_t cc = UNCOND); begin
-    inst_j = inst_default();
+  function automatic inst_t j (pc_t dest, cc_t cc = UNCOND); begin
+    j = '0;
     //
-    inst_j.opcode    = JCC;
-    inst_j.u.jcc.cc  = cc;
-    inst_j.u.jcc.A   = field_A_t'(dest);
+    j.opcode    = JCC;
+    j.u.jcc.cc  = cc;
+    j.u.jcc.A   = field_A_t'(dest);
   end endfunction
 
-  function automatic inst_t inst_wait; begin
-    inst_wait = inst_default();
+  function automatic inst_t await; begin
+    await = '0;
     //
-    inst_wait.opcode  = CNTRL;
+    await.opcode  = CNTRL;
   end endfunction
 
-  function automatic inst_t inst_emit; begin
-    inst_emit = inst_default();
+  function automatic inst_t emit; begin
+    emit = '0;
     //
-    inst_emit.opcode           = CNTRL;
-    inst_emit.u.cntrl.is_emit  = 'b1;
+    emit.opcode           = CNTRL;
+    emit.u.cntrl.is_emit  = 'b1;
   end endfunction
 
-  function automatic inst_t inst_call(pc_t dest); begin
-    inst_call = inst_default();
+  function automatic inst_t call(pc_t dest); begin
+    call = '0;
     //
-    inst_call.opcode    = CRET;
-    inst_call.u.cret.a  = field_A_t'(dest);
+    call.opcode    = CRET;
+    call.u.cret.a  = field_A_t'(dest);
   end endfunction
 
-  function automatic inst_t inst_ret; begin
-    inst_ret = inst_default();
+  function automatic inst_t ret; begin
+    ret = '0;
     //
-    inst_ret.opcode         = CRET;
-    inst_ret.u.cret.is_ret  = 'b1;
+    ret.opcode         = CRET;
+    ret.u.cret.is_ret  = 'b1;
   end endfunction
 
-  function automatic inst_t inst_push(reg_t r); begin
-    inst_push = inst_default();
+  function automatic inst_t push(reg_t r); begin
+    push = '0;
     //
-    inst_push.opcode            = PP;
-    inst_push.u.pp.u.push.src1  = r;
+    push.opcode            = PP;
+    push.u.pp.u.push.src1  = r;
   end endfunction
 
-  function automatic inst_t inst_pop(reg_t r); begin
+  function automatic inst_t pop(reg_t r); begin
     // TODO: introduce one cycle hazard on pop.
-    inst_pop = inst_default();
+    pop = '0;
     //
-    inst_pop.opcode          = PP;
-    inst_pop.u.pp.is_pop     = 'b1;
-    inst_pop.u.pp.u.pop.dst  = r;
+    pop.opcode          = PP;
+    pop.u.pp.is_pop     = 'b1;
+    pop.u.pp.u.pop.dst  = r;
   end endfunction
 
-  function automatic inst_t inst_mov(reg_t dst, reg_t src0); begin
-    inst_mov = inst_default();
+  function automatic inst_t mov(reg_t dst, reg_t src0); begin
+    mov = '0;
     //
-    inst_mov.opcode       = MOV;
-    inst_mov.u.mov.dst    = dst;
-    inst_mov.u.mov.u.src  = src0;
+    mov.opcode       = MOV;
+    mov.u.mov.dst    = dst;
+    mov.u.mov.u.src  = src0;
   end endfunction
 
-  function automatic inst_t inst_movi(reg_t dst, imm_t imm); begin
-    inst_movi = inst_default();
+  function automatic inst_t movi(reg_t dst, imm_t imm); begin
+    movi = '0;
     //
-    inst_movi.opcode        = MOV;
-    inst_movi.u.mov.dst     = dst;
-    inst_movi.u.mov.is_imm  = 'b1;
-    inst_movi.u.mov.u.imm   = imm;
+    movi.opcode        = MOV;
+    movi.u.mov.dst     = dst;
+    movi.u.mov.is_imm  = 'b1;
+    movi.u.mov.u.imm   = imm;
   end endfunction
 
-  function automatic inst_t inst_movs(reg_t dst, reg_special_t src1); begin
-    inst_movs = inst_default();
+  function automatic inst_t movs(reg_t dst, reg_special_t src1); begin
+    movs = '0;
     //
-    inst_movs.opcode            = MOV;
-    inst_movs.u.mov.dst         = dst;
-    inst_movs.u.mov.is_special  = 'b1;
-    inst_movs.u.mov.u.special   = src1;
+    movs.opcode            = MOV;
+    movs.u.mov.dst         = dst;
+    movs.u.mov.is_special  = 'b1;
+    movs.u.mov.u.special   = src1;
   end endfunction
 
-  function automatic inst_t inst_addi(reg_t dst, reg_t src0, imm_t imm,
+  function automatic inst_t addi(reg_t dst, reg_t src0, imm_t imm,
 		 bit dst_en = 'b1); begin
-    inst_addi = inst_default();
+    addi = '0;
     //
-    inst_addi.opcode          = ARITH;
-    inst_addi.u.arith.dst     = dst;
-    inst_addi.u.arith.src0    = src0;
-    inst_addi.u.arith.is_imm  = 'b1;
-    inst_addi.u.arith.u.imm   = imm;
-    inst_addi.u.arith.wren    = dst_en;
+    addi.opcode          = ARITH;
+    addi.u.arith.dst     = dst;
+    addi.u.arith.src0    = src0;
+    addi.u.arith.is_imm  = 'b1;
+    addi.u.arith.u.imm   = imm;
+    addi.u.arith.wren    = dst_en;
   end endfunction
 
-  function automatic inst_t inst_subi(reg_t dst, reg_t src0, imm_t imm,
+  function automatic inst_t subi(reg_t dst, reg_t src0, imm_t imm,
 		 bit dst_en = 'b1); begin
-    inst_subi = inst_default();
+    subi = '0;
     //
-    inst_subi.opcode          = ARITH;
-    inst_subi.u.arith.is_sub  = 'b1;
-    inst_subi.u.arith.dst     = dst;
-    inst_subi.u.arith.src0    = src0;
-    inst_subi.u.arith.is_imm  = 'b1;
-    inst_subi.u.arith.u.imm   = imm;
-    inst_subi.u.arith.wren    = dst_en;
+    subi.opcode          = ARITH;
+    subi.u.arith.is_sub  = 'b1;
+    subi.u.arith.dst     = dst;
+    subi.u.arith.src0    = src0;
+    subi.u.arith.is_imm  = 'b1;
+    subi.u.arith.u.imm   = imm;
+    subi.u.arith.wren    = dst_en;
   end endfunction
 
-  function automatic inst_t inst_sub(reg_t dst, reg_t src0, reg_t src1,
+  function automatic inst_t sub(reg_t dst, reg_t src0, reg_t src1,
 		bit dst_en = 'b1); begin
-    inst_sub = inst_default();
+    sub = '0;
     //
-    inst_sub.opcode          = ARITH;
-    inst_sub.u.arith.is_sub  = 'b1;
-    inst_sub.u.arith.wren    = dst_en;
-    inst_sub.u.arith.dst     = dst;
-    inst_sub.u.arith.src0    = src0;
-    inst_sub.u.arith.u.src1  = src1;
+    sub.opcode          = ARITH;
+    sub.u.arith.is_sub  = 'b1;
+    sub.u.arith.wren    = dst_en;
+    sub.u.arith.dst     = dst;
+    sub.u.arith.src0    = src0;
+    sub.u.arith.u.src1  = src1;
   end endfunction
 
-  function automatic inst_t inst_ld(reg_t dst, reg_t src1); begin
-    inst_ld = inst_default();
+  function automatic inst_t ld(reg_t dst, reg_t src1); begin
+    ld = '0;
     //
-    inst_ld.opcode           = MEM;
-    inst_ld.u.mem.dst        = dst;
-    inst_ld.u.mem.u.ld.src1  = src1;
+    ld.opcode           = MEM;
+    ld.u.mem.dst        = dst;
+    ld.u.mem.u.ld.src1  = src1;
   end endfunction
 
-  function automatic inst_t inst_st(reg_t src0, reg_t src1); begin
-    inst_st = inst_default();
+  function automatic inst_t st(reg_t src0, reg_t src1); begin
+    st = '0;
     //
-    inst_st.opcode           = MEM;
-    inst_st.u.mem.is_st      = 'b1;
-    inst_st.u.mem.u.st.src0  = src0;
-    inst_st.u.mem.u.st.src1  = src1;
+    st.opcode           = MEM;
+    st.u.mem.is_st      = 'b1;
+    st.u.mem.u.st.src0  = src0;
+    st.u.mem.u.st.src1  = src1;
   end endfunction
 
-  function automatic inst_t inst_nop; begin
-    inst_nop = '0;
+  function automatic inst_t nop; begin
+    nop = '0;
   end endfunction
 
 endpackage // qs_insts_pkg
