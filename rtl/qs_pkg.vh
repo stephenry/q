@@ -29,42 +29,6 @@
 `define QS_RTL_QS_PKG_VH
 
 package qs_pkg;
-
-  localparam int N = 16;
-
-  localparam int W  = 32;
-
-  localparam int BANK_N  = 2;
-
-  typedef logic [$clog2(BANK_N)-1:0] bank_n_t;
-  typedef logic signed [$clog2(N):0] n_t;
-  typedef logic [$clog2(N)-1:0]      addr_t;
-  typedef logic [W-1:0]              w_t;
-
-  typedef enum logic [2:0] {  BANK_IDLE       = 3'b000,
-                              BANK_LOADING    = 3'b001,
-                              BANK_READY      = 3'b010,
-                              BANK_SORTING    = 3'b011,
-                              BANK_SORTED     = 3'b100,
-                              BANK_UNLOADING  = 3'b101
-                            } bank_status_t;
-
-  typedef struct packed {
-    bank_status_t status;
-    n_t          n;
-    logic        error;
-  } bank_state_t;
-  localparam int BANK_CONTEXT_W  = $bits(bank_status_t);
-
-  typedef enum   logic [2:0] {  ENQUEUE_FSM_IDLE  = 3'b000,
-                                ENQUEUE_FSM_LOAD  = 3'b101
-                                } enqueue_fsm_t;
-  localparam int ENQUEUE_FSM_BUSY_B = 2;
-
-  typedef enum   logic [2:0] {  DEQUEUE_FSM_IDLE  = 3'b000,
-                                DEQUEUE_FSM_EMIT  = 3'b101
-                                } dequeue_fsm_t;
-  localparam int DEQUEUE_FSM_BUSY_B  = 2;
     
 endpackage // qs_pkg
 

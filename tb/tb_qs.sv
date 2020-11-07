@@ -25,7 +25,6 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //========================================================================== //
 
-`include "qs_pkg.vh"
 `include "tb_qs_pkg.vh"
 
 module tb_qs (
@@ -37,7 +36,7 @@ module tb_qs (
     input                                         in_vld
   , input                                         in_sop
   , input                                         in_eop
-  , input qs_pkg::w_t                             in_dat
+  , input [tb_qs_pkg::OPT_W - 1:0]                in_dat
 
   , output                                        in_rdy
 
@@ -46,7 +45,7 @@ module tb_qs (
   , output logic                                  out_sop_r
   , output logic                                  out_eop_r
   , output logic                                  out_err_r
-  , output qs_pkg::w_t                            out_dat_r
+  , output logic [tb_qs_pkg::OPT_W - 1:0]         out_dat_r
 
   // ======================================================================== //
   // TB support

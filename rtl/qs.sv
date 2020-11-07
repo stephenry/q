@@ -25,11 +25,16 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //========================================================================== //
 
-`include "qs_pkg.vh"
 `include "qs_insts_pkg.vh"
 `include "libv_pkg.vh"
 
-module qs #(parameter int N = 16, parameter int W = 32) (
+module qs #(// The maximum number of entries in the sort vector.,
+	    parameter int N = 16,
+	    // The width of each element in the sort vector.
+	    parameter int W = 32,
+	    // Number of internal banks in which to queue/dequeue pending
+	    // unsorted/sorted data
+	    parameter int BANKS_N = 2) (
 
    //======================================================================== //
    //                                                                         //
@@ -73,7 +78,39 @@ module qs #(parameter int N = 16, parameter int W = 32) (
   // Word type:
   typedef logic [W - 1:0] 		w_t;
 
+  // Sort vector addresss:
   typedef logic [$clog2(N) - 1:0] 	addr_t;
+
+  // Type to represent the number of entries in a vector.
+  typedef logic [$clog2(N):0] 	        n_t;
+
+  // Type to represent the index of a bank.
+  typedef logic [$clog2(BANKS_N) - 1:0] bank_id_t;
+
+  // Bank status encoding:
+  typedef enum logic [2:0] {// Bank is unused and is not assigned.
+			    BANK_IDLE 	   = 3'b000,
+			    // Bank is being written.
+                            BANK_LOADING   = 3'b001,
+			    // Bank is ready to be sorted.
+                            BANK_READY 	   = 3'b010,
+			    // Bank is being sorted.
+                            BANK_SORTING   = 3'b011,
+			    // Bank has been sorted.
+                            BANK_SORTED    = 3'b100,
+			    // Bank is being read.
+                            BANK_UNLOADING = 3'b101
+                            } bank_status_t;
+
+
+  typedef struct packed {
+    // Flag denoting whether an error has occurred during processing.
+    logic                     error;
+    // Current bank word count.
+    n_t                       n;
+    // Current bank status:
+    bank_status_t             status;
+  } bank_state_t;
 
   // ======================================================================== //
   //                                                                          //
@@ -83,12 +120,18 @@ module qs #(parameter int N = 16, parameter int W = 32) (
 
   // ------------------------------------------------------------------------ //
   //
-  `LIBV_REG_EN(qs_pkg::enqueue_fsm_t, enqueue_fsm);
-  `LIBV_REG_EN(qs_pkg::bank_n_t, enqueue_bank_idx);
-  `LIBV_REG_EN(qs_pkg::addr_t, enqueue_idx);
+
+  typedef enum   logic [2:0] {  ENQUEUE_FSM_IDLE  = 3'b000,
+                                ENQUEUE_FSM_LOAD  = 3'b101
+                                } enqueue_fsm_t;
+  localparam int ENQUEUE_FSM_BUSY_B = 2;
+  //
+  `LIBV_REG_EN(enqueue_fsm_t, enqueue_fsm);
+  `LIBV_REG_EN(bank_id_t, enqueue_bank_idx);
+  `LIBV_REG_EN(addr_t, enqueue_idx);
   `LIBV_SPSRAM_SIGNALS(enqueue_, W, $clog2(N));
   //
-  qs_pkg::bank_state_t                  enqueue_bank;
+  bank_state_t                  enqueue_bank;
   logic                                 enqueue_bank_en;
   //
   always_comb begin : enqueue_fsm_PROC
@@ -112,7 +155,7 @@ module qs #(parameter int N = 16, parameter int W = 32) (
 
     case (enqueue_fsm_r)
 
-      qs_pkg::ENQUEUE_FSM_IDLE: begin
+      ENQUEUE_FSM_IDLE: begin
 
         if (in_vld) begin
           enqueue_en          = 'b1;
@@ -122,40 +165,39 @@ module qs #(parameter int N = 16, parameter int W = 32) (
           //
           enqueue_bank_en      = '1;
           enqueue_bank         = 0;
-          enqueue_bank.status  =
-				in_eop ? qs_pkg::BANK_READY : qs_pkg::BANK_LOADING;
+          enqueue_bank.status  = in_eop ? BANK_READY : BANK_LOADING;
 
           //
           if (!in_eop)
-            enqueue_fsm_w  = qs_pkg::ENQUEUE_FSM_LOAD;
+            enqueue_fsm_w  = ENQUEUE_FSM_LOAD;
           else
             enqueue_bank_idx_en  = 'b1;
         end
-      end // case: qs_pkg::ENQUEUE_FSM_IDLE
+      end // case: ENQUEUE_FSM_IDLE
 
-      qs_pkg::ENQUEUE_FSM_LOAD: begin
+      ENQUEUE_FSM_LOAD: begin
 
         if (in_vld) begin
           enqueue_en    = 'b1;
           enqueue_wen   = 'b1;
-          enqueue_addr  = qs_pkg::addr_t'(enqueue_idx_r);
+          enqueue_addr  = addr_t'(enqueue_idx_r);
 
           if (in_eop) begin
             enqueue_bank_idx_en  = 'b1;
 
             //
             enqueue_bank         = '0;
-            enqueue_bank.status  = qs_pkg::BANK_READY;
+            enqueue_bank.status  = BANK_READY;
             enqueue_bank.n       = {1'b0, enqueue_idx_r};
             enqueue_bank_en      = '1;
 
             //              
-            enqueue_fsm_w        = qs_pkg::ENQUEUE_FSM_IDLE;
+            enqueue_fsm_w        = ENQUEUE_FSM_IDLE;
           end
           
         end
 
-      end // case: qs_pkg::ENQUEUE_FSM_LOAD
+      end // case: ENQUEUE_FSM_LOAD
 
       default:;
 
@@ -165,15 +207,15 @@ module qs #(parameter int N = 16, parameter int W = 32) (
     in_rdy    = bank_idle [enqueue_bank_idx_r];
 
     //
-    enqueue_fsm_en  = (enqueue_fsm_r [qs_pkg::ENQUEUE_FSM_BUSY_B] |
-                       enqueue_fsm_w [qs_pkg::ENQUEUE_FSM_BUSY_B]);
+    enqueue_fsm_en  = (enqueue_fsm_r [ENQUEUE_FSM_BUSY_B] |
+                       enqueue_fsm_w [ENQUEUE_FSM_BUSY_B]);
 
     //
     enqueue_idx_en  = enqueue_fsm_en;
 
     //
     unique case (enqueue_fsm_r)
-      qs_pkg::ENQUEUE_FSM_IDLE:
+      ENQUEUE_FSM_IDLE:
 	enqueue_idx_w  = 'b1;
       default:
         enqueue_idx_w  = enqueue_idx_r + 'b1;
@@ -389,9 +431,9 @@ module qs #(parameter int N = 16, parameter int W = 32) (
   // ------------------------------------------------------------------------ //
   //
   //
-  `LIBV_REG_EN(qs_pkg::bank_n_t, sort_bank_idx);
+  `LIBV_REG_EN(bank_id_t, sort_bank_idx);
   `LIBV_SPSRAM_SIGNALS(sort_, W, $clog2(N));
-  qs_pkg::bank_state_t                  sort_bank;
+  bank_state_t                  sort_bank;
   logic                                 sort_bank_en;
 
   always_comb begin : sort_PROC
@@ -399,7 +441,7 @@ module qs #(parameter int N = 16, parameter int W = 32) (
     //
 //    sort_en          = da_mem_op_issue;
 //    sort_wen         = da_ucode.is_store;
-//    sort_addr        = qs_pkg::addr_t'(da_ucode.is_store ? da_src0 : da_src1);
+//    sort_addr        = addr_t'(da_ucode.is_store ? da_src0 : da_src1);
 //    sort_din         = da_src1;
 
     //
@@ -414,7 +456,7 @@ module qs #(parameter int N = 16, parameter int W = 32) (
     //
 //    sort_bank_en      = da_adv & da_ucode.is_emit;
     sort_bank         = bank_state_r [sort_bank_idx_r];
-    sort_bank.status  = qs_pkg::BANK_SORTED;
+    sort_bank.status  = BANK_SORTED;
     sort_bank.error   = '0;
 
     //
@@ -426,12 +468,17 @@ module qs #(parameter int N = 16, parameter int W = 32) (
   // ------------------------------------------------------------------------ //
   //
   //
-  `LIBV_REG_EN(qs_pkg::dequeue_fsm_t, dequeue_fsm);
-  `LIBV_REG_EN(qs_pkg::bank_n_t, dequeue_bank_idx);
-  `LIBV_REG_EN(qs_pkg::addr_t, dequeue_idx);
+  typedef enum   logic [2:0] {  DEQUEUE_FSM_IDLE  = 3'b000,
+                                DEQUEUE_FSM_EMIT  = 3'b101
+                                } dequeue_fsm_t;
+  localparam int DEQUEUE_FSM_BUSY_B = 2;
+  //
+  `LIBV_REG_EN(dequeue_fsm_t, dequeue_fsm);
+  `LIBV_REG_EN(bank_id_t, dequeue_bank_idx);
+  `LIBV_REG_EN(addr_t, dequeue_idx);
   `LIBV_SPSRAM_SIGNALS(dequeue_, W, $clog2(N));
   //
-  qs_pkg::bank_state_t                  dequeue_bank;
+  bank_state_t                  dequeue_bank;
   logic                                 dequeue_bank_en;
 
   typedef struct packed {
@@ -442,7 +489,7 @@ module qs #(parameter int N = 16, parameter int W = 32) (
     // An Error has occurred.
     logic                err;
     // Index of nominated bank.
-    qs_pkg::bank_n_t     idx;
+    bank_id_t     idx;
   } dequeue_t;
 
   `LIBV_REG_RST(logic, dequeue_out_vld, 'b0);
@@ -476,10 +523,10 @@ module qs #(parameter int N = 16, parameter int W = 32) (
 
     case (dequeue_fsm_r)
 
-      qs_pkg::DEQUEUE_FSM_IDLE: begin
+      DEQUEUE_FSM_IDLE: begin
 
         if (bank_sorted [dequeue_bank_idx_r]) begin
-          qs_pkg::bank_state_t st = bank_state_r [dequeue_bank_idx_r];
+          bank_state_t st = bank_state_r [dequeue_bank_idx_r];
           
           dequeue_en 		  = 'b1;
           dequeue_addr 		  = 'b0;
@@ -495,18 +542,18 @@ module qs #(parameter int N = 16, parameter int W = 32) (
           if (st.n == '0) begin
             dequeue_out_w.eop  = '1;
 
-            dequeue_bank.status     = qs_pkg::BANK_IDLE;
+            dequeue_bank.status     = BANK_IDLE;
           end else begin
             dequeue_out_w.eop  = '0;
             
-            dequeue_bank.status    = qs_pkg::BANK_UNLOADING;
-            dequeue_fsm_w          = qs_pkg::DEQUEUE_FSM_EMIT;
+            dequeue_bank.status    = BANK_UNLOADING;
+            dequeue_fsm_w          = DEQUEUE_FSM_EMIT;
           end
         end
       end
 
-      qs_pkg::DEQUEUE_FSM_EMIT: begin
-        qs_pkg::bank_state_t st = bank_state_r [dequeue_bank_idx_r];
+      DEQUEUE_FSM_EMIT: begin
+        bank_state_t st = bank_state_r [dequeue_bank_idx_r];
         
         dequeue_en 		= 'b1;
         dequeue_addr 		= dequeue_idx_r;
@@ -517,7 +564,7 @@ module qs #(parameter int N = 16, parameter int W = 32) (
         dequeue_out_w.eop 	= 1'b0;
         dequeue_out_w.err 	= st.error;
 
-        if (dequeue_idx_r == qs_pkg::addr_t'(st.n)) begin
+        if (dequeue_idx_r == addr_t'(st.n)) begin
           dequeue_bank_idx_en = 1'b1;
 
           //
@@ -526,9 +573,9 @@ module qs #(parameter int N = 16, parameter int W = 32) (
           //
           dequeue_bank_en     = 1'b1;
           dequeue_bank 	      = st;
-          dequeue_bank.status = qs_pkg::BANK_IDLE;
+          dequeue_bank.status = BANK_IDLE;
 
-          dequeue_fsm_w       = qs_pkg::DEQUEUE_FSM_IDLE;
+          dequeue_fsm_w       = DEQUEUE_FSM_IDLE;
         end
         
       end // case: DEQUEUE_FSM_EMIT
@@ -538,15 +585,15 @@ module qs #(parameter int N = 16, parameter int W = 32) (
     endcase // unique case (dequeue_fsm_r)
 
     //
-    dequeue_fsm_en  = (dequeue_fsm_w [qs_pkg::DEQUEUE_FSM_BUSY_B] |
-                       dequeue_fsm_r [qs_pkg::DEQUEUE_FSM_BUSY_B]);
+    dequeue_fsm_en  = (dequeue_fsm_w [DEQUEUE_FSM_BUSY_B] |
+                       dequeue_fsm_r [DEQUEUE_FSM_BUSY_B]);
 
     //
     dequeue_idx_en  = dequeue_fsm_en;
 
     //
     unique case (dequeue_fsm_r)
-      qs_pkg::DEQUEUE_FSM_IDLE:
+      DEQUEUE_FSM_IDLE:
 	dequeue_idx_w  = 'b1;
       default:
         dequeue_idx_w  = dequeue_idx_r + 'b1;
@@ -557,86 +604,103 @@ module qs #(parameter int N = 16, parameter int W = 32) (
 
   end // block: dequeue_fsm_PROC
 
+
   // ------------------------------------------------------------------------ //
   //
-  `LIBV_REG_EN(qs_pkg::bank_state_t [qs_pkg::BANK_N - 1:0], bank_state);
-  
-  always_comb begin : bank_PROC
+  bank_state_t [BANKS_N - 1:0]             bank_state_r;
+  bank_state_t [BANKS_N - 1:0]             bank_state_w;
+  logic [BANKS_N - 1:0]                    bank_state_en;
+  //
+  logic [BANKS_N - 1:0]                    bank_enqueue_upt;
+  logic [BANKS_N - 1:0]                    bank_sort_upt;
+  logic [BANKS_N - 1:0]                    bank_dequeue_upt;
+  //
+  logic [BANKS_N - 1:0]                    bank_idle;
+  logic [BANKS_N - 1:0]                    bank_ready;
+  logic [BANKS_N - 1:0]                    bank_sorted;
 
-    for (int i = 0; i < qs_pkg::BANK_N; i++) begin
+  always_comb begin : bank_state_PROC
+
+    for (int i = 0; i < BANKS_N; i++) begin
+      // Synonym for readability
+      bank_id_t bank_id = bank_id_t'(i);
+
+
+      // 
+      bank_enqueue_upt [i] 	= enqueue_bank_en & (bank_id == enqueue_bank_idx_r);
+
+      //
+      bank_sort_upt [i] 	= sort_bank_en & (bank_id == sort_bank_idx_r);
+
+      //
+      bank_dequeue_upt [i] 	= dequeue_bank_en & (bank_id == dequeue_bank_idx_r);
 
       // Defaults:
+      casez ({bank_enqueue_upt [i],
+	      bank_sort_upt [i],
+	      bank_dequeue_upt [i]
+	      })
+	3'b1??: begin
+	  bank_state_en [i] = 'b1;
+          bank_state_w [i]  = enqueue_bank;
+	end
+	3'b01?: begin
+	  bank_state_en [i] = 'b1;
+          bank_state_w [i]  = sort_bank;
+	end
+	3'b001: begin
+	  bank_state_en [i] = 'b1;
+	  bank_state_w [i]  = bank_state_r [i];
+	end
+	default: begin
+	  bank_state_en [i] = 'b0;
+	  bank_state_w [i]  = bank_state_r [i];
+	end
+      endcase // casez ({bank_enqueue_upt [i],...
 
-      unique if (enqueue_bank_en && (qs_pkg::bank_n_t'(i) == enqueue_bank_idx_r)) begin
-        bank_state_en 	 = 1'b1;
-        bank_state_w [i] = enqueue_bank;
-      end
-      else if (sort_bank_en && (qs_pkg::bank_n_t'(i) == sort_bank_idx_r)) begin
-        bank_state_en 	 = 1'b1;
-        bank_state_w [i] = sort_bank;
-      end
-      else if (dequeue_bank_en && (qs_pkg::bank_n_t'(i) == dequeue_bank_idx_r)) begin
-        bank_state_en 	 = 1'b1;
-        bank_state_w [i] = dequeue_bank;
-      end else begin
-	bank_state_en    = 'b0;
-	bank_state_w [i] = bank_state_r [i];
-      end
 
-    end
-
-  end // block: bank_PROC
-
-  // ------------------------------------------------------------------------ //
-  //
-  //
-  logic [qs_pkg::BANK_N - 1:0]                    bank_idle;
-  logic [qs_pkg::BANK_N - 1:0]                    bank_ready;
-  logic [qs_pkg::BANK_N - 1:0]                    bank_sorted;
-
-  always_comb begin : bank_status_PROC
-
-    for (int i = 0; i < qs_pkg::BANK_N; i++) begin
-
+      // TODO: deprecate; redundant.
+      
+      // Defaults:
       bank_idle [i]   = 'b0;
       bank_ready [i]  = 'b0;
       bank_sorted [i] = 'b0;
 
       case (bank_state_r [i].status)
-	qs_pkg::BANK_IDLE:   bank_idle [i]   = 'b1;
-	qs_pkg::BANK_READY:  bank_ready [i]  = 'b1;
-	qs_pkg::BANK_SORTED: bank_sorted [i] = 'b1;
+	BANK_IDLE:   bank_idle [i]   = 'b1;
+	BANK_READY:  bank_ready [i]  = 'b1;
+	BANK_SORTED: bank_sorted [i] = 'b1;
 	default: ;
       endcase
-    end // for (int i = 0; i < qs_pkg::BANK_N; i++)
+    end // for (int i = 0; i < BANKS_N; i++)
 
-  end // block: bank_status_PROC
+  end // block: bank_state_PROC
   
   // ------------------------------------------------------------------------ //
   //
-  logic [qs_pkg::BANK_N - 1:0]          bank_en;
-  logic [qs_pkg::BANK_N - 1:0]          bank_wen;
-  w_t [qs_pkg::BANK_N - 1:0]            bank_din;
-  w_t [qs_pkg::BANK_N - 1:0]            bank_dout;
-  addr_t [qs_pkg::BANK_N - 1:0]         bank_addr;
-  logic [qs_pkg::BANK_N - 1:0] 		bank_enqueue_sel;
-  logic [qs_pkg::BANK_N - 1:0] 		bank_sort_sel;
-  logic [qs_pkg::BANK_N - 1:0] 		bank_dequeue_sel;
+  logic [BANKS_N - 1:0]                 bank_en;
+  logic [BANKS_N - 1:0]                 bank_wen;
+  w_t [BANKS_N - 1:0]                   bank_din;
+  w_t [BANKS_N - 1:0]                   bank_dout;
+  addr_t [BANKS_N - 1:0]                bank_addr;
+  logic [BANKS_N - 1:0] 		bank_enqueue_sel;
+  logic [BANKS_N - 1:0] 		bank_sort_sel;
+  logic [BANKS_N - 1:0] 		bank_dequeue_sel;
 
   always_comb begin : spsram_PROC
 
-    for (int i = 0; i < qs_pkg::BANK_N; i++) begin
+    for (int i = 0; i < BANKS_N; i++) begin
       // Synonym for readability
-      qs_pkg::bank_n_t bank_id = qs_pkg::bank_n_t'(i);
+      bank_id_t bank_id = bank_id_t'(i);
 
       // 
-      bank_enqueue_sel [i]     = enqueue_en & (bank_id == enqueue_bank_idx_r);
+      bank_enqueue_sel [i] 	= enqueue_en & (bank_id == enqueue_bank_idx_r);
 
       //
-      bank_sort_sel [i]        = sort_en & (bank_id == sort_bank_idx_r);
+      bank_sort_sel [i] 	= sort_en & (bank_id == sort_bank_idx_r);
 
       //
-      bank_dequeue_sel [i]     = dequeue_en & (bank_id == dequeue_bank_idx_r);
+      bank_dequeue_sel [i] 	= dequeue_en & (bank_id == dequeue_bank_idx_r);
 
 
       casez ({// Enqueue controller maintains ownership,
@@ -672,6 +736,8 @@ module qs #(parameter int N = 16, parameter int W = 32) (
 	end
       endcase // casez ({...
 
+    end // for (int i = 0; i < BANKS_N; i++)
+
   end // block: spsram_PROC
 
   // ------------------------------------------------------------------------ //
@@ -705,6 +771,23 @@ module qs #(parameter int N = 16, parameter int W = 32) (
     out_dat_r = out_r.dat;
 
   end // block: out_PROC
+  
+  // ======================================================================== //
+  //                                                                          //
+  // Flops                                                                    //
+  //                                                                          //
+  // ======================================================================== //
+  
+  // ------------------------------------------------------------------------ //
+  //
+  always_ff @(posedge clk) begin : bank_state_REG
+    for (int i = 0; i < BANKS_N; i++) begin
+      if (rst)
+	bank_state_r [i] <= '{ status:BANK_IDLE, default:'0 };
+      else if (bank_state_en [i])
+	bank_state_r [i] <= bank_state_w [i];
+    end
+  end // block: bank_state_REG
   
   // ======================================================================== //
   //                                                                          //
@@ -750,7 +833,7 @@ module qs #(parameter int N = 16, parameter int W = 32) (
 
   // ------------------------------------------------------------------------ //
   //
-  generate for (genvar g = 0; g < qs_pkg::BANK_N; g++) begin
+  generate for (genvar g = 0; g < BANKS_N; g++) begin
   
     spsram #(.W(W), .N(N)) u_bank (
       //
