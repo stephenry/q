@@ -25,7 +25,6 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //========================================================================== //
 
-`include "qs_pkg.vh"
 `include "qs_insts_pkg.vh"
 
 module qs_ucode_rom (
