@@ -25,7 +25,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //========================================================================== //
 
-`include "spsram_pkg.vh"
+`include "libv_pkg.vh"
 
 module qs_stack #(parameter int N = 16, parameter int W = 32) (
 
@@ -55,15 +55,15 @@ module qs_stack #(parameter int N = 16, parameter int W = 32) (
 
    //------------------------------------------------------------------------ //
    //
-   , output logic                            empty_r
-   , output logic                            full_r
+   , output logic                            empty_w
+   , output logic                            full_w
 );
 
   typedef logic [W-1:0] w_t;
   typedef logic [$clog2(N)-1:0] n_t;
 
   //
-  `SPSRAM_SIGNALS(spram__, W, $clog2(N));
+  `LIBV_SPSRAM_SIGNALS(spram__, W, $clog2(N));
   //
   logic                           empty_w;
   logic                           full_w;

@@ -53,6 +53,7 @@ find_package(Verilator)
 
 add_subdirectory(third_party)
 add_subdirectory(pd)
+add_subdirectory(libv)
 add_subdirectory(rtl)
 add_subdirectory(tb)
 
