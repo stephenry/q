@@ -1,0 +1,214 @@
+//========================================================================== //
+// Copyright (c) 2020, Stephen Henry
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// * Redistributions of source code must retain the above copyright notice, this
+//   list of conditions and the following disclaimer.
+//
+// * Redistributions in binary form must reproduce the above copyright notice,
+//   this list of conditions and the following disclaimer in the documentation
+//   and/or other materials provided with the distribution.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
+//========================================================================== //
+
+#ifndef QS_TB_TB_H
+#define QS_TB_TB_H
+
+#include "verilated.h"
+#include <vector>
+#include <deque>
+#include <string>
+#include <ostream>
+
+// Enable waveform dumping.
+#cmakedefine OPT_VCD_ENABLE
+
+// Enable tracing to log file.
+#cmakedefine OPT_TRACE_ENABLE
+
+// Verbose logging
+#cmakedefine OPT_VERBOSE
+
+// Forwards:
+class Vtb_qs;
+
+namespace tb {
+
+constexpr std::size_t OPT_N = ${OPT_N};
+
+constexpr std::size_t OPT_W = ${OPT_W};
+
+using word_type = vluint32_t;
+
+std::ostream& operator<<(std::ostream& os, const std::vector<word_type>& dp);
+
+struct VSignals {
+
+  struct VIn {
+    vluint8_t vld;
+    vluint8_t sop;
+    vluint8_t eop;
+    vluint32_t dat;
+  };
+
+  struct VOut {
+    vluint8_t vld;
+    vluint8_t sop;
+    vluint8_t eop;
+    vluint32_t dat;
+  };
+  
+  template<typename U>
+  static VSignals bind(U* u) {
+    VSignals vs;
+    // Unsorted In:
+    vs.in_vld_ = std::addressof(u->in_vld);
+    vs.in_sop_ = std::addressof(u->in_sop);
+    vs.in_eop_ = std::addressof(u->in_eop);
+    vs.in_dat_ = std::addressof(u->in_dat);
+    vs.in_rdy_ = std::addressof(u->in_rdy);
+    // Sorted out:
+    vs.out_vld_r_ = std::addressof(u->out_vld_r);
+    vs.out_sop_r_ = std::addressof(u->out_sop_r);
+    vs.out_eop_r_ = std::addressof(u->out_eop_r);
+    vs.out_dat_r_ = std::addressof(u->out_dat_r);
+    // Testbench monitors:
+    vs.tb_cycle_ = std::addressof(u->tb_cycle);
+    // Clk/Rst:
+    vs.rst_ = std::addressof(u->rst);
+    vs.clk_ = std::addressof(u->clk);
+
+    return vs;
+  }
+
+  // Set unsorted input interface.
+  void set(const VIn& in) const;
+
+  // Set value of clk port.
+  void set_clk(bool clk = true);
+
+  // Set value of rst port.
+  void set_rst(bool rst = true);
+
+  // Sample 'in_rdy' port.
+  bool in_rdy() const;
+
+  // Sample sorted output interface.
+  void get(VOut& out) const;
+
+  // Obtain current simulation cycle.
+  vluint64_t cycle() const;
+  
+ private:
+  // Unsorted in:
+  vluint8_t* in_vld_;
+  vluint8_t* in_sop_;
+  vluint8_t* in_eop_;
+  vluint32_t* in_dat_;
+  vluint8_t* in_rdy_;
+
+  // Sorted out:
+  vluint8_t* out_vld_r_;
+  vluint8_t* out_sop_r_;
+  vluint8_t* out_eop_r_;
+  vluint32_t* out_dat_r_;
+
+  // Testbench monitor
+  vluint64_t* tb_cycle_;
+
+  // Clk/Rst
+  vluint8_t* rst_;
+  vluint8_t* clk_;
+};
+
+struct Options {
+  // Enable waveform dumping
+  bool wave_enable = false;
+
+  // Waveform dumpfile (when enabled).
+  std::string wave_name = "sim.vcd";
+
+  // Enable log tracing.
+  bool trace_enable = false;
+};
+
+class TB {
+ public:
+  // Constructor
+  TB(const Options& opts = Options{});
+
+  // Destructor
+  ~TB();
+
+  // Current simulation time
+  vluint64_t time() const { return time_; }
+
+  // Current simulation cycle
+  vluint64_t cycle() const { return cycle_; }
+
+  void push_back(const std::vector<word_type>& pkt);
+
+  // Run simulation.
+  void run();
+
+ private:
+#ifdef OPT_TRACE_ENABLE
+
+  // Return log output stream.
+  std::ostream& log() const;
+#endif
+
+  // Invoke reset sequence on RTL.
+  void reset();
+
+  // Drive stimulus into test bench
+  void drive_stimulus(const std::vector<word_type>& stimulus);
+
+  // Obtain sorted output.
+  std::vector<word_type> get_sorted_packet();
+
+  // Advance RTL by one clock cycle.
+  void step(std::size_t n = 1);
+
+  // Verilated interface
+  VSignals vs_;
+  
+#ifdef OPT_VCD_ENABLE
+  // VCD instance.
+  VerilatedVcdC* wave_ = nullptr;
+#endif
+
+  // Verilated RTL instance.
+  Vtb_qs* u_ = nullptr;
+
+  // DataPackets to be issued to the RTL.
+  std::deque<std::vector<word_type> > pkts_;
+
+  // Current execution time.
+  vluint64_t time_;
+
+  // Current operationg cycle.
+  vluint64_t cycle_;
+
+  // Testbench options
+  Options opts_;
+};
+
+} // namespace tb
+
+#endif
+
