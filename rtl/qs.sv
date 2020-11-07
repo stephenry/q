@@ -29,12 +29,12 @@
 `include "libv_pkg.vh"
 
 module qs #(// The maximum number of entries in the sort vector.,
-	    parameter int N = 16,
-	    // The width of each element in the sort vector.
-	    parameter int W = 32,
-	    // Number of internal banks in which to queue/dequeue pending
-	    // unsorted/sorted data
-	    parameter int BANKS_N = 2) (
+            parameter int N = 16,
+            // The width of each element in the sort vector.
+            parameter int W = 32,
+            // Number of internal banks in which to queue/dequeue pending
+            // unsorted/sorted data
+            parameter int BANKS_N = 2) (
 
    //======================================================================== //
    //                                                                         //
@@ -43,12 +43,12 @@ module qs #(// The maximum number of entries in the sort vector.,
    //======================================================================== //
 
    //
-     input                                             in_vld
-   , input                                             in_sop
-   , input                                             in_eop
-   , input [W - 1:0]                                   in_dat
+     input                                        in_vld
+   , input                                        in_sop
+   , input                                        in_eop
+   , input [W - 1:0]                              in_dat
    //
-   , output logic                                      in_rdy
+   , output logic                                 in_rdy
 
    //======================================================================== //
    //                                                                         //
@@ -57,11 +57,11 @@ module qs #(// The maximum number of entries in the sort vector.,
    //======================================================================== //
 
    //
-   , output logic                                      out_vld_r
-   , output logic                                      out_sop_r
-   , output logic                                      out_eop_r
-   , output logic                                      out_err_r
-   , output logic [W - 1:0]                            out_dat_r
+   , output logic                                 out_vld_r
+   , output logic                                 out_sop_r
+   , output logic                                 out_eop_r
+   , output logic                                 out_err_r
+   , output logic [W - 1:0]                       out_dat_r
 
    //======================================================================== //
    //                                                                         //
@@ -76,29 +76,29 @@ module qs #(// The maximum number of entries in the sort vector.,
   // Local types:
 
   // Word type:
-  typedef logic [W - 1:0] 		w_t;
+  typedef logic [W - 1:0]               w_t;
 
   // Sort vector addresss:
-  typedef logic [$clog2(N) - 1:0] 	addr_t;
+  typedef logic [$clog2(N) - 1:0]       addr_t;
 
   // Type to represent the number of entries in a vector.
-  typedef logic [$clog2(N):0] 	        n_t;
+  typedef logic [$clog2(N):0]           n_t;
 
   // Type to represent the index of a bank.
   typedef logic [$clog2(BANKS_N) - 1:0] bank_id_t;
 
   // Bank status encoding:
   typedef enum logic [2:0] {// Bank is unused and is not assigned.
-			    BANK_IDLE 	   = 3'b000,
-			    // Bank is being written.
+                            BANK_IDLE      = 3'b000,
+                            // Bank is being written.
                             BANK_LOADING   = 3'b001,
-			    // Bank is ready to be sorted.
-                            BANK_READY 	   = 3'b010,
-			    // Bank is being sorted.
+                            // Bank is ready to be sorted.
+                            BANK_READY     = 3'b010,
+                            // Bank is being sorted.
                             BANK_SORTING   = 3'b011,
-			    // Bank has been sorted.
+                            // Bank has been sorted.
                             BANK_SORTED    = 3'b100,
-			    // Bank is being read.
+                            // Bank is being read.
                             BANK_UNLOADING = 3'b101
                             } bank_status_t;
 
@@ -120,7 +120,7 @@ module qs #(// The maximum number of entries in the sort vector.,
 
   // ------------------------------------------------------------------------ //
   //
-
+  // Enqueue state machine state encodings.
   typedef enum   logic [2:0] {  ENQUEUE_FSM_IDLE  = 3'b000,
                                 ENQUEUE_FSM_LOAD  = 3'b101
                                 } enqueue_fsm_t;
@@ -132,7 +132,7 @@ module qs #(// The maximum number of entries in the sort vector.,
   `LIBV_SPSRAM_SIGNALS(enqueue_, W, $clog2(N));
   //
   bank_state_t                  enqueue_bank;
-  logic                                 enqueue_bank_en;
+  logic                         enqueue_bank_en;
   //
   always_comb begin : enqueue_fsm_PROC
 
@@ -216,7 +216,7 @@ module qs #(// The maximum number of entries in the sort vector.,
     //
     unique case (enqueue_fsm_r)
       ENQUEUE_FSM_IDLE:
-	enqueue_idx_w  = 'b1;
+        enqueue_idx_w  = 'b1;
       default:
         enqueue_idx_w  = enqueue_idx_r + 'b1;
     endcase // unique case (enqueue_fsm_r)
@@ -228,13 +228,13 @@ module qs #(// The maximum number of entries in the sort vector.,
 
   // Fetch:
   logic                                 fa_vld;
-  logic 				fa_kill;
-  logic 				fa_pass;
-  logic 				fa_adv;
+  logic                                 fa_kill;
+  logic                                 fa_pass;
+  logic                                 fa_adv;
 
   // Decode:
   `LIBV_REG_RST(logic, da_vld, 'b0);
-  logic 				da_adv;
+  logic                                 da_adv;
   
   // ------------------------------------------------------------------------ //
   //
@@ -338,31 +338,6 @@ module qs #(// The maximum number of entries in the sort vector.,
     stack__cmd_clr       = '0;
 */
   end // block: da_PROC
-
-  // ------------------------------------------------------------------------ //
-  //
-  always_comb begin : xa_PROC
-
-
-
-
-
-  end // block: xa_PROC
-  
-  // ------------------------------------------------------------------------ //
-  //
-  always_comb begin : ar_PROC
-
-
-
-
-
-
-
-
-
-
-  end // block: ar_PROC
     
 
 
@@ -433,7 +408,7 @@ module qs #(// The maximum number of entries in the sort vector.,
   //
   `LIBV_REG_EN(bank_id_t, sort_bank_idx);
   `LIBV_SPSRAM_SIGNALS(sort_, W, $clog2(N));
-  bank_state_t                  sort_bank;
+  bank_state_t                          sort_bank;
   logic                                 sort_bank_en;
 
   always_comb begin : sort_PROC
@@ -456,7 +431,7 @@ module qs #(// The maximum number of entries in the sort vector.,
     //
 //    sort_bank_en      = da_adv & da_ucode.is_emit;
     sort_bank         = bank_state_r [sort_bank_idx_r];
-    sort_bank.status  = BANK_SORTED;
+    sort_bank.status  = BANK_SORTED; // TODO BANK_SORTING
     sort_bank.error   = '0;
 
     //
@@ -467,7 +442,7 @@ module qs #(// The maximum number of entries in the sort vector.,
 
   // ------------------------------------------------------------------------ //
   //
-  //
+  // Dequeue state machine state encodings.
   typedef enum   logic [2:0] {  DEQUEUE_FSM_IDLE  = 3'b000,
                                 DEQUEUE_FSM_EMIT  = 3'b101
                                 } dequeue_fsm_t;
@@ -479,7 +454,7 @@ module qs #(// The maximum number of entries in the sort vector.,
   `LIBV_SPSRAM_SIGNALS(dequeue_, W, $clog2(N));
   //
   bank_state_t                  dequeue_bank;
-  logic                                 dequeue_bank_en;
+  logic                         dequeue_bank_en;
 
   typedef struct packed {
     // Beat is Start-Of-Packet.
@@ -498,28 +473,28 @@ module qs #(// The maximum number of entries in the sort vector.,
   always_comb begin : dequeue_fsm_PROC
 
     //
-    dequeue_en             = 'b0;
-    dequeue_wen            = 'b0;
-    dequeue_addr           = 'b0;
-    dequeue_din            = 'b0;
+    dequeue_en 		= 'b0;
+    dequeue_wen 	= 'b0;
+    dequeue_addr 	= 'b0;
+    dequeue_din 	= 'b0;
 
     //
-    dequeue_bank_idx_en     = '0;
-    dequeue_bank_idx_w      = dequeue_bank_idx_r + 'b1;
+    dequeue_bank_idx_en = '0;
+    dequeue_bank_idx_w 	= dequeue_bank_idx_r + 'b1;
 
     //
-    dequeue_bank            = 'b0;
-    dequeue_bank_en         = 'b0;
+    dequeue_bank 	= 'b0;
+    dequeue_bank_en 	= 'b0;
 
     //
-    dequeue_out_vld_w  = '0;
-    dequeue_out_w.sop  = '0;
-    dequeue_out_w.eop  = '0;
-    dequeue_out_w.err  = '0;
-    dequeue_out_w.idx  = dequeue_bank_idx_r;
+    dequeue_out_vld_w 	= '0;
+    dequeue_out_w.sop 	= '0;
+    dequeue_out_w.eop 	= '0;
+    dequeue_out_w.err 	= '0;
+    dequeue_out_w.idx 	= dequeue_bank_idx_r;
     
     //
-    dequeue_fsm_w           = dequeue_fsm_r;
+    dequeue_fsm_w 	= dequeue_fsm_r;
 
     case (dequeue_fsm_r)
 
@@ -528,16 +503,16 @@ module qs #(// The maximum number of entries in the sort vector.,
         if (bank_sorted [dequeue_bank_idx_r]) begin
           bank_state_t st = bank_state_r [dequeue_bank_idx_r];
           
-          dequeue_en 		  = 'b1;
-          dequeue_addr 		  = 'b0;
+          dequeue_en              = 'b1;
+          dequeue_addr            = 'b0;
 
           //
           dequeue_out_vld_w  = '1;
           dequeue_out_w.sop  = '1;
           dequeue_out_w.err  = st.error;
 
-          dequeue_bank_en 	  = 'b1;
-          dequeue_bank 		  = st;
+          dequeue_bank_en         = 'b1;
+          dequeue_bank            = st;
           
           if (st.n == '0) begin
             dequeue_out_w.eop  = '1;
@@ -555,14 +530,14 @@ module qs #(// The maximum number of entries in the sort vector.,
       DEQUEUE_FSM_EMIT: begin
         bank_state_t st = bank_state_r [dequeue_bank_idx_r];
         
-        dequeue_en 		= 'b1;
-        dequeue_addr 		= dequeue_idx_r;
+        dequeue_en              = 'b1;
+        dequeue_addr            = dequeue_idx_r;
 
         //
-        dequeue_out_vld_w 	= 1'b1;
-        dequeue_out_w.sop 	= 1'b0;
-        dequeue_out_w.eop 	= 1'b0;
-        dequeue_out_w.err 	= st.error;
+        dequeue_out_vld_w       = 1'b1;
+        dequeue_out_w.sop       = 1'b0;
+        dequeue_out_w.eop       = 1'b0;
+        dequeue_out_w.err       = st.error;
 
         if (dequeue_idx_r == addr_t'(st.n)) begin
           dequeue_bank_idx_en = 1'b1;
@@ -572,7 +547,7 @@ module qs #(// The maximum number of entries in the sort vector.,
 
           //
           dequeue_bank_en     = 1'b1;
-          dequeue_bank 	      = st;
+          dequeue_bank        = st;
           dequeue_bank.status = BANK_IDLE;
 
           dequeue_fsm_w       = DEQUEUE_FSM_IDLE;
@@ -594,7 +569,7 @@ module qs #(// The maximum number of entries in the sort vector.,
     //
     unique case (dequeue_fsm_r)
       DEQUEUE_FSM_IDLE:
-	dequeue_idx_w  = 'b1;
+        dequeue_idx_w  = 'b1;
       default:
         dequeue_idx_w  = dequeue_idx_r + 'b1;
     endcase // unique case (dequeue_fsm_r)
@@ -611,9 +586,9 @@ module qs #(// The maximum number of entries in the sort vector.,
   bank_state_t [BANKS_N - 1:0]             bank_state_w;
   logic [BANKS_N - 1:0]                    bank_state_en;
   //
-  logic [BANKS_N - 1:0]                    bank_enqueue_upt;
-  logic [BANKS_N - 1:0]                    bank_sort_upt;
-  logic [BANKS_N - 1:0]                    bank_dequeue_upt;
+  logic [BANKS_N - 1:0]                    bank_state_enqueue_sel;
+  logic [BANKS_N - 1:0]                    bank_state_sort_sel;
+  logic [BANKS_N - 1:0]                    bank_state_dequeue_sel;
   //
   logic [BANKS_N - 1:0]                    bank_idle;
   logic [BANKS_N - 1:0]                    bank_ready;
@@ -625,37 +600,42 @@ module qs #(// The maximum number of entries in the sort vector.,
       // Synonym for readability
       bank_id_t bank_id = bank_id_t'(i);
 
-
       // 
-      bank_enqueue_upt [i] 	= enqueue_bank_en & (bank_id == enqueue_bank_idx_r);
+      bank_state_enqueue_sel [i] =
+        enqueue_bank_en & (bank_id == enqueue_bank_idx_r);
 
       //
-      bank_sort_upt [i] 	= sort_bank_en & (bank_id == sort_bank_idx_r);
+      bank_state_sort_sel [i]    =
+        sort_bank_en & (bank_id == sort_bank_idx_r);
 
       //
-      bank_dequeue_upt [i] 	= dequeue_bank_en & (bank_id == dequeue_bank_idx_r);
+      bank_state_dequeue_sel [i] =
+        dequeue_bank_en & (bank_id == dequeue_bank_idx_r);
 
       // Defaults:
-      casez ({bank_enqueue_upt [i],
-	      bank_sort_upt [i],
-	      bank_dequeue_upt [i]
-	      })
-	3'b1??: begin
-	  bank_state_en [i] = 'b1;
+      casez ({// Enqueue controller updates bank state
+	      bank_state_enqueue_sel [i],
+	      // Sort controller updates bank state
+              bank_state_sort_sel [i],
+	      // Dequeue controller updates bank state
+              bank_state_dequeue_sel [i]
+              })
+        3'b1??: begin
+          bank_state_en [i] = 'b1;
           bank_state_w [i]  = enqueue_bank;
-	end
-	3'b01?: begin
-	  bank_state_en [i] = 'b1;
+        end
+        3'b01?: begin
+          bank_state_en [i] = 'b1;
           bank_state_w [i]  = sort_bank;
-	end
-	3'b001: begin
-	  bank_state_en [i] = 'b1;
-	  bank_state_w [i]  = bank_state_r [i];
-	end
-	default: begin
-	  bank_state_en [i] = 'b0;
-	  bank_state_w [i]  = bank_state_r [i];
-	end
+        end
+        3'b001: begin
+          bank_state_en [i] = 'b1;
+          bank_state_w [i]  = bank_state_r [i];
+        end
+        default: begin
+          bank_state_en [i] = 'b0;
+          bank_state_w [i]  = bank_state_r [i];
+        end
       endcase // casez ({bank_enqueue_upt [i],...
 
 
@@ -667,10 +647,10 @@ module qs #(// The maximum number of entries in the sort vector.,
       bank_sorted [i] = 'b0;
 
       case (bank_state_r [i].status)
-	BANK_IDLE:   bank_idle [i]   = 'b1;
-	BANK_READY:  bank_ready [i]  = 'b1;
-	BANK_SORTED: bank_sorted [i] = 'b1;
-	default: ;
+        BANK_IDLE:   bank_idle [i]   = 'b1;
+        BANK_READY:  bank_ready [i]  = 'b1;
+        BANK_SORTED: bank_sorted [i] = 'b1;
+        default: ;
       endcase
     end // for (int i = 0; i < BANKS_N; i++)
 
@@ -683,62 +663,65 @@ module qs #(// The maximum number of entries in the sort vector.,
   w_t [BANKS_N - 1:0]                   bank_din;
   w_t [BANKS_N - 1:0]                   bank_dout;
   addr_t [BANKS_N - 1:0]                bank_addr;
-  logic [BANKS_N - 1:0] 		bank_enqueue_sel;
-  logic [BANKS_N - 1:0] 		bank_sort_sel;
-  logic [BANKS_N - 1:0] 		bank_dequeue_sel;
+  logic [BANKS_N - 1:0]                 bank_enqueue_sel;
+  logic [BANKS_N - 1:0]                 bank_sort_sel;
+  logic [BANKS_N - 1:0]                 bank_dequeue_sel;
 
-  always_comb begin : spsram_PROC
+  always_comb begin : bank_PROC
 
     for (int i = 0; i < BANKS_N; i++) begin
       // Synonym for readability
       bank_id_t bank_id = bank_id_t'(i);
 
       // 
-      bank_enqueue_sel [i] 	= enqueue_en & (bank_id == enqueue_bank_idx_r);
+      bank_enqueue_sel [i] =
+        enqueue_en & (bank_id == enqueue_bank_idx_r);
 
       //
-      bank_sort_sel [i] 	= sort_en & (bank_id == sort_bank_idx_r);
+      bank_sort_sel [i]    =
+        sort_en & (bank_id == sort_bank_idx_r);
 
       //
-      bank_dequeue_sel [i] 	= dequeue_en & (bank_id == dequeue_bank_idx_r);
+      bank_dequeue_sel [i] =
+        dequeue_en & (bank_id == dequeue_bank_idx_r);
 
 
       casez ({// Enqueue controller maintains ownership,
-	      bank_enqueue_sel [i],
-	      // Or, sort controller maintains ownership,
-	      bank_sort_sel [i],
-	      // Or, dequeue controller maintains ownership (of current bank).
-	      bank_dequeue_sel [i]
-	      })
-	3'b1??: begin
-          bank_en [i] 	= 1'b1;
-          bank_wen [i] 	= enqueue_wen;
+              bank_enqueue_sel [i],
+              // Or, sort controller maintains ownership,
+              bank_sort_sel [i],
+              // Or, dequeue controller maintains ownership (of current bank).
+              bank_dequeue_sel [i]
+              })
+        3'b1??: begin
+          bank_en [i]   = 1'b1;
+          bank_wen [i]  = enqueue_wen;
           bank_addr [i] = enqueue_addr;
-          bank_din [i] 	= enqueue_din;
-	end
-	3'b01?: begin
-	  bank_en [i] 	= 1'b1;
-	  bank_wen [i] 	= sort_wen;
-	  bank_addr [i] = sort_addr;
-	  bank_din [i] 	= sort_din;
-	end
-	3'b001: begin
-          bank_en [i] 	= 1'b1;
-          bank_wen [i] 	= dequeue_wen;
+          bank_din [i]  = enqueue_din;
+        end
+        3'b01?: begin
+          bank_en [i]   = 1'b1;
+          bank_wen [i]  = sort_wen;
+          bank_addr [i] = sort_addr;
+          bank_din [i]  = sort_din;
+        end
+        3'b001: begin
+          bank_en [i]   = 1'b1;
+          bank_wen [i]  = dequeue_wen;
           bank_addr [i] = dequeue_addr;
-          bank_din [i] 	= dequeue_din;
-	end
-	default: begin
-          bank_en [i] 	= '0;
-          bank_wen [i] 	= '0;
+          bank_din [i]  = dequeue_din;
+        end
+        default: begin
+          bank_en [i]   = '0;
+          bank_wen [i]  = '0;
           bank_addr [i] = '0;
-          bank_din [i] 	= '0;
-	end
+          bank_din [i]  = '0;
+        end
       endcase // casez ({...
 
     end // for (int i = 0; i < BANKS_N; i++)
 
-  end // block: spsram_PROC
+  end // block: bank_PROC
 
   // ------------------------------------------------------------------------ //
   //
@@ -783,9 +766,9 @@ module qs #(// The maximum number of entries in the sort vector.,
   always_ff @(posedge clk) begin : bank_state_REG
     for (int i = 0; i < BANKS_N; i++) begin
       if (rst)
-	bank_state_r [i] <= '{ status:BANK_IDLE, default:'0 };
+        bank_state_r [i] <= '{ status:BANK_IDLE, default:'0 };
       else if (bank_state_en [i])
-	bank_state_r [i] <= bank_state_w [i];
+        bank_state_r [i] <= bank_state_w [i];
     end
   end // block: bank_state_REG
   
