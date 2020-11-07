@@ -36,7 +36,6 @@ package qs_pkg;
 
   localparam int BANK_N  = 2;
 
-  typedef logic [BANK_N-1:0]         bank_n_d_t;
   typedef logic [$clog2(BANK_N)-1:0] bank_n_t;
   typedef logic signed [$clog2(N):0] n_t;
   typedef logic [$clog2(N)-1:0]      addr_t;
@@ -66,13 +65,6 @@ package qs_pkg;
                                 DEQUEUE_FSM_EMIT  = 3'b101
                                 } dequeue_fsm_t;
   localparam int DEQUEUE_FSM_BUSY_B  = 2;
-
-  typedef logic [7:0] pc_t;
-
-  typedef struct packed {
-    logic        foo;
-  } sort_context_t;
-  localparam int SORT_CONTEXT_W  = $bits(sort_context_t);
     
 endpackage // qs_pkg
 

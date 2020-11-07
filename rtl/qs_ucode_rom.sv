@@ -168,7 +168,7 @@ module qs_ucode_rom (
   // Reset label:
   localparam pc_t SYM_RESET = 'd0;
 
-  // Start (entry-point) label
+  // Start (entry-point) label.
   localparam pc_t SYM_START = 'd32;
 
   // Partition subroutine.
@@ -178,7 +178,7 @@ module qs_ucode_rom (
   localparam pc_t SYM_QUICKSORT = 'd96;
 
   // Quicksort subroutine.
-  localparam pc_t SYN_ERR = 'd128;
+  localparam pc_t SYM_ERR = 'd128;
 
   always_comb begin : quicksort_prog_PROC
 

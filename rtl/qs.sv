@@ -1,5 +1,5 @@
 //========================================================================== //
-// Copyright (c) 2018, Stephen Henry
+// Copyright (c) 2020, Stephen Henry
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -162,7 +162,7 @@ module qs #(parameter int N = 16, parameter int W = 32) (
     endcase // unique case (enqueue_fsm_r)
 
     //
-    in_rdy    = queue_idle [enqueue_bank_idx_r];
+    in_rdy    = bank_idle [enqueue_bank_idx_r];
 
     //
     enqueue_fsm_en  = (enqueue_fsm_r [qs_pkg::ENQUEUE_FSM_BUSY_B] |
@@ -257,7 +257,7 @@ module qs #(parameter int N = 16, parameter int W = 32) (
 
     //
     priority case (1'b1)
-      da_ucode.is_wait: da_stall  = (~queue_ready [sort_bank_idx_r]);
+      da_ucode.is_wait: da_stall  = (~bank_ready [sort_bank_idx_r]);
       default:          da_stall  = da_ld_stall_w;
     endcase // priority case (1'b1)
     
@@ -478,7 +478,7 @@ module qs #(parameter int N = 16, parameter int W = 32) (
 
       qs_pkg::DEQUEUE_FSM_IDLE: begin
 
-        if (queue_sorted [dequeue_bank_idx_r]) begin
+        if (bank_sorted [dequeue_bank_idx_r]) begin
           qs_pkg::bank_state_t st = bank_state_r [dequeue_bank_idx_r];
           
           dequeue_en 		  = 'b1;
@@ -590,28 +590,27 @@ module qs #(parameter int N = 16, parameter int W = 32) (
   // ------------------------------------------------------------------------ //
   //
   //
-  qs_pkg::bank_n_d_t                            queue_idle;
-  qs_pkg::bank_n_d_t                            queue_ready;
-  qs_pkg::bank_n_d_t                            queue_sorted;
+  logic [qs_pkg::BANK_N - 1:0]                    bank_idle;
+  logic [qs_pkg::BANK_N - 1:0]                    bank_ready;
+  logic [qs_pkg::BANK_N - 1:0]                    bank_sorted;
 
-  always_comb begin : queue_ctrl_PROC
+  always_comb begin : bank_status_PROC
 
-    //
-    queue_idle  = '0;
-    for (int i = 0; i < qs_pkg::BANK_N; i++)
-      queue_idle [i]  = (bank_state_r [i].status == qs_pkg::BANK_IDLE);
+    for (int i = 0; i < qs_pkg::BANK_N; i++) begin
 
-    //
-    queue_ready  = '0;
-    for (int i = 0; i < qs_pkg::BANK_N; i++)
-      queue_ready [i]  = (bank_state_r [i].status == qs_pkg::BANK_READY);
+      bank_idle [i]   = 'b0;
+      bank_ready [i]  = 'b0;
+      bank_sorted [i] = 'b0;
 
-    //
-    queue_sorted       = '0;
-    for (int i = 0; i < qs_pkg::BANK_N; i++)
-      queue_sorted [i]  = (bank_state_r [i].status == qs_pkg::BANK_SORTED);
+      case (bank_state_r [i].status)
+	qs_pkg::BANK_IDLE:   bank_idle [i]   = 'b1;
+	qs_pkg::BANK_READY:  bank_ready [i]  = 'b1;
+	qs_pkg::BANK_SORTED: bank_sorted [i] = 'b1;
+	default: ;
+      endcase
+    end // for (int i = 0; i < qs_pkg::BANK_N; i++)
 
-  end // block: queue_PROC
+  end // block: bank_status_PROC
   
   // ------------------------------------------------------------------------ //
   //
@@ -620,34 +619,58 @@ module qs #(parameter int N = 16, parameter int W = 32) (
   w_t [qs_pkg::BANK_N - 1:0]            bank_din;
   w_t [qs_pkg::BANK_N - 1:0]            bank_dout;
   addr_t [qs_pkg::BANK_N - 1:0]         bank_addr;
+  logic [qs_pkg::BANK_N - 1:0] 		bank_enqueue_sel;
+  logic [qs_pkg::BANK_N - 1:0] 		bank_sort_sel;
+  logic [qs_pkg::BANK_N - 1:0] 		bank_dequeue_sel;
 
   always_comb begin : spsram_PROC
 
     for (int i = 0; i < qs_pkg::BANK_N; i++) begin
+      // Synonym for readability
+      qs_pkg::bank_n_t bank_id = qs_pkg::bank_n_t'(i);
 
-      unique if (enqueue_en && (qs_pkg::bank_n_t'(i) == enqueue_bank_idx_r)) begin
-        bank_en [i]    = 1'b1;
-        bank_wen [i]   = enqueue_wen;
-        bank_addr [i]  = enqueue_addr;
-        bank_din [i]   = enqueue_din;
-      end else if (sort_en && (qs_pkg::bank_n_t'(i) == sort_bank_idx_r)) begin
-	bank_en [i]    = 1'b1;
-	bank_wen [i]   = sort_wen;
-	bank_addr [i]  = sort_addr;
-	bank_din [i]   = sort_din;
-      end else if (dequeue_en && (qs_pkg::bank_n_t'(i) == dequeue_bank_idx_r)) begin
-        bank_en [i]    = 1'b1;
-        bank_wen [i]   = dequeue_wen;
-        bank_addr [i]  = dequeue_addr;
-        bank_din [i]   = dequeue_din;
-      end else begin
-        bank_en [i]    = '0;
-        bank_wen [i]   = '0;
-        bank_addr [i]  = '0;
-        bank_din [i]   = '0;
-      end
-      
-    end // for (int i = 0; i < qs_pkg::BANK_N; i++)
+      // 
+      bank_enqueue_sel [i]     = enqueue_en & (bank_id == enqueue_bank_idx_r);
+
+      //
+      bank_sort_sel [i]        = sort_en & (bank_id == sort_bank_idx_r);
+
+      //
+      bank_dequeue_sel [i]     = dequeue_en & (bank_id == dequeue_bank_idx_r);
+
+
+      casez ({// Enqueue controller maintains ownership,
+	      bank_enqueue_sel [i],
+	      // Or, sort controller maintains ownership,
+	      bank_sort_sel [i],
+	      // Or, dequeue controller maintains ownership (of current bank).
+	      bank_dequeue_sel [i]
+	      })
+	3'b1??: begin
+          bank_en [i] 	= 1'b1;
+          bank_wen [i] 	= enqueue_wen;
+          bank_addr [i] = enqueue_addr;
+          bank_din [i] 	= enqueue_din;
+	end
+	3'b01?: begin
+	  bank_en [i] 	= 1'b1;
+	  bank_wen [i] 	= sort_wen;
+	  bank_addr [i] = sort_addr;
+	  bank_din [i] 	= sort_din;
+	end
+	3'b001: begin
+          bank_en [i] 	= 1'b1;
+          bank_wen [i] 	= dequeue_wen;
+          bank_addr [i] = dequeue_addr;
+          bank_din [i] 	= dequeue_din;
+	end
+	default: begin
+          bank_en [i] 	= '0;
+          bank_wen [i] 	= '0;
+          bank_addr [i] = '0;
+          bank_din [i] 	= '0;
+	end
+      endcase // casez ({...
 
   end // block: spsram_PROC
 
