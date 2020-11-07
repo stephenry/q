@@ -36,8 +36,23 @@
     else\
       __name``_r <= __name``_w
 
+`define LIBV_REG_RST_R(__type, __name, __reset = 'b0)\
+  __type __name``_r;\
+  always_ff @(posedge clk) \
+    if (rst)\
+      __name``_r <= __reset;\
+    else\
+      __name``_r <= __name``_w
+
 `define LIBV_REG_EN(__type, __name)\
   __type __name``_r;\
+  __type __name``_w;\
+  logic  __name``_en;\
+  always_ff @(posedge clk) \
+    if (__name``_en)\
+      __name``_r <= __name``_w
+
+`define LIBV_REG_EN_W(__type, __name)\
   __type __name``_w;\
   logic  __name``_en;\
   always_ff @(posedge clk) \

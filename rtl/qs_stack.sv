@@ -1,5 +1,5 @@
 //========================================================================== //
-// Copyright (c) 2018, Stephen Henry
+// Copyright (c) 2020, Stephen Henry
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -31,21 +31,18 @@ module qs_stack #(parameter int N = 16, parameter int W = 32) (
 
    //======================================================================== //
    //                                                                         //
-   // Misc.                                                                   //
+   // Command                                                                 //
    //                                                                         //
    //======================================================================== //
 
-     input                                   clk
-   , input                                   rst
-
-   //------------------------------------------------------------------------ //
-   //
-   , input                                   cmd_vld
+     input                                   cmd_vld
    , input                                   cmd_push
-   , input        [W-1:0]                    cmd_push_dat
+   , input        [W - 1:0]                  cmd_push_dat
    , input                                   cmd_clr
    //
-   , output logic [W-1:0]                    cmd_pop_dat_r
+   , output logic [W - 1:0]                  head_r
+   //
+   , output logic                            cmd_err_w
 
    //======================================================================== //
    //                                                                         //
@@ -53,30 +50,40 @@ module qs_stack #(parameter int N = 16, parameter int W = 32) (
    //                                                                         //
    //======================================================================== //
 
-   //------------------------------------------------------------------------ //
-   //
    , output logic                            empty_w
    , output logic                            full_w
+
+   //======================================================================== //
+   //                                                                         //
+   // Misc.                                                                   //
+   //                                                                         //
+   //======================================================================== //
+
+   , input                                   clk
+   , input                                   rst
 );
 
-  typedef logic [W-1:0] w_t;
-  typedef logic [$clog2(N)-1:0] n_t;
+  // Word type
+  typedef logic [W-1:0]                 w_t;
+
+  // Address type
+  typedef logic [$clog2(N)-1:0]         addr_t;
+
+  function automatic logic is_last_entry(addr_t addr); begin
+    is_last_entry = (addr_t'(N - 1) == addr);
+  end endfunction
+    
+
+  function automatic logic is_first_entry(addr_t addr); begin
+    is_first_entry = (addr == '0);
+  end endfunction
+    
 
   //
   `LIBV_SPSRAM_SIGNALS(spram__, W, $clog2(N));
   //
-  logic                           empty_w;
-  logic                           full_w;
   logic                           empty_mem_r;
   logic                           empty_mem_w;  
-  //
-  n_t                             rd_ptr_r;
-  n_t                             rd_ptr_w;
-  logic                           rd_ptr_en;
-  //
-  n_t                             wr_ptr_r;
-  n_t                             wr_ptr_w;
-  logic                           wr_ptr_en;
   //
   w_t                             cmd_pop_dat_r;
   w_t                             cmd_pop_dat_w;
@@ -92,106 +99,125 @@ module qs_stack #(parameter int N = 16, parameter int W = 32) (
 
   // ------------------------------------------------------------------------ //
   //
-  always_comb
-    begin : status_PROC
+  `LIBV_REG_RST_R(logic, empty, 'b1);
+  `LIBV_REG_RST_R(logic, full, 'b0);
+  `LIBV_REG_EN(addr_t, rd_ptr);
+  `LIBV_REG_EN(addr_t, wr_ptr);
+  `LIBV_REG_RST(logic, stack_was_read, 'b0);
 
-      //
-      cmd_pop_dat_en  = cmd_vld;
-      cmd_pop_dat_w   = cmd_push ? cmd_push_dat : spram__dout;
+  `LIBV_SPSRAM_SIGNALS(stack_mem_, W, $bits(addr_t));
+  
+  always_comb begin : stack_PROC
 
-      //
-      casez ({cmd_pop_dat_vld_r, cmd_vld, cmd_push, cmd_clr})
-        4'b?_1?1: wr_ptr_w  = 'b0;
-        4'b1_110: wr_ptr_w  = wr_ptr_r + 'b1;
-        4'b1_100: wr_ptr_w  = (wr_ptr_r != '0) ? wr_ptr_r - 'b1 : wr_ptr_r;
-        default:  wr_ptr_w  = wr_ptr_r;
-      endcase // casez ({cmd_pop_dat_vld_r, cmd_vld, cmd_push, cmd_cld})
+    // Defaults:
 
-      //
-      wr_ptr_en  = cmd_vld;
+    rd_ptr_en 	     = 1'b0;
+    rd_ptr_w 	     = rd_ptr_r;
+
+    wr_ptr_en 	     = 1'b0;
+    wr_ptr_w 	     = wr_ptr_r;
+
+    cmd_err_w 	     = 1'b0;
+
+    empty_w 	     = empty_r;
+    full_w 	     = full_r;
+
+    // Stack was read in the previous cycle.
+    stack_was_read_w = 'b0;
+
+    //
+    casez ({// Command is valid,
+	    cmd_vld,
+	    // Command type
+	    cmd_push,
+	    // Stack is full
+	    full_r,
+	    // Stack is empty
+	    empty_r
+	    })
+
+
+      4'b1_0_?_0: begin
+	// Pop from non-empty stack
+
+	empty_w   = is_first_entry(rd_ptr_r);
+
+	// Decrement read pointer unless stack is becoming empty.
+	rd_ptr_en = (~empty_w);
+	rd_ptr_w  = rd_ptr_r - 'b1;
+      end
       
-      //
-      casez ({cmd_pop_dat_vld_r, cmd_vld, cmd_push, cmd_clr})
-        4'b?_1?1: rd_ptr_w  = 'b0;
-        4'b1_110: rd_ptr_w  = empty_mem_r ? rd_ptr_r : (rd_ptr_r + 'b1);
-        4'b1_100: rd_ptr_w  = (rd_ptr_r != '0) ? (rd_ptr_r - 'b1) : rd_ptr_r;
-        default:  rd_ptr_w  = rd_ptr_r;
-      endcase // casez ({cmd_vld, cmd_push, cmd_pop_dat_vld_r})
+      4'b1_0_?_1: begin
+	// Pop from empty stack (error)
+	cmd_err_w = 'b1;
+      end
 
-      //
-      rd_ptr_en    = cmd_vld;
+      4'b1_1_0_?: begin
+	// Push to non-full stack.
+	full_w 	  = is_last_entry(wr_ptr_r);
 
-      //
-      empty_mem_w  = (wr_ptr_w == '0);
+	// Increment write pointer unless stack is becoming full.
+	wr_ptr_en = (~full_w);
+	wr_ptr_w  = wr_ptr_r + 'b1;
+      end
 
-      //
-      casez ({cmd_vld, cmd_push, cmd_clr})
-        3'b1_10: cmd_pop_dat_vld_w  = 'b1;
-        3'b1_00: cmd_pop_dat_vld_w  = ~empty_mem_r;
-        3'b1_?1: cmd_pop_dat_vld_w  = 'b0;
-        default: cmd_pop_dat_vld_w  = cmd_pop_dat_vld_r;
-      endcase
+      4'b1_1_1_?: begin
+	// Push to full stack (error)
+	cmd_err_w = 'b1;
+      end
 
-      //
-      empty_w      = ~cmd_pop_dat_vld_w;
-      full_w       = (rd_ptr_w == n_t'(N-1));
+      default: ;
 
-      //
-      spram__en    = cmd_vld & cmd_pop_dat_vld_r;
-      spram__wen   = cmd_vld & cmd_pop_dat_vld_r & cmd_push;
-      spram__addr  = cmd_push ? wr_ptr_r : rd_ptr_r;
-      spram__din   = cmd_pop_dat_r;
+    endcase // casez ({...
 
-    end // block: status_PROC
+    //
+    casez ({ // Command is valid
+	     cmd_vld,
+	     // Command validity
+	     cmd_err_w,
+	     // Command type
+	     cmd_push
+	     })
+      3'b1_0_0: begin
+	// Pop command
 
-  // ======================================================================== //
-  //                                                                          //
-  // Sequential Logic                                                         //
-  //                                                                          //
-  // ======================================================================== //
+	// Data from stack memory becomes valid in the next cycle.
+	stack_was_read_w = 'b1;
+	
+	stack_mem_en 	 = 'b1;
+	stack_mem_wen 	 = 'b0;
+	stack_mem_addr 	 = rd_ptr_r;
+	stack_mem_din 	 = cmd_push_dat;
+      end
+      3'b1_0_1: begin
+	// Push command
+	stack_mem_en   = 'b1;
+	stack_mem_wen  = 'b1;
+	stack_mem_addr = wr_ptr_r;
+	stack_mem_din  = 'b0;
+      end
+      default: begin
+	//
+	stack_mem_en   = 'b0;
+	stack_mem_wen  = 'b0;
+	stack_mem_addr = 'b0;
+	stack_mem_din  = 'b0;
+      end
+    endcase // casez ({...
 
+  end // block: stack_PROC
+  
   // ------------------------------------------------------------------------ //
   //
-  always_ff @(posedge clk)
-    if (cmd_pop_dat_en)
-      cmd_pop_dat_r <= cmd_pop_dat_w;
+  `LIBV_REG_EN_W(w_t, head);
+  
+  always_comb begin : out_PROC
 
-  // ------------------------------------------------------------------------ //
-  //
-  always_ff @(posedge clk)
-    if (rst)
-      cmd_pop_dat_vld_r <= 'b0;
-    else
-      cmd_pop_dat_vld_r <= cmd_pop_dat_vld_w;
+    // Latch output if the stack was read in the previously cycle.
+    head_en = stack_was_read_r;
+    head_w  = stack_mem_dout;
 
-  // ------------------------------------------------------------------------ //
-  //
-  always_ff @(posedge clk)
-    if (rst)
-      rd_ptr_r <= 'b0;
-    else if (rd_ptr_en)
-      rd_ptr_r <= rd_ptr_w;
-
-  // ------------------------------------------------------------------------ //
-  //
-  always_ff @(posedge clk)
-    if (rst)
-      wr_ptr_r <= 'b0;
-    else if (wr_ptr_en)
-      wr_ptr_r <= wr_ptr_w;
-
-  // ------------------------------------------------------------------------ //
-  //
-  always_ff @(posedge clk)
-    if (rst) begin
-      empty_r     <= 'b1;
-      empty_mem_r <= 'b1;
-      full_r      <= 'b0;
-    end else begin
-      empty_r     <= empty_w;
-      empty_mem_r <= empty_mem_w;
-      full_r      <= full_w;
-    end
+  end // block: out_PROC
 
   // ======================================================================== //
   //                                                                          //
@@ -201,16 +227,16 @@ module qs_stack #(parameter int N = 16, parameter int W = 32) (
 
   // ------------------------------------------------------------------------ //
   //
-  spsram #(.W(W), .N(N), .ASYNC_DOUT('b1)) u_spram (
+  spsram #(.W(W), .N(N), .ASYNC_DOUT('b1)) u_stack_mem (
     //
       .clk          (clk                )
     //
-    , .en           (spram__en          )
-    , .wen          (spram__wen         )
-    , .addr         (spram__addr        )
-    , .din          (spram__din         )
+    , .en           (stack_mem_en       )
+    , .wen          (stack_mem_wen      )
+    , .addr         (stack_mem_addr     )
+    , .din          (stack_mem_din      )
     //
-    , .dout         (spram__dout        )
+    , .dout         (stack_mem_dout     )
   );
 
 endmodule // qs_stack

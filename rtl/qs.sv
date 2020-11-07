@@ -74,133 +74,7 @@ module qs #(parameter int N = 16, parameter int W = 32) (
   typedef logic [W - 1:0] 		w_t;
 
   typedef logic [$clog2(N) - 1:0] 	addr_t;
-  
-/*
-  typedef struct packed {
-    logic        vld;
-    logic        sop;
-    logic        eop;
-    logic        err;
-    qs_pkg::bank_n_t     idx;
-  } dequeue_momento_t;
 
-  qs_pkg::bank_state_t   [BANK_N-1:0] 		       bank_state_r;
-  qs_pkg::bank_state_t   [BANK_N-1:0]           bank_state_w;
-  logic          [BANK_N-1:0]           bank_state_en;
-  //
-  qs_pkg::addr_t                                enqueue_idx_r;
-  qs_pkg::addr_t                                enqueue_idx_w;
-  logic                                 enqueue_idx_en;
-  //
-  qs_pkg::bank_n_d_t                            dequeue_sel;
-  qs_pkg::bank_n_d_t                            dequeue_vld;
-  //
-  qs_pkg::addr_t                                dequeue_idx_r;
-  qs_pkg::addr_t                                dequeue_idx_w;
-  logic                                 dequeue_idx_en;
-  //
-  logic                                 in_rdy;
-  //
-  qs_pkg::bank_state_t                          enqueue_bank;
-  logic                                 enqueue_bank_en;
-  //
-  qs_pkg::bank_state_t                          dequeue_bank;
-  logic                                 dequeue_bank_en;
-  //
-  //
-  `SPSRAM_SIGNALS(enqueue__, W, $clog2(N));
-  `SPSRAM_SIGNALS(dequeue__, W, $clog2(N));
-  //
-  logic                                 sort__en;
-  logic                                 sort__wen;
-  qs_pkg::addr_t                                sort__addr;
-  w_t                                   sort__din;
-  w_t                                   sort__dout;
-  //
-  qs_pkg::bank_n_d_t                            sortqueue_sel;
-  //
-  logic  [BANK_N-1:0]                   spsram_bank__en;
-  logic  [BANK_N-1:0]                   spsram_bank__wen;
-  qs_pkg::addr_t [BANK_N-1:0]                   spsram_bank__addr;
-  w_t    [BANK_N-1:0]                   spsram_bank__din;
-  w_t    [BANK_N-1:0]                   spsram_bank__dout;
-  //
-  dequeue_momento_t                     dequeue_momento_in;
-  dequeue_momento_t                     dequeue_momento_out_r;
-  //
-  logic                                 stack__cmd_vld;
-  logic                                 stack__cmd_push;
-  logic                                 stack__cmd_clr;
-  w_t                                   stack__cmd_push_dat;
-  w_t                                   stack__cmd_pop_dat_r;
-  logic                                 stack__empty_r;
-  logic                                 stack__full_r;
-  //
-  logic                                 sort_momento_in;
-  logic                                 sort_momento_out_r;
-  //
-  w_t                                   adder__y;
-  logic                                 adder__cout;
-  w_t                                   adder__a;
-  w_t                                   adder__b_pre;
-  w_t                                   adder__b;
-  logic                                 adder__cin;
-  //
-  logic                                 ar_flag_en;
-  //
-  logic                                 ar_flag_z_w;
-  logic                                 ar_flag_n_w;
-  logic                                 ar_flag_c_w;
-  //
-  logic                                 ar_flag_z_r;
-  logic                                 ar_flag_n_r;
-  logic                                 ar_flag_c_r;
-  //
-  reg_t [1:0]                           da_rf__ra;
-  logic [1:0]                           da_rf__ren;
-  w_t   [1:0]                           da_rf__rdata;
-  //
-  reg_t                                 da_rf__wa_w;
-  logic                                 da_rf__wen_w;
-  w_t                                   da_rf__wdata_w;
-  //
-  reg_t                                 da_rf__wa_r;
-  logic                                 da_rf__wen_r;
-  w_t                                   da_rf__wdata_r;
-  //
-  logic                                 fa_kill;
-  logic                                 fa_valid;
-  logic                                 fa_adv;
-  logic                                 fa_pass;
-  pc_t                                  fa_pc_r;
-  pc_t                                  fa_pc_w;
-  logic                                 fa_pc_en;
-  //
-  logic                                 da_en;
-  logic                                 da_stall;
-  logic                                 da_adv;
-  logic                                 da_mem_op_issue;
-  logic                                 da_valid_w;
-  logic                                 da_valid_r;
-  logic                                 da_cc_hit;
-  logic                                 da_taken_branch;
-  logic                                 da_taken_ret;
-  logic                                 da_taken_call;
-  logic                                 da_ld_stall_r;
-  logic                                 da_ld_stall_w;
-  pc_t                                  da_pc_w;
-  pc_t                                  da_pc_r;
-  //
-  logic                                 da_src0_is_wrbk;
-  w_t                                   da_src0;
-  logic                                 da_src1_is_wrbk;
-  w_t                                   da_src1;
-  //
-  ucode_t                               da_ucode;
-  //
-  inst_t                                da_inst_r;
-  inst_t                                da_inst_w;
-*/  
   // ======================================================================== //
   //                                                                          //
   // Combinatorial Logic                                                      //
@@ -561,9 +435,13 @@ module qs #(parameter int N = 16, parameter int W = 32) (
   logic                                 dequeue_bank_en;
 
   typedef struct packed {
-    logic        sop;
-    logic        eop;
-    logic        err;
+    // Beat is Start-Of-Packet.
+    logic                sop;
+    // Beat is End-Of-Packet.
+    logic                eop;
+    // An Error has occurred.
+    logic                err;
+    // Index of nominated bank.
     qs_pkg::bank_n_t     idx;
   } dequeue_t;
 
@@ -587,11 +465,11 @@ module qs #(parameter int N = 16, parameter int W = 32) (
     dequeue_bank_en         = 'b0;
 
     //
-    dequeue_out_vld  = '0;
-    dequeue_out.sop  = '0;
-    dequeue_out.eop  = '0;
-    dequeue_out.err  = '0;
-    dequeue_out.idx  = dequeue_bank_idx_r;
+    dequeue_out_vld_w  = '0;
+    dequeue_out_w.sop  = '0;
+    dequeue_out_w.eop  = '0;
+    dequeue_out_w.err  = '0;
+    dequeue_out_w.idx  = dequeue_bank_idx_r;
     
     //
     dequeue_fsm_w           = dequeue_fsm_r;
@@ -607,19 +485,19 @@ module qs #(parameter int N = 16, parameter int W = 32) (
           dequeue_addr 		  = 'b0;
 
           //
-          dequeue_out_vld  = '1;
-          dequeue_out.sop  = '1;
-          dequeue_out.err  = st.error;
+          dequeue_out_vld_w  = '1;
+          dequeue_out_w.sop  = '1;
+          dequeue_out_w.err  = st.error;
 
           dequeue_bank_en 	  = 'b1;
           dequeue_bank 		  = st;
           
           if (st.n == '0) begin
-            dequeue_out.eop  = '1;
+            dequeue_out_w.eop  = '1;
 
             dequeue_bank.status     = qs_pkg::BANK_IDLE;
           end else begin
-            dequeue_out.eop  = '0;
+            dequeue_out_w.eop  = '0;
             
             dequeue_bank.status    = qs_pkg::BANK_UNLOADING;
             dequeue_fsm_w          = qs_pkg::DEQUEUE_FSM_EMIT;
@@ -631,19 +509,19 @@ module qs #(parameter int N = 16, parameter int W = 32) (
         qs_pkg::bank_state_t st = bank_state_r [dequeue_bank_idx_r];
         
         dequeue_en 		= 'b1;
-//        dequeue_addr 		= dequeue_idx_r;
+        dequeue_addr 		= dequeue_idx_r;
 
         //
-        dequeue_out_vld 	= 1'b1;
-        dequeue_out.sop 	= 1'b0;
-        dequeue_out.eop 	= 1'b0;
-        dequeue_out.err 	= st.error;
+        dequeue_out_vld_w 	= 1'b1;
+        dequeue_out_w.sop 	= 1'b0;
+        dequeue_out_w.eop 	= 1'b0;
+        dequeue_out_w.err 	= st.error;
 
         if (dequeue_idx_r == qs_pkg::addr_t'(st.n)) begin
           dequeue_bank_idx_en = 1'b1;
 
           //
-          dequeue_out.eop     = 1'b1;
+          dequeue_out_w.eop     = 1'b1;
 
           //
           dequeue_bank_en     = 1'b1;
@@ -675,7 +553,7 @@ module qs #(parameter int N = 16, parameter int W = 32) (
     endcase // unique case (dequeue_fsm_r)
 
     // Out state latch enable
-    dequeue_out_en = dequeue_out_vld;
+    dequeue_out_en = dequeue_out_vld_w;
 
   end // block: dequeue_fsm_PROC
 
@@ -737,36 +615,36 @@ module qs #(parameter int N = 16, parameter int W = 32) (
   
   // ------------------------------------------------------------------------ //
   //
-  logic [qs_pkg::BANK_N - 1:0]          spsram_bank_en;
-  logic [qs_pkg::BANK_N - 1:0]          spsram_bank_wen;
-  w_t [qs_pkg::BANK_N - 1:0]            spsram_bank_din;
-  w_t [qs_pkg::BANK_N - 1:0]            spsram_bank_dout;
-  addr_t [qs_pkg::BANK_N - 1:0]         spsram_bank_addr;
+  logic [qs_pkg::BANK_N - 1:0]          bank_en;
+  logic [qs_pkg::BANK_N - 1:0]          bank_wen;
+  w_t [qs_pkg::BANK_N - 1:0]            bank_din;
+  w_t [qs_pkg::BANK_N - 1:0]            bank_dout;
+  addr_t [qs_pkg::BANK_N - 1:0]         bank_addr;
 
   always_comb begin : spsram_PROC
 
     for (int i = 0; i < qs_pkg::BANK_N; i++) begin
 
       unique if (enqueue_en && (qs_pkg::bank_n_t'(i) == enqueue_bank_idx_r)) begin
-        spsram_bank_en [i]    = 1'b1;
-        spsram_bank_wen [i]   = enqueue_wen;
-        spsram_bank_addr [i]  = enqueue_addr;
-        spsram_bank_din [i]   = enqueue_din;
+        bank_en [i]    = 1'b1;
+        bank_wen [i]   = enqueue_wen;
+        bank_addr [i]  = enqueue_addr;
+        bank_din [i]   = enqueue_din;
       end else if (sort_en && (qs_pkg::bank_n_t'(i) == sort_bank_idx_r)) begin
-	spsram_bank_en [i]    = 1'b1;
-	spsram_bank_wen [i]   = sort_wen;
-	spsram_bank_addr [i]  = sort_addr;
-	spsram_bank_din [i]   = sort_din;
+	bank_en [i]    = 1'b1;
+	bank_wen [i]   = sort_wen;
+	bank_addr [i]  = sort_addr;
+	bank_din [i]   = sort_din;
       end else if (dequeue_en && (qs_pkg::bank_n_t'(i) == dequeue_bank_idx_r)) begin
-        spsram_bank_en [i]    = 1'b1;
-        spsram_bank_wen [i]   = dequeue_wen;
-        spsram_bank_addr [i]  = dequeue_addr;
-        spsram_bank_din [i]   = dequeue_din;
+        bank_en [i]    = 1'b1;
+        bank_wen [i]   = dequeue_wen;
+        bank_addr [i]  = dequeue_addr;
+        bank_din [i]   = dequeue_din;
       end else begin
-        spsram_bank_en [i]    = '0;
-        spsram_bank_wen [i]   = '0;
-        spsram_bank_addr [i]  = '0;
-        spsram_bank_din [i]   = '0;
+        bank_en [i]    = '0;
+        bank_wen [i]   = '0;
+        bank_addr [i]  = '0;
+        bank_din [i]   = '0;
       end
       
     end // for (int i = 0; i < qs_pkg::BANK_N; i++)
@@ -788,15 +666,14 @@ module qs #(parameter int N = 16, parameter int W = 32) (
   always_comb begin : out_PROC
 
     //
-    out_vld_w = dequeue_out_r.vld;
+    out_vld_w = dequeue_out_vld_r;
 
     // Stage outputs
     out_en    = out_vld_w;
-    out_w.sop = dequeue_momento_out_r.sop;
-    out_w.eop = dequeue_momento_out_r.eop;
-    out_w.err = dequeue_momento_out_r.err;
-    out_w.dat = spsram_bank__dout [dequeue_momento_out_r.idx];
-
+    out_w.sop = dequeue_out_r.sop;
+    out_w.eop = dequeue_out_r.eop;
+    out_w.err = dequeue_out_r.err;
+    out_w.dat = bank_dout [dequeue_out_r.idx];
 
     // Drive outputs
     out_sop_r = out_r.sop;
@@ -808,189 +685,26 @@ module qs #(parameter int N = 16, parameter int W = 32) (
   
   // ======================================================================== //
   //                                                                          //
-  // Sequential Logic                                                         //
-  //                                                                          //
-  // ======================================================================== //
-  /*
-  // ------------------------------------------------------------------------ //
-  //
-  always_ff @(posedge clk)
-    if (rst)
-      da_ld_stall_r <= 'b0;
-    else
-      da_ld_stall_r <= da_ld_stall_w;
-  
-  // ------------------------------------------------------------------------ //
-  //
-  always_ff @(posedge clk)
-    if (rst)
-      {ar_flag_z_r, ar_flag_n_r, ar_flag_c_r} <= 'b0;
-    else if (ar_flag_en)
-      {ar_flag_z_r, ar_flag_n_r, ar_flag_c_r} <=
-          {ar_flag_z_w, ar_flag_n_w, ar_flag_c_w};
-  
-  // ------------------------------------------------------------------------ //
-  //
-  always_ff @(posedge clk)
-    if (rst)
-      da_rf__wen_r <= '0;
-    else
-      da_rf__wen_r <= da_rf__wen_w;
-  
-  // ------------------------------------------------------------------------ //
-  //
-  always_ff @(posedge clk)
-    if (da_rf__wen_w) begin
-      da_rf__wa_r    <= da_rf__wa_w;
-      da_rf__wdata_r <= da_rf__wdata_w;
-    end
-  
-  // ------------------------------------------------------------------------ //
-  //
-  always_ff @(posedge clk)
-    if (rst)
-      fa_pc_r <= SYM_RESET;
-    else if (fa_pc_en)
-      fa_pc_r <= fa_pc_w;
-
-  // ------------------------------------------------------------------------ //
-  //
-  always_ff @(posedge clk)
-    if (rst)
-      da_valid_r <= 'b0;
-    else
-      da_valid_r <= da_valid_w;
-  
-  // ------------------------------------------------------------------------ //
-  //
-  always_ff @(posedge clk)
-    if (da_en) begin
-      da_inst_r <= da_inst_w;
-      da_pc_r   <= da_pc_w;
-    end
-
-  // ------------------------------------------------------------------------ //
-  //
-  always_ff @(posedge clk)
-    if (rst)
-      enqueue_fsm_r <= ENQUEUE_FSM_IDLE;
-    else if (enqueue_fsm_en)
-      enqueue_fsm_r <= enqueue_fsm_w;
-  
-  // ------------------------------------------------------------------------ //
-  //
-  always_ff @(posedge clk)
-    if (rst)
-      dequeue_fsm_r <= DEQUEUE_FSM_IDLE;
-    else if (dequeue_fsm_en)
-      dequeue_fsm_r <= dequeue_fsm_w;
-      
-  // ------------------------------------------------------------------------ //
-  //
-  always_ff @(posedge clk)
-    if (rst)
-      enqueue_idx_r <= 'b0;
-    else if (enqueue_idx_en)
-      enqueue_idx_r <= enqueue_idx_w;
-  
-  // ------------------------------------------------------------------------ //
-  //
-  always_ff @(posedge clk)
-    if (rst)
-      dequeue_idx_r <= 'b0;
-    else if (dequeue_idx_en)
-      dequeue_idx_r <= dequeue_idx_w;
-
-  // ------------------------------------------------------------------------ //
-  // TODO - rename to SCOREBOARD
-  always_ff @(posedge clk) begin : bank_reg_PROC
-    if (rst) begin
-      for (int i = 0; i < qs_pkg::BANK_N; i++)
-        bank_state_r [i] <= '{status:BANK_IDLE, default:'0};
-    end else begin
-      for (int i = 0; i < qs_pkg::BANK_N; i++)
-        if (bank_state_en [i])
-          bank_state_r [i] <= bank_state_w [i];
-    end
-  end // block: bank_reg_PROC
-  
-  // ------------------------------------------------------------------------ //
-  //
-  always_ff @(posedge clk)
-    if (rst)
-      enqueue_bank_idx_r <= '0;
-    else if (enqueue_bank_idx_en)
-      enqueue_bank_idx_r <= enqueue_bank_idx_w;
-  
-  // ------------------------------------------------------------------------ //
-  //
-  always_ff @(posedge clk)
-    if (rst)
-      dequeue_bank_idx_r <= '0;
-    else if (dequeue_bank_idx_en)
-      dequeue_bank_idx_r <= dequeue_bank_idx_w;
-  
-  // ------------------------------------------------------------------------ //
-  //
-  always_ff @(posedge clk)
-    if (rst)
-      sort_bank_idx_r <= '0;
-    else if (sort_bank_idx_en)
-      sort_bank_idx_r <= sort_bank_idx_w;
-  
-  // ------------------------------------------------------------------------ //
-  //
-  always_ff @(posedge clk)
-    if (rst)
-      out_vld_r <= 'b0;
-    else
-      out_vld_r <= out_vld_w;
-  
-  // ------------------------------------------------------------------------ //
-  //
-  always_ff @(posedge clk)
-    if (out_vld_w) begin
-      out_sop_r  = out_sop_w;
-      out_eop_r  = out_eop_w;
-      out_err_r  = out_err_w;
-      out_dat_r  = out_dat_w;
-    end
-*/
-  
-  // ======================================================================== //
-  //                                                                          //
   // Instances                                                                //
   //                                                                          //
   // ======================================================================== //
-/*
-  // ------------------------------------------------------------------------ //
-  //
-  fast_adder #(.W(W)) u_adder (
-    //
-      .y                 (adder__y           )
-    , .cout              (adder__cout        )
-    //
-    , .a                 (adder__a           )
-    , .b                 (adder__b           )
-    , .cin               (adder__cin         )
-  );
-  
+
   // ------------------------------------------------------------------------ //
   //
   rf #(.W(W), .N(8), .RD_N(2)) u_rf (
     //
-      .clk               (clk                )
-    , .rst               (rst                )
+      .clk               (clk                     )
+    , .rst               (rst                     )
     //
-    , .ra                (da_rf__ra          )
-    , .ren               (da_rf__ren         )
-    , .rdata             (da_rf__rdata       )
+    , .ra                ()
+    , .ren               ()
+    , .rdata             ()
     //
-    , .wa                (da_rf__wa_r        )
-    , .wen               (da_rf__wen_r       )
-    , .wdata             (da_rf__wdata_r     )
+    , .wa                ()
+    , .wen               ()
+    , .wdata             ()
   );
-*/
+
   // ------------------------------------------------------------------------ //
   //
   qs_stack #(.W(W), .N(128)) u_qs_stack (
@@ -1003,7 +717,9 @@ module qs #(parameter int N = 16, parameter int W = 32) (
     , .cmd_push_dat      ()
     , .cmd_clr           ()
     //
-    , .cmd_pop_dat_r     ()
+    , .head_r            ()
+    //
+    , .cmd_err_w         ()
     //
     , .empty_w           ()
     , .full_w            ()
@@ -1013,16 +729,16 @@ module qs #(parameter int N = 16, parameter int W = 32) (
   //
   generate for (genvar g = 0; g < qs_pkg::BANK_N; g++) begin
   
-    spsram #(.W(W), .N(N)) u_spsram_bank (
+    spsram #(.W(W), .N(N)) u_bank (
       //
         .clk           (clk                       )
       //
-      , .en            (spsram_bank_en [g]        )
-      , .wen           (spsram_bank_wen [g]       )
-      , .addr          (spsram_bank_addr [g]      )
-      , .din           (spsram_bank_din [g]       )
+      , .en            (bank_en [g]               )
+      , .wen           (bank_wen [g]              )
+      , .addr          (bank_addr [g]             )
+      , .din           (bank_din [g]              )
       //
-      , .dout          (spsram_bank_dout [g]      )
+      , .dout          (bank_dout [g]             )
     );
 
   end endgenerate

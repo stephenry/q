@@ -391,6 +391,7 @@ package qs_insts_pkg;
   end endfunction
 
   function automatic inst_t inst_pop(reg_t r); begin
+    // TODO: introduce one cycle hazard on pop.
     inst_pop = inst_default();
     //
     inst_pop.opcode          = PP;
