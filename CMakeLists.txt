@@ -44,12 +44,20 @@ option(OPT_VERBOSE "Verbose logging." OFF)
 
 # Configure RTL
 
-# The number of entries in the bid table.
+# The maximum number of elements to be counted.
 set(OPT_N 16 CACHE STRING "The number of values to sort.")
 
+# The width of each sorted element
 set(OPT_W 32 CACHE STRING "The width of each sorted value.")
 
+# The number of internal banks
+set(OPT_BANKS_N 3 CACHE STRING "The number of internal sorting banks.")
+
 find_package(Verilator)
+
+message(STATUS "Parameter: N = ${OPT_N}")
+message(STATUS "Parameter: W = ${OPT_W}")
+message(STATUS "Parameter: BANKS_N = ${OPT_BANKS_N}")
 
 add_subdirectory(third_party)
 add_subdirectory(pd)

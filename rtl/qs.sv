@@ -501,18 +501,18 @@ module qs #(// The maximum number of entries in the sort vector.,
       DEQUEUE_FSM_IDLE: begin
 
         if (bank_sorted [dequeue_bank_idx_r]) begin
-          bank_state_t st = bank_state_r [dequeue_bank_idx_r];
+          bank_state_t st   = bank_state_r [dequeue_bank_idx_r];
           
-          dequeue_en              = 'b1;
-          dequeue_addr            = 'b0;
+          dequeue_en 	    = 'b1;
+          dequeue_addr 	    = 'b0;
 
           //
-          dequeue_out_vld_w  = '1;
-          dequeue_out_w.sop  = '1;
-          dequeue_out_w.err  = st.error;
+          dequeue_out_vld_w = '1;
+          dequeue_out_w.sop = '1;
+          dequeue_out_w.err = st.error;
 
-          dequeue_bank_en         = 'b1;
-          dequeue_bank            = st;
+          dequeue_bank_en   = 'b1;
+          dequeue_bank 	    = st;
           
           if (st.n == '0) begin
             dequeue_out_w.eop  = '1;

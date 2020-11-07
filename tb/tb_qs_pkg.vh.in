@@ -36,5 +36,8 @@ package tb_qs_pkg;
   // The number of items to sort.
   localparam int OPT_N = ${OPT_N};
 
+  // The number of internal sorter banks.
+  localparam int OPT_BANKS_N = ${OPT_BANKS_N};
+
 endpackage // tb_qs_pkg
 `endif

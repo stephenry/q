@@ -52,6 +52,8 @@ constexpr std::size_t OPT_N = ${OPT_N};
 
 constexpr std::size_t OPT_W = ${OPT_W};
 
+constexpr std::size_t OPT_BANKS_N = ${OPT_BANKS_N};
+
 using word_type = vluint32_t;
 
 std::ostream& operator<<(std::ostream& os, const std::vector<word_type>& dp);
