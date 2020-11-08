@@ -27,7 +27,7 @@
 
 `include "qs_insts_pkg.vh"
 
-module qs_ucode_rom (
+module qs_srt_ucode_rom (
 
    //======================================================================== //
    //                                                                         //
@@ -263,4 +263,4 @@ module qs_ucode_rom (
 
   end // block: quicksort_prog_PROC
 
-endmodule // qs_ucode_rom
+endmodule // qs_srt_ucode_rom

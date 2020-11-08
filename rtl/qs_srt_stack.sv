@@ -239,4 +239,4 @@ module qs_srt_stack #(parameter int N = 16, parameter int W = 32) (
     , .dout         (stack_mem_dout     )
   );
 
-endmodule // qs_stack
+endmodule // qs_srt_stack

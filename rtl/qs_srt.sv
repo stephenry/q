@@ -184,7 +184,7 @@ module qs_srt (
 
   // ------------------------------------------------------------------------ //
   //
-  qs_ucode_rom u_qs_ucode_rom (
+  qs_srt_ucode_rom u_qs_srt_ucode_rom (
     //
       .ra                (fa_pc_r                 )
     //
@@ -195,7 +195,7 @@ module qs_srt (
   //
   qs_insts_pkg::ucode_t                 xa_ucode;
   
-  qs_ucode_decoder u_qs_ucode_decoder (
+  qs_srt_ucode_decoder u_qs_srt_ucode_decoder (
     //
       .inst              (xa_inst_r               )
     //

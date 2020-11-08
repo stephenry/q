@@ -27,7 +27,7 @@
 
 `include "qs_insts_pkg.vh"
 
-module qs_ucode_decoder (
+module qs_srt_ucode_decoder (
 
    //======================================================================== //
    //                                                                         //
@@ -162,4 +162,4 @@ module qs_ucode_decoder (
 
   end // block: decode_PROC
 
-endmodule // qs_ucode_decoder
+endmodule // qs_srt_ucode_decoder
