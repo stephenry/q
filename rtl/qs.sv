@@ -171,6 +171,28 @@ module qs #(// The maximum number of entries in the sort vector.,
   logic 	                        xa_commit;
   logic 				xa_adv;
   logic 				xa_cc_hit;
+  `LIBV_REG_RST(logic, ca_rf_wen, 'b0);
+  `LIBV_REG_EN(qs_insts_pkg::reg_t, ca_rf_wa);
+  `LIBV_REG_EN(w_t, ca_rf_wdata);
+  logic                                 xa_src0_forward;
+  logic                                 xa_src1_forward;
+  //
+  w_t                                   xa_dp_alu_0;
+  w_t                                   xa_dp_alu_1_pre;
+  w_t                                   xa_dp_alu_1;
+  logic                                 xa_dp_alu_cin;
+  w_t                                   xa_dp_alu_y;
+  logic                                 xa_dp_alu_cout;
+  //
+  `LIBV_REG_RST(logic, xa_stack_cmd_vld, 'b0);
+
+  typedef struct packed {
+    logic 	    push;
+    w_t             push_dat;
+    logic           clr;
+  } xa_stack_cmd_t;
+
+  `LIBV_REG_EN(xa_stack_cmd_t, xa_stack_cmd);
 
   // Commit Stage (CA)
   `LIBV_REG_RST(logic, ca_replay, 'b0);
@@ -181,6 +203,7 @@ module qs #(// The maximum number of entries in the sort vector.,
     logic 	 c;
     // Negative bit
     logic 	 n;
+
     // Zero bit
     logic 	 z;
   } ar_flags_t;
@@ -354,44 +377,27 @@ module qs #(// The maximum number of entries in the sort vector.,
 
   // ------------------------------------------------------------------------ //
   //
-  w_t                                   alu_a;
-  w_t                                   alu_b;
-  logic                                 alu_cin;
-  w_t                                   alu_y;
-  logic                                 alu_cout;
+  always_comb begin : xa_rf_PROC
+
+    // Register file lookup
+
+    //
+    rf_ren [0] 	    = xa_vld_r;
+    rf_ra [0] 	    = xa_ucode.src0;
+
+    //
+    rf_ren [1] 	    = xa_vld_r;
+    rf_ra [1] 	    = xa_ucode.src1;
+
+    // Forwarding (CA -> XA)
+    xa_src0_forward = ca_rf_wen_r & rf_ren [0] & (rf_ra [0] == ca_rf_wa_r);
+    xa_src1_forward = ca_rf_wen_r & rf_ren [1] & (rf_ra [1] == ca_rf_wa_r);
+
+  end // block: xa_rf_PROC
   
-  always_comb begin : xa_PROC
-
-    // Instruction in XA is stalled.
-    //
-    casez ({// Current instruction is an await
-	    xa_ucode.is_await
-	    })
-      1'b1: begin
-	// Await for the current nominated stall to become ready
-	xa_stall = (bank_state_r [sort_bank_idx_r].status != BANK_READY);
-      end
-      default: begin
-	xa_stall = 'b0;
-      end
-    endcase
-
-    // Instruction in XA is killed.
-    xa_kill   = (ca_replay_r);
-
-    // Instruction in XA advances.
-    xa_adv    = xa_vld_r & (~xa_stall) & (~xa_kill);
-
-    // Instruction in XA commits.
-    xa_commit = xa_adv;
-
-    //
-    xa_vld_w = fa_vld_r;
-
-
-    //
-    xa_pc_en = 'b0;
-    xa_pc_w  = fa_pc_r;
+  // ------------------------------------------------------------------------ //
+  //
+  always_comb begin : xa_datapath_PROC
 
     // Consider Condition Code (CC) for current instruction.
     //
@@ -414,70 +420,173 @@ module qs #(// The maximum number of entries in the sort vector.,
       end
     endcase // case (xa_ucode)
 
+    // Compute ALU input A.
+    //
+    casez ({// Instruction is zero; uninitialized.
+	    xa_ucode.src0_is_zero,
+	    // Forward writeback
+	    xa_src0_forward
+	    })
+      2'b1?: begin
+	// Inject '0.
+	xa_dp_alu_0 = '0;
+      end
+      2'b01: begin
+	// Forward writeback
+	xa_dp_alu_0 = ca_rf_wdata_r;
+      end
+      default: begin
+	// Otherwise, select register-file state.
+	xa_dp_alu_0 = rf_rdata [0];
+      end
+    endcase // casez ({...
 
-    casez ({1'b0})
-      default: alu_a = '0;
-    endcase // casez ({})
-
-
-    casez ({1'b0})
-      default: alu_b = '0;
-    endcase // casez ({})
+    // Compute ALU input B.
+    //
+    casez ({// Instruction has special field.
+	    xa_ucode.has_special,
+	    // Instruction has immediate
+	    xa_ucode.has_imm,
+	    // Forward writeback
+	    xa_src1_forward
+	    })
+      3'b1??: begin
+	// Inject "special" register.
+	case (xa_ucode.special)
+	  qs_insts_pkg::REG_N: begin
+	    // Inject bank word count and extend as necessary.
+	    xa_dp_alu_1_pre = w_t'(bank_state_r [sort_bank_idx_r].n);
+	  end
+	  default: begin
+	    // Otherwise, unknown register. Instruction should have
+	    // been flagged as invalid during initial decode.
+	    xa_dp_alu_1_pre = '0;
+	  end
+	endcase
+      end
+      3'b01?: begin
+	// Inject ucode immediate field and extend as appropriate.
+	xa_dp_alu_1_pre = w_t'(xa_ucode.imm);
+      end
+      3'b001: begin
+	// Forward writeback
+	xa_dp_alu_1_pre = ca_rf_wdata_r;
+      end
+      default: begin
+	// Otherwise, inject register file data.
+	xa_dp_alu_1_pre = rf_rdata [1];
+      end
+    endcase // casez ({...
 
     // Inject arithmetic unit carry-in.
-    alu_cin 		= xa_ucode.cin;
+    xa_dp_alu_cin = xa_ucode.cin;
+
+    // Conditionally invert ALU input, if required.
+    xa_dp_alu_1   = xa_dp_alu_1_pre ^ {W{xa_ucode.inv_src1}};
 
     // Compute output of arithmetic unit.
-    { alu_cout, alu_y } = alu_a + alu_b + (alu_cin ? 'h1 : 'h0);
+    { xa_dp_alu_cout, xa_dp_alu_y } = 
+       xa_dp_alu_0 + xa_dp_alu_1 + (xa_dp_alu_cin ? 'h1 : 'h0);
 
     // Architectural flags
-    ar_flags_en 	= xa_commit;
+    ar_flags_en  = xa_commit & xa_ucode.flag_en;
 
-    ar_flags_w 		= '0;
-    ar_flags_w.c 	= alu_cout;
-    ar_flags_w.n 	= alu_y [$left(alu_y)];
-    ar_flags_w.z 	= (alu_y == '0);
+    ar_flags_w 	 = '0;
+    ar_flags_w.c = xa_dp_alu_cout;
+    ar_flags_w.n = xa_dp_alu_y [$left(xa_dp_alu_y)];
+    ar_flags_w.z = (xa_dp_alu_y == '0);
 
     // Write to register file.
-    rf_wen 		= xa_commit & xa_ucode.dst_en;
-    rf_wa 		= xa_ucode.dst;
-
+    ca_rf_wen_w  = xa_commit & xa_ucode.dst_en;
+    ca_rf_wa_w 	 = xa_ucode.dst;
 
     // Decide value to be written back (if applicable) to the
     // architectural register file.
     //
     casez ({ // Write top of stack.
 	     xa_ucode.is_pop,
-	     // Write current architectural program counter.
+	     // Write link address (PC + 1)
 	     xa_ucode.dst_is_blink,
 	     // Write word from current bank.
 	     xa_ucode.is_load
 	    })
       3'b1??: begin
-	//
-	rf_wdata = qs_stack_head_r;
+	// Write current stack head.
+	ca_rf_wdata_w = qs_stack_head_r;
       end
       3'b01?: begin
-	//
-	rf_wdata = '0;
+	// Writing to the BLINK register therefore write the link
+	// address for the current instruction (the next instruction).
+	ca_rf_wdata_w = w_t'(xa_pc_r) + 'b1;
       end
       3'b001: begin
-	//
-	rf_wdata = '0;
+	// Write data returning from currently owned bank.
+	ca_rf_wdata_w = bank_dout [sort_bank_idx_r];
       end
-      default: begin 
-	rf_wdata = alu_y;
+      default: begin
+	// Otherwise, write ALU output.
+	ca_rf_wdata_w = xa_dp_alu_y;
       end
-    endcase
+    endcase // casez ({...
 
-    ca_replay_w    = 1'b0;
-    ca_replay_pc_w = '0;
+    // Compute replay condition which occurs on the commit of a
+    // flow-control instruction (jump, ret, call). On commit, the
+    // pipeline is restarted from the new program counter and old
+    // instructions in the pipeline are killed.
+    //
+    casez ({ // Instruction commits
+	     xa_commit,
+	     //
+	     xa_ucode.is_jump, xa_cc_hit,
+	     //
+	     xa_ucode.is_ret,
+	     //
+	     xa_ucode.is_call
+	    })
+      5'b1_11_?_?: begin
+	// Conditional jump and condition has been met.
+	ca_replay_w    = 'b1;
+	ca_replay_pc_w = xa_ucode.target;
+      end
+      5'b1_0?_1_?: begin
+	// RET instruction
+	ca_replay_w    = 'b1;
+	ca_replay_pc_w = qs_insts_pkg::pc_t'(xa_dp_alu_1);
+      end
+      5'b1_0?_0_1: begin
+	// CALL instruction
+	ca_replay_w    = 'b1;
+	ca_replay_pc_w = qs_insts_pkg::pc_t'(xa_dp_alu_1);
+      end
+      default: begin
+	ca_replay_w    = 'b1;
+	ca_replay_pc_w = '0;
+      end
+    endcase // casez ({...
 
-    // Enables:
-    ca_replay_pc_en 	= ca_replay_w;
-    
-  end // block: xa_PROC
+    // Latch replay PC on valid replay.
+    ca_replay_pc_en 	  = ca_replay_w;
+        
+  end // block: xa_datapath_PROC
   
+  // ------------------------------------------------------------------------ //
+  //
+  always_comb begin : xa_stack_PROC
+
+    // Issue stack command
+    xa_stack_cmd_vld_w 	    = xa_commit & (xa_ucode.is_push | xa_ucode.is_pop);
+
+    // Stack command state
+    xa_stack_cmd_en 	    = xa_stack_cmd_vld_w;
+    xa_stack_cmd_w 	    = '0;
+    xa_stack_cmd_w.push     = xa_ucode.is_push;
+    xa_stack_cmd_w.push_dat = xa_dp_alu_1;
+
+    // Unused
+    xa_stack_cmd_w.clr 	    = 'b0;
+
+  end // block: xa_stack_PROC
+    
   // ------------------------------------------------------------------------ //
   //
   `LIBV_REG_EN(bank_id_t, sort_bank_idx);
@@ -486,7 +595,7 @@ module qs #(// The maximum number of entries in the sort vector.,
   bank_state_t                          sort_bank;
   logic                                 sort_bank_en;
   //
-  always_comb begin : sort_bank_PROC
+  always_comb begin : xa_bank_PROC
 
     // Sort bank index update.
     sort_bank_idx_en = 'b0;
@@ -525,7 +634,43 @@ module qs #(// The maximum number of entries in the sort vector.,
     sort_addr = '0;
     sort_din  = '0;
 
-  end // block: sort_bank_PROC
+  end // block: xa_bank_PROC
+  
+  // ------------------------------------------------------------------------ //
+  //
+  always_comb begin : xa_pipe_cntrl_PROC
+
+    // Instruction in XA is stalled.
+    //
+    casez ({// Current instruction is an await
+	    xa_ucode.is_await
+	    })
+      1'b1: begin
+	// Await for the current nominated stall to become ready
+	xa_stall = (bank_state_r [sort_bank_idx_r].status != BANK_READY);
+      end
+      default: begin
+	xa_stall = 'b0;
+      end
+    endcase // casez ({...
+
+    // Instruction in XA is killed.
+    xa_kill   = (ca_replay_r);
+
+    // Instruction in XA advances.
+    xa_adv    = xa_vld_r & (~xa_stall) & (~xa_kill);
+
+    // Instruction in XA commits.
+    xa_commit = xa_adv;
+
+    //
+    xa_vld_w  = fa_vld_r;
+
+    //
+    xa_pc_en  = fa_adv;
+    xa_pc_w   = fa_pc_r;
+
+  end // block: xa_pipe_cntrl_PROC
 
   // ------------------------------------------------------------------------ //
   //
@@ -717,7 +862,7 @@ module qs #(// The maximum number of entries in the sort vector.,
         end
         3'b001: begin
           bank_state_en [i] = 'b1;
-          bank_state_w [i]  = bank_state_r [i]; // WTF?
+          bank_state_w [i]  = dequeue_bank;
         end
         default: begin
           bank_state_en [i] = 'b0;
@@ -918,5 +1063,28 @@ module qs #(// The maximum number of entries in the sort vector.,
     );
 
   end endgenerate // for (genvar g = 0; g < BANKS_N; g++)
+  
+  // ======================================================================== //
+  //                                                                          //
+  // Wires/Synonyms                                                           //
+  //                                                                          //
+  // ======================================================================== //
+
+  // ------------------------------------------------------------------------ //
+  //
+  always_comb begin : wires_PROC
+
+    // Register file write interface:
+    rf_wen 		  = ca_rf_wen_r;
+    rf_wa 		  = ca_rf_wa_r;
+    rf_wdata 		  = ca_rf_wdata_r;
+
+    // Stack command interface:
+    qs_stack_cmd_vld 	  = xa_stack_cmd_vld_r;
+    qs_stack_cmd_push 	  = xa_stack_cmd_r.push;
+    qs_stack_cmd_push_dat = xa_stack_cmd_r.push_dat;
+    qs_stack_cmd_clr 	  = xa_stack_cmd_r.clr;
+
+  end // block: wires_PROC
 
 endmodule // qs
