@@ -142,7 +142,7 @@ package qs_insts_pkg;
         field_A_t a;
       } cret;
       struct  packed {
-        logic is_emit;
+        logic is_done;
         logic [10:0] padding;
       } cntrl;
     } u;
@@ -150,8 +150,8 @@ package qs_insts_pkg;
 
   // Decoded horizontal microcode.
   typedef struct packed {
-    logic            is_emit;
-    logic            is_wait;
+    logic            is_done;
+    logic            is_await;
     logic            is_call;
     logic            is_ret;
     logic            is_load;
@@ -240,120 +240,6 @@ package qs_insts_pkg;
     return inst[7:0];
   endfunction // CC_field
 
-  // Procedure to decode an instruction; convert packed instruction to
-  // horizontal microcode.
-  function automatic ucode_t decode(inst_t inst); begin
-    logic sel      = SEL_field(inst);
-    ucode_t ucode  = '0;
-    // COMMON
-    ucode.imm      = I_field(inst);
-    ucode.dst      = R_field(inst);
-    ucode.src0     = S_field(inst);
-    ucode.src1     = U_field(inst);
-    ucode.special  = SPECIAL_field(inst);
-    ucode.cc       = CC_field(inst);
-    ucode.target   = A_field(inst);
-    
-    case (inst.opcode)
-      NOP: begin
-      end
-      JCC: begin
-        // Jcc
-        ucode.is_jump  = 'b1;
-      end
-      PP: begin
-        case (sel)
-          1'b1: begin
-            // POP
-            ucode.is_pop  = 'b1;
-            ucode.dst_en  = 'b1;
-          end
-          default: begin
-            // PUSH
-            ucode.is_push       = 'b1;
-            ucode.src1_en       = 'b1;
-            ucode.src0_is_zero  = 'b1;
-          end
-        endcase
-      end
-      MEM: begin
-        ucode.src1_en   = 'b1;
-        case (sel)
-          1'b1: begin
-            // ST
-            ucode.is_store  = 'b1;
-            ucode.src0_en   = 'b1;
-          end
-          default: begin
-            // LD
-            ucode.is_load  = 'b1;
-            ucode.dst_en   = 'b1;
-          end
-        endcase // case (sel)
-      end
-      MOV: begin
-        ucode.dst_en        = 'b1;
-        ucode.src0_is_zero  = 'b1;
-        unique0 casez ({inst[11],inst[3]})
-          // MOV
-          2'b00:   ucode.src1_en      = 'b1;
-          // MOVI
-          2'b01:   ucode.has_imm      = 'b1;
-          // MOVS
-          2'b1?:   ucode.has_special  = 'b1;
-        endcase // unique0 casez ({inst[11],inst[3]})
-      end
-      ARITH: begin
-        ucode.dst_en   = W_field(inst);
-        ucode.flag_en  = 'b1;
-        ucode.src0_en  = 'b1;
-        if (IMM_field(inst))
-          // {ADD,SUB}I
-          ucode.has_imm  = 'b1;
-        else
-          // {ADD,SUB}
-          ucode.src1_en  = 'b1;
-        if (sel) begin
-          // SUB
-          ucode.inv_src1  = 'b1;
-          ucode.cin       = 'b1;
-        end
-      end
-      CRET: begin
-        ucode.is_jump       = 'b1;
-        ucode.src0_is_zero  = 'b1;
-        case (sel)
-          1'b1: begin
-            // RET
-            ucode.is_ret   = 'b1;
-            ucode.src1_en  = 'b1;
-            ucode.src1     = BLINK;
-          end
-          default: begin
-            // CALL
-            ucode.is_call  = 'b1;
-            ucode.dst_en   = 'b1;
-            ucode.dst      = BLINK;
-          end
-        endcase // case (inst.u.cret.is_call)
-      end
-      CNTRL: begin
-        if (sel)
-          ucode.is_emit  = 'b1;
-        else
-          ucode.is_wait  = 'b1;
-      end
-      default: begin
-        ucode.invalid_inst  = 'b1;
-      end
-    endcase // case (inst.opcode)
-
-    //
-    ucode.dst_is_blink  = (ucode.dst == BLINK);
-    
-    return ucode;
-  end endfunction
-
   function automatic inst_t j (pc_t dest, cc_t cc = UNCOND); begin
     j = '0;
     //
@@ -362,19 +248,24 @@ package qs_insts_pkg;
     j.u.jcc.A   = field_A_t'(dest);
   end endfunction
 
+  // Await instruction; awaits ready status of the currently selected
+  // bank.
   function automatic inst_t await; begin
     await = '0;
     //
     await.opcode  = CNTRL;
   end endfunction
 
-  function automatic inst_t emit; begin
-    emit = '0;
+  // Done instruction; notifies completion status of the currently
+  // selected bank.
+  function automatic inst_t done; begin
+    done = '0;
     //
-    emit.opcode           = CNTRL;
-    emit.u.cntrl.is_emit  = 'b1;
+    done.opcode           = CNTRL;
+    done.u.cntrl.is_done  = 'b1;
   end endfunction
 
+  // Call instruction
   function automatic inst_t call(pc_t dest); begin
     call = '0;
     //
@@ -382,6 +273,7 @@ package qs_insts_pkg;
     call.u.cret.a  = field_A_t'(dest);
   end endfunction
 
+  // Return instruction
   function automatic inst_t ret; begin
     ret = '0;
     //
@@ -389,6 +281,7 @@ package qs_insts_pkg;
     ret.u.cret.is_ret  = 'b1;
   end endfunction
 
+  // Push instruction
   function automatic inst_t push(reg_t r); begin
     push = '0;
     //
@@ -396,6 +289,7 @@ package qs_insts_pkg;
     push.u.pp.u.push.src1  = r;
   end endfunction
 
+  // Pop instruction
   function automatic inst_t pop(reg_t r); begin
     // TODO: introduce one cycle hazard on pop.
     pop = '0;
@@ -405,6 +299,7 @@ package qs_insts_pkg;
     pop.u.pp.u.pop.dst  = r;
   end endfunction
 
+  // Move instruction; reg[dst] <- reg[src0]
   function automatic inst_t mov(reg_t dst, reg_t src0); begin
     mov = '0;
     //
@@ -413,6 +308,7 @@ package qs_insts_pkg;
     mov.u.mov.u.src  = src0;
   end endfunction
 
+  // Move Immediate instruction; reg[dst] <- ext(imm);
   function automatic inst_t movi(reg_t dst, imm_t imm); begin
     movi = '0;
     //
@@ -422,6 +318,7 @@ package qs_insts_pkg;
     movi.u.mov.u.imm   = imm;
   end endfunction
 
+  // Move "Special" instruction reg[dst] <- special[src1]
   function automatic inst_t movs(reg_t dst, reg_special_t src1); begin
     movs = '0;
     //
@@ -431,6 +328,7 @@ package qs_insts_pkg;
     movs.u.mov.u.special   = src1;
   end endfunction
 
+  // Add instruction (immediate); reg[dst] = reg[src0] + imm
   function automatic inst_t addi(reg_t dst, reg_t src0, imm_t imm,
 		 bit dst_en = 'b1); begin
     addi = '0;
@@ -443,6 +341,7 @@ package qs_insts_pkg;
     addi.u.arith.wren    = dst_en;
   end endfunction
 
+  // Subtract instruction (immediate); reg[dst] = reg[src0] - imm
   function automatic inst_t subi(reg_t dst, reg_t src0, imm_t imm,
 		 bit dst_en = 'b1); begin
     subi = '0;
@@ -456,6 +355,7 @@ package qs_insts_pkg;
     subi.u.arith.wren    = dst_en;
   end endfunction
 
+  // Subtract instructon: reg[dst] <- reg[src0] - reg[src1]
   function automatic inst_t sub(reg_t dst, reg_t src0, reg_t src1,
 		bit dst_en = 'b1); begin
     sub = '0;
@@ -468,6 +368,7 @@ package qs_insts_pkg;
     sub.u.arith.u.src1  = src1;
   end endfunction
 
+  // Load instruction: reg[dst] <- mem[src1]
   function automatic inst_t ld(reg_t dst, reg_t src1); begin
     ld = '0;
     //
@@ -476,6 +377,7 @@ package qs_insts_pkg;
     ld.u.mem.u.ld.src1  = src1;
   end endfunction
 
+  // Store instruction: mem[src0] <- reg[src1]
   function automatic inst_t st(reg_t src0, reg_t src1); begin
     st = '0;
     //

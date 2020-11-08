@@ -184,10 +184,10 @@ module qs_stack #(parameter int N = 16, parameter int W = 32) (
 	// Data from stack memory becomes valid in the next cycle.
 	stack_was_read_w = 'b1;
 	
-	stack_mem_en 	 = 'b1;
-	stack_mem_wen 	 = 'b0;
-	stack_mem_addr 	 = rd_ptr_r;
-	stack_mem_din 	 = cmd_push_dat;
+	stack_mem_en   = 'b1;
+	stack_mem_wen  = 'b0;
+	stack_mem_addr = rd_ptr_r;
+	stack_mem_din  = cmd_push_dat;
       end
       3'b1_0_1: begin
 	// Push command

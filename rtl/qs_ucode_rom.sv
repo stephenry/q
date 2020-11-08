@@ -45,7 +45,6 @@ module qs_ucode_rom (
   import qs_insts_pkg::*;
 
   // ------------------------------------------------------------------------ //
-  //
   // Algorithm:
   //
   // function partition (lo, hi) is
@@ -123,7 +122,7 @@ module qs_ucode_rom (
   //               : LD R1, [R4]      ;
   //               : ST [R3], R1      ;
   //               : ST [R4], R0      ;
-  //               : MOV R0,R3        ; ret <- pivot
+  //               : MOV R0, R3       ; ret <- pivot
   //               : POP R6           ;
   //               : POP R5           ;
   //               : POP R4           ;
@@ -155,12 +154,12 @@ module qs_ucode_rom (
   //               : RET              ; PC <- BLINK
   //
   //  PROC START:
-  //   __start     : WAIT             ; wait until queue_ready == 1
+  //   __start     : AWAIT            ; wait until queue_ready == 1
   //
-  //               : MOVI R0, 0       ;
-  //               : MOVS R1, N       ; 
+  //               : MOVI R0, 0       ; R0 <- "Initial LO"
+  //               : MOVS R1, N       ; R1 <- "Initial HI (N)" 
   //               : CALL __qs        ; call quicksort(A, lo, hi);
-  //               : EMIT             ;
+  //               : DONE             ;
   //               : J __main         ; goto __main
   //
 
@@ -252,10 +251,10 @@ module qs_ucode_rom (
       SYM_START +       1: rout = movi(R0, '0);
       SYM_START +       2: rout = movs(R1, REG_N);
       SYM_START +       3: rout = call(SYM_QUICKSORT);
-      SYM_START +       4: rout = emit();
+      SYM_START +       4: rout = done();
       SYM_START +       5: rout = j(SYM_START);
 
-      // Error lable (jump to self for all enternity).
+      // Error label (jump to self for all enternity).
       SYM_ERR            : rout = j(SYM_ERR);
             
       default:             rout = j(SYM_ERR);
