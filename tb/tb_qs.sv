@@ -66,7 +66,7 @@ module tb_qs (
 
   // ------------------------------------------------------------------------ //
   //
-  qs #(.W(tb_qs_pkg::OPT_W), .N(tb_qs_pkg::OPT_N)) u_qs (
+  qs u_qs (
     //
       .in_vld                 (in_vld                  )
     , .in_sop                 (in_sop                  )
