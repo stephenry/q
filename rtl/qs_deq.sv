@@ -56,10 +56,10 @@ module qs_deq (
    , output qs_pkg::bank_state_t                  bnk_out_r
    , output qs_pkg::bank_id_t                     bnk_idx_r
    //
-   , input qs_pkg::w_t                            deq_rd_data_r
+   , input qs_pkg::w_t                            rd_data_r
    //
-   , output logic                                 deq_rd_en_r
-   , output qs_pkg::addr_t                        deq_rd_addr_r
+   , output logic                                 rd_en_r
+   , output qs_pkg::addr_t                        rd_addr_r
 
    //======================================================================== //
    //                                                                         //

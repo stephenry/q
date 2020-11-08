@@ -44,14 +44,14 @@ module qs_srt (
    , output qs_pkg::bank_state_t                  bnk_out_r
    , output qs_pkg::bank_id_t                     bnk_idx_r
    //
-   , input qs_pkg::w_t                            srt_rd_data_r
+   , input qs_pkg::w_t                            rd_data_r
    //
-   , output logic                                 srt_rd_en_r
-   , output qs_pkg::addr_t                        srt_rd_addr_r
+   , output logic                                 rd_en_r
+   , output qs_pkg::addr_t                        rd_addr_r
    //
-   , output logic                                 srt_wr_en_r
-   , output qs_pkg::addr_t                        srt_wr_addr_r
-   , output qs_pkg::w_t                           srt_wr_data_r
+   , output logic                                 wr_en_r
+   , output qs_pkg::addr_t                        wr_addr_r
+   , output qs_pkg::w_t                           wr_data_r
 
    //======================================================================== //
    //                                                                         //

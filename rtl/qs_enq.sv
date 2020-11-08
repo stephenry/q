@@ -57,9 +57,9 @@ module qs_enq (
    , output qs_pkg::bank_state_t                  bnk_out_r
    , output qs_pkg::bank_id_t                     bnk_idx_r
    //
-   , output logic                                 enq_wr_en_r
-   , output qs_pkg::addr_t                        enq_wr_addr_r
-   , output qs_pkg::w_t                           enq_wr_data_r
+   , output logic                                 wr_en_r
+   , output qs_pkg::addr_t                        wr_addr_r
+   , output qs_pkg::w_t                           wr_data_r
 
    //======================================================================== //
    //                                                                         //
