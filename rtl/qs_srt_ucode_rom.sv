@@ -25,7 +25,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //========================================================================== //
 
-`include "qs_insts_pkg.vh"
+`include "qs_srt_pkg.vh"
 
 module qs_srt_ucode_rom (
 
@@ -36,13 +36,13 @@ module qs_srt_ucode_rom (
    //======================================================================== //
 
    // Input address
-     input qs_insts_pkg::pc_t                     ra
+     input qs_srt_pkg::pc_t                     ra
 
    // Instruction
-   , output qs_insts_pkg::inst_t                  rout
+   , output qs_srt_pkg::inst_t                  rout
 );
   // Import everything in this scope for readability.
-  import qs_insts_pkg::*;
+  import qs_srt_pkg::*;
 
   // ------------------------------------------------------------------------ //
   // Algorithm:

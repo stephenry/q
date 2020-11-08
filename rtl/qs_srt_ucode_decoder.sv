@@ -25,7 +25,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //========================================================================== //
 
-`include "qs_insts_pkg.vh"
+`include "qs_srt_pkg.vh"
 
 module qs_srt_ucode_decoder (
 
@@ -35,13 +35,13 @@ module qs_srt_ucode_decoder (
    //                                                                         //
    //======================================================================== //
 
-     input qs_insts_pkg::inst_t                   inst
+     input qs_srt_pkg::inst_t                   inst
    //
-   , output qs_insts_pkg::ucode_t                 ucode
+   , output qs_srt_pkg::ucode_t                 ucode
 );
 
   // Import everything into this scope for readability
-  import qs_insts_pkg::*;
+  import qs_srt_pkg::*;
 
   // ------------------------------------------------------------------------ //
   //

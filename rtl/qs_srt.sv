@@ -26,6 +26,7 @@
 //========================================================================== //
 
 `include "qs_pkg.vh"
+`include "qs_srt_pkg.vh"
 `include "libv_pkg.vh"
 
 module qs_srt (
@@ -80,33 +81,33 @@ module qs_srt (
 
   // rf:
   logic [1:0]                           rf_ren;
-  qs_insts_pkg::reg_t [1:0]             rf_ra;
+  qs_srt_pkg::reg_t [1:0]             rf_ra;
   qs_pkg::w_t [1:0]                     rf_rdata;
   //
   logic                                 rf_wen;
-  qs_insts_pkg::reg_t                   rf_wa;
+  qs_srt_pkg::reg_t                   rf_wa;
   qs_pkg::w_t                           rf_wdata;
 
   // Pipeline:
 
   // Fetch Stage (FA)
   `LIBV_REG_RST(logic, fa_vld, 1'b0);
-  `LIBV_REG_EN(qs_insts_pkg::pc_t, fa_pc);
+  `LIBV_REG_EN(qs_srt_pkg::pc_t, fa_pc);
   logic                                 fa_stall;
   logic                                 fa_kill;
   logic                                 fa_adv;
 
   // Execute Stage (XA)
   `LIBV_REG_RST(logic, xa_vld, 1'b0);
-  `LIBV_REG_EN(qs_insts_pkg::pc_t, xa_pc);
-  `LIBV_REG_EN(qs_insts_pkg::inst_t, xa_inst);
+  `LIBV_REG_EN(qs_srt_pkg::pc_t, xa_pc);
+  `LIBV_REG_EN(qs_srt_pkg::inst_t, xa_inst);
   logic 	                        xa_stall;
   logic 				xa_kill;
   logic 	                        xa_commit;
   logic 				xa_adv;
   logic 				xa_cc_hit;
   `LIBV_REG_RST(logic, ca_rf_wen, 'b0);
-  `LIBV_REG_EN(qs_insts_pkg::reg_t, ca_rf_wa);
+  `LIBV_REG_EN(qs_srt_pkg::reg_t, ca_rf_wa);
   `LIBV_REG_EN(qs_pkg::w_t, ca_rf_wdata);
   logic                                 xa_src0_forward;
   logic                                 xa_src1_forward;
@@ -130,7 +131,7 @@ module qs_srt (
 
   // Commit Stage (CA)
   `LIBV_REG_RST(logic, ca_replay, 'b0);
-  `LIBV_REG_EN(qs_insts_pkg::pc_t, ca_replay_pc);
+  `LIBV_REG_EN(qs_srt_pkg::pc_t, ca_replay_pc);
 
   typedef struct packed {
     // Carry bit
@@ -193,7 +194,7 @@ module qs_srt (
 
   // ------------------------------------------------------------------------ //
   //
-  qs_insts_pkg::ucode_t                 xa_ucode;
+  qs_srt_pkg::ucode_t                 xa_ucode;
   
   qs_srt_ucode_decoder u_qs_srt_ucode_decoder (
     //
@@ -229,15 +230,15 @@ module qs_srt (
     // Consider Condition Code (CC) for current instruction.
     //
     case (xa_ucode.cc)
-      qs_insts_pkg::EQ: begin
+      qs_srt_pkg::EQ: begin
 	// Architectural flags compare equal.
 	xa_cc_hit =   ar_flags_r.z;
       end
-      qs_insts_pkg::GT: begin
+      qs_srt_pkg::GT: begin
 	// Architectural flags compare greater-than or equal.
 	xa_cc_hit = (~ar_flags_r.z) & (~ar_flags_r.n);
       end
-      qs_insts_pkg::LE: begin
+      qs_srt_pkg::LE: begin
 	// Architectural flags compare less-than or equal.
 	xa_cc_hit =   ar_flags_r.z  |   ar_flags_r.n;
       end
@@ -280,7 +281,7 @@ module qs_srt (
       3'b1??: begin
 	// Inject "special" register.
 	case (xa_ucode.special)
-	  qs_insts_pkg::REG_N: begin
+	  qs_srt_pkg::REG_N: begin
 	    // Inject bank word count and extend as necessary.
 	    xa_dp_alu_1_pre = qs_pkg::w_t'(bank_state_r [sort_bank_idx_r].n);
 	  end
@@ -378,12 +379,12 @@ module qs_srt (
       5'b1_0?_1_?: begin
 	// RET instruction
 	ca_replay_w    = 'b1;
-	ca_replay_pc_w = qs_insts_pkg::pc_t'(xa_dp_alu_1);
+	ca_replay_pc_w = qs_srt_pkg::pc_t'(xa_dp_alu_1);
       end
       5'b1_0?_0_1: begin
 	// CALL instruction
 	ca_replay_w    = 'b1;
-	ca_replay_pc_w = qs_insts_pkg::pc_t'(xa_dp_alu_1);
+	ca_replay_pc_w = qs_srt_pkg::pc_t'(xa_dp_alu_1);
       end
       default: begin
 	ca_replay_w    = 'b1;

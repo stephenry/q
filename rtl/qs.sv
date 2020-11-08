@@ -26,7 +26,6 @@
 //========================================================================== //
 
 `include "qs_pkg.vh"
-`include "qs_insts_pkg.vh"
 `include "libv_pkg.vh"
 
 module qs (

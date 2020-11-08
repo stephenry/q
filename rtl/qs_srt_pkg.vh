@@ -25,10 +25,10 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //========================================================================== //
 
-`ifndef QS_RTL_QS_INSTS_PKG_VH
- `define QS_RTL_QS_INSTS_PKG_VH
+`ifndef QS_RTL_QS_SRT_PKG_VH
+ `define QS_RTL_QS_SRT_PKG_VH
 
-package qs_insts_pkg;
+package qs_srt_pkg;
 
   // Program counter type.
   typedef logic [7:0] pc_t;
@@ -391,6 +391,6 @@ package qs_insts_pkg;
     nop = '0;
   end endfunction
 
-endpackage // qs_insts_pkg
+endpackage // qs_srt_pkg
 
-`endif //  `ifndef QS_RTL_QS_INSTS_PKG_VH
+`endif //  `ifndef QS_RTL_QS_SRT_PKG_VH
