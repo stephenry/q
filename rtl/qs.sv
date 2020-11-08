@@ -109,9 +109,9 @@ module qs #(// The maximum number of entries in the sort vector.,
 
   typedef struct packed {
     // Flag denoting whether an error has occurred during processing.
-    logic                     error;
-    // Current bank word count.
-    n_t                       n;
+    logic                     err;
+    // Current bank word count (inclusive of final entry).
+    addr_t                    n;
     // Current bank status:
     bank_status_t             status;
   } bank_state_t;
@@ -133,6 +133,24 @@ module qs #(// The maximum number of entries in the sort vector.,
   // Wires                                                                    //
   //                                                                          //
   // ======================================================================== //
+
+  typedef struct packed {
+    logic 	 busy;
+    logic        ready;
+    logic [1:0]  state;
+  } enqueue_fsm_encoding_t;
+  
+  typedef enum   logic [3:0] {  ENQUEUE_FSM_IDLE = 4'b0000,
+                                ENQUEUE_FSM_LOAD = 4'b1101
+                                } enqueue_fsm_t;
+  //
+  `LIBV_REG_EN(enqueue_fsm_encoding_t, enqueue_fsm);
+  `LIBV_REG_EN(bank_id_t, enqueue_bank_idx);
+  `LIBV_REG_EN(addr_t, enqueue_idx);
+  `LIBV_SPSRAM_SIGNALS(enqueue_, W, $clog2(N));
+  //
+  bank_state_t                          enqueue_bank;
+  logic                                 enqueue_bank_en;
 
   // qs_stack:
   logic 		                qs_stack_cmd_vld;
@@ -203,12 +221,58 @@ module qs #(// The maximum number of entries in the sort vector.,
     logic 	 c;
     // Negative bit
     logic 	 n;
-
     // Zero bit
     logic 	 z;
   } ar_flags_t;
   
   `LIBV_REG_EN(ar_flags_t, ar_flags);
+
+  typedef struct packed {
+    logic 	 busy;
+    logic [1:0]  state;
+  } dequeue_fsm_encoding_t;
+  
+  typedef enum   logic [2:0] {  DEQUEUE_FSM_IDLE   = 3'b000,
+                                DEQUEUE_FSM_UNLOAD = 3'b101
+                                } dequeue_fsm_t;
+  //
+  `LIBV_REG_EN(dequeue_fsm_encoding_t, dequeue_fsm);
+  `LIBV_REG_EN(bank_id_t, dequeue_bank_idx);
+  `LIBV_REG_EN(addr_t, dequeue_idx);
+  `LIBV_SPSRAM_SIGNALS(dequeue_, W, $clog2(N));
+  //
+  bank_state_t                          dequeue_bank;
+  logic                                 dequeue_bank_en;
+  //
+  typedef struct packed {
+    logic        sop;
+    logic        eop;
+    logic        err;
+    bank_id_t    idx;
+  } dequeue_t;
+  //
+  `LIBV_REG_RST(logic, dequeue_out_vld, 1'b0);
+  `LIBV_REG_EN(dequeue_t, dequeue_out);
+  //
+  typedef struct packed {
+    logic        sop;
+    logic        eop;
+    logic        err;
+    w_t          dat;
+  } out_t;
+  //
+  `LIBV_REG_RST_W(logic, out_vld, 'b0);
+  `LIBV_REG_EN(out_t, out);
+  //
+  bank_state_t [BANKS_N - 1:0]          bank_state_r;
+  bank_state_t [BANKS_N - 1:0]          bank_state_w;
+  logic [BANKS_N - 1:0]                 bank_state_en;
+  //
+  logic [BANKS_N - 1:0]                 bank_state_enqueue_sel;
+  logic [BANKS_N - 1:0]                 bank_state_sort_sel;
+  logic [BANKS_N - 1:0]                 bank_state_dequeue_sel;
+  //
+  logic [BANKS_N - 1:0]                 bank_sorted;
 
   // ======================================================================== //
   //                                                                          //
@@ -218,109 +282,104 @@ module qs #(// The maximum number of entries in the sort vector.,
 
   // ------------------------------------------------------------------------ //
   //
-  // Enqueue state machine state encodings.
-  typedef enum   logic [2:0] {  ENQUEUE_FSM_IDLE  = 3'b000,
-                                ENQUEUE_FSM_LOAD  = 3'b101
-                                } enqueue_fsm_t;
-  localparam int ENQUEUE_FSM_BUSY_B = 2;
-  //
-  `LIBV_REG_EN(enqueue_fsm_t, enqueue_fsm);
-  `LIBV_REG_EN(bank_id_t, enqueue_bank_idx);
-  `LIBV_REG_EN(addr_t, enqueue_idx);
-  `LIBV_SPSRAM_SIGNALS(enqueue_, W, $clog2(N));
-  //
-  bank_state_t                  enqueue_bank;
-  logic                         enqueue_bank_en;
-  //
-  always_comb begin : enqueue_fsm_PROC
+  always_comb begin : enqueue_PROC
 
-    //
-    enqueue_en 		= '0;
-    enqueue_wen 	= '0;
+    // Defaults:
+
+    // FSM state
+    enqueue_fsm_en 	= 'b0;
+    enqueue_fsm_w 	= enqueue_fsm_r;
+
+    // Bank state
+    enqueue_bank 	= bank_state_r [enqueue_bank_idx_r];
+    enqueue_bank_en 	= 'b0;
+
+    // Bank index
+    enqueue_bank_idx_en = 'b0;
+    enqueue_bank_idx_w 	= bank_id_inc(enqueue_bank_idx_r);
+
+    enqueue_idx_en 	= 'b0;
+    enqueue_idx_w 	= enqueue_idx_r + 'b1;
+    
+    // Enqueue bank update
+    enqueue_en 		= 'b0;
+    enqueue_wen 	= 'b1;
     enqueue_addr 	= '0;
     enqueue_din 	= in_dat;
-
-    //
-    enqueue_bank_idx_en = '0;
-    enqueue_bank_idx_w 	= enqueue_bank_idx_r + 1'b1;
-
-    //
-    enqueue_bank 	= '0;
-    enqueue_bank_en 	= '0;
-
-    //
-    enqueue_fsm_w 	= enqueue_fsm_r;
 
     case (enqueue_fsm_r)
 
       ENQUEUE_FSM_IDLE: begin
+	// Enqueue FSM is IDLE awaiting for the current selected bank
+	// to become READY. When it becomes READY, bank transitions to
+	// the LOADING status and entries are pushed from the IN
+	// interface.
 
-        if (in_vld) begin
-          enqueue_en          = 'b1;
-          enqueue_wen         = 'b1;
-          enqueue_addr        = '0;
+	case (enqueue_bank.status)
+	  BANK_IDLE: begin
+	    // Update bank status
+	    enqueue_bank_en 	 = 'b1;
 
-          //
-          enqueue_bank_en      = '1;
-          enqueue_bank         = 0;
-          enqueue_bank.status  = in_eop ? BANK_READY : BANK_LOADING;
+	    enqueue_bank 	 = '0;
+	    enqueue_bank.err 	 = 'b0;
+	    enqueue_bank.n 	 = '0;
+	    enqueue_bank.status  = BANK_LOADING;
 
-          //
-          if (!in_eop)
-            enqueue_fsm_w  = ENQUEUE_FSM_LOAD;
-          else
-            enqueue_bank_idx_en  = 'b1;
-        end
+	    // Reset index
+	    enqueue_idx_en 	 = 'b1;
+	    enqueue_idx_w 	 = '0;
+
+	    // Advance state.
+	    enqueue_fsm_en = 'b1;
+	    enqueue_fsm_w  = ENQUEUE_FSM_LOAD;
+	  end
+	  default: ;
+	endcase // case (bank_state_r [enqueue_bank_idx_r].status)
+
       end // case: ENQUEUE_FSM_IDLE
 
       ENQUEUE_FSM_LOAD: begin
+	// Enqueue FSM is loading data from the IN interface.
 
-        if (in_vld) begin
-          enqueue_en    = 'b1;
-          enqueue_wen   = 'b1;
-          enqueue_addr  = addr_t'(enqueue_idx_r);
+	casez ({in_vld, in_eop}) 
+	  2'b1_0: begin
+	    // Write to nominated bank.
+	    enqueue_en 	   = 'b1;
+	    enqueue_bank.n = enqueue_bank.n + 'b1;
 
-          if (in_eop) begin
-            enqueue_bank_idx_en  = 'b1;
+	    // Advance index.
+	    enqueue_idx_en = 'b1;
+	  end
+	  2'b1_1: begin
+	    // Write to nominated bank.
+	    enqueue_en 		= 'b1;
+	    
+	    // Update bank status, now ready to be sorted.
+	    enqueue_bank_en 	= 'b1;
+	    enqueue_bank.n 	= enqueue_idx_r;
+	    enqueue_bank.status = BANK_READY;
 
-            //
-            enqueue_bank         = '0;
-            enqueue_bank.status  = BANK_READY;
-            enqueue_bank.n       = {1'b0, enqueue_idx_r};
-            enqueue_bank_en      = '1;
-
-            //              
-            enqueue_fsm_w        = ENQUEUE_FSM_IDLE;
-          end
-          
-        end
-
+	    // Done, transition back to idle state.
+	    enqueue_fsm_en 	= 'b1;
+	    enqueue_fsm_w 	= ENQUEUE_FSM_IDLE;
+	  end
+	  default: begin
+	    // Otherwise, bubble. Do nothing.
+	  end
+	endcase
+	
       end // case: ENQUEUE_FSM_LOAD
 
-      default:;
-
-    endcase // unique case (enqueue_fsm_r)
-
-    //
-    in_rdy    = bank_idle [enqueue_bank_idx_r];
-
-    //
-    enqueue_fsm_en  = (enqueue_fsm_r [ENQUEUE_FSM_BUSY_B] |
-                       enqueue_fsm_w [ENQUEUE_FSM_BUSY_B]);
-
-    //
-    enqueue_idx_en  = enqueue_fsm_en;
-
-    //
-    unique case (enqueue_fsm_r)
-      ENQUEUE_FSM_IDLE:
-        enqueue_idx_w  = 'b1;
       default:
-        enqueue_idx_w  = enqueue_idx_r + 'b1;
-    endcase // unique case (enqueue_fsm_r)
+	// Otherwise, invalid state.
+	;
 
-  end // block: enqueue_fsm_PROC
+    endcase // case (enqueue_fsm_r)
+    
+    // Bank is ready to be loaded.
+    in_rdy = enqueue_fsm_r.ready;
 
+  end // block: enqueue_PROC
   
   // ------------------------------------------------------------------------ //
   //
@@ -674,158 +733,97 @@ module qs #(// The maximum number of entries in the sort vector.,
 
   // ------------------------------------------------------------------------ //
   //
-  // Dequeue state machine state encodings.
-  typedef enum   logic [2:0] {  DEQUEUE_FSM_IDLE  = 3'b000,
-                                DEQUEUE_FSM_EMIT  = 3'b101
-                                } dequeue_fsm_t;
-  localparam int DEQUEUE_FSM_BUSY_B = 2;
-  //
-  `LIBV_REG_EN(dequeue_fsm_t, dequeue_fsm);
-  `LIBV_REG_EN(bank_id_t, dequeue_bank_idx);
-  `LIBV_REG_EN(addr_t, dequeue_idx);
-  `LIBV_SPSRAM_SIGNALS(dequeue_, W, $clog2(N));
-  //
-  bank_state_t                  dequeue_bank;
-  logic                         dequeue_bank_en;
-
-  typedef struct packed {
-    // Beat is Start-Of-Packet.
-    logic                sop;
-    // Beat is End-Of-Packet.
-    logic                eop;
-    // An Error has occurred.
-    logic                err;
-    // Index of nominated bank.
-    bank_id_t            idx;
-  } dequeue_t;
-
-  `LIBV_REG_RST(logic, dequeue_out_vld, 'b0);
-  `LIBV_REG_EN(dequeue_t, dequeue_out);
- 
   always_comb begin : dequeue_fsm_PROC
 
-    //
-    dequeue_en 		= 'b0;
-    dequeue_wen 	= 'b0;
-    dequeue_addr 	= 'b0;
-    dequeue_din 	= 'b0;
-
-    //
-    dequeue_bank_idx_en = '0;
-    dequeue_bank_idx_w 	= dequeue_bank_idx_r + 'b1;
-
-    //
-    dequeue_bank 	= 'b0;
-    dequeue_bank_en 	= 'b0;
-
-    //
-    dequeue_out_vld_w 	= '0;
-    dequeue_out_w.sop 	= '0;
-    dequeue_out_w.eop 	= '0;
-    dequeue_out_w.err 	= '0;
-    dequeue_out_w.idx 	= dequeue_bank_idx_r;
-    
-    //
+    // Defaults:
+    dequeue_fsm_en 	= 'b0;
     dequeue_fsm_w 	= dequeue_fsm_r;
 
+    dequeue_bank_en 	= 'b0;
+    dequeue_bank 	= bank_state_r [dequeue_bank_idx_r];
+
+    dequeue_bank_idx_en = 'b0;
+    dequeue_bank_idx_w 	= bank_id_inc(dequeue_bank_idx_r);
+
+    dequeue_idx_en 	= 'b0;
+    dequeue_idx_w 	= dequeue_idx_r + 'b1;
+
+    // Dequeue out defaults.
+    dequeue_out_vld_w 	= 'b0;
+    dequeue_out_en 	= 'b0;
+    dequeue_out_w 	= dequeue_out_r;
+
+    // Bank defaults:
+    dequeue_en 		= 'b0;
+    dequeue_wen 	= '0;
+    dequeue_addr 	= dequeue_idx_r;
+    dequeue_din 	= '0;
+    
     case (dequeue_fsm_r)
 
       DEQUEUE_FSM_IDLE: begin
 
-        if (bank_sorted [dequeue_bank_idx_r]) begin
-          bank_state_t st   = bank_state_r [dequeue_bank_idx_r];
-          
-          dequeue_en 	    = 'b1;
-          dequeue_addr 	    = 'b0;
+	case (dequeue_bank.status)
 
-          //
-          dequeue_out_vld_w = '1;
-          dequeue_out_w.sop = '1;
-          dequeue_out_w.err = st.error;
+	  BANK_SORTED: begin
+	    // Update bank status.
+	    dequeue_bank_en 	= 'b1;
+	    dequeue_bank.status = BANK_UNLOADING;
 
-          dequeue_bank_en   = 'b1;
-          dequeue_bank 	    = st;
-          
-          if (st.n == '0) begin
-            dequeue_out_w.eop  = '1;
+	    // Reset index counter.
+	    dequeue_idx_en 	= 'b1;
+	    dequeue_idx_w 	= '0;
 
-            dequeue_bank.status     = BANK_IDLE;
-          end else begin
-            dequeue_out_w.eop  = '0;
-            
-            dequeue_bank.status    = BANK_UNLOADING;
-            dequeue_fsm_w          = DEQUEUE_FSM_EMIT;
-          end
-        end
+	    // Transition to 
+	    dequeue_fsm_en 	= 'b1;
+	    dequeue_fsm_w 	= DEQUEUE_FSM_UNLOAD;
+	  end
+
+	  default:
+	    // Otherwise, continue to wait completion of the current
+	    // bank.
+	    ;
+
+	endcase // case (dequeue_bank)
+
       end
 
-      DEQUEUE_FSM_EMIT: begin
-        bank_state_t st = bank_state_r [dequeue_bank_idx_r];
-        
-        dequeue_en              = 'b1;
-        dequeue_addr            = dequeue_idx_r;
+      DEQUEUE_FSM_UNLOAD: begin
 
-        //
-        dequeue_out_vld_w       = 1'b1;
-        dequeue_out_w.sop       = 1'b0;
-        dequeue_out_w.eop       = 1'b0;
-        dequeue_out_w.err       = st.error;
+	// Load bank
+	dequeue_en 	  = 'b1;
 
-        if (dequeue_idx_r == addr_t'(st.n)) begin
-          dequeue_bank_idx_en = 1'b1;
+	dequeue_out_vld_w = 'b1;
 
-          //
-          dequeue_out_w.eop     = 1'b1;
+	dequeue_out_en 	  = out_vld_w;
+	dequeue_out_w 	  = '0;
+	dequeue_out_w.sop = (dequeue_idx_r == '0);
+	dequeue_out_w.idx = dequeue_bank_idx_r;
 
-          //
-          dequeue_bank_en     = 1'b1;
-          dequeue_bank        = st;
-          dequeue_bank.status = BANK_IDLE;
+	if (dequeue_bank.n == dequeue_idx_r) begin
+	  // Is final word, update status and return to IDLE.
+	  dequeue_out_w.eop   = '1;
+	  dequeue_out_w.err   = dequeue_bank.err;
 
-          dequeue_fsm_w       = DEQUEUE_FSM_IDLE;
-        end
-        
-      end // case: DEQUEUE_FSM_EMIT
+	  dequeue_bank_en     = 'b1;
+	  dequeue_bank.status = BANK_READY;
 
-      default: ;
+	  dequeue_fsm_en      = 'b1;
+	  dequeue_fsm_w       = DEQUEUE_FSM_IDLE;
+	end
 
-    endcase // unique case (dequeue_fsm_r)
+      end // case: DEQUEUE_FSM_UNLOAD
 
-    //
-    dequeue_fsm_en  = (dequeue_fsm_w [DEQUEUE_FSM_BUSY_B] |
-                       dequeue_fsm_r [DEQUEUE_FSM_BUSY_B]);
-
-    //
-    dequeue_idx_en  = dequeue_fsm_en;
-
-    //
-    unique case (dequeue_fsm_r)
-      DEQUEUE_FSM_IDLE:
-        dequeue_idx_w  = 'b1;
       default:
-        dequeue_idx_w  = dequeue_idx_r + 'b1;
-    endcase // unique case (dequeue_fsm_r)
+	// Otherwise, invalid state
+	;
 
-    // Out state latch enable
-    dequeue_out_en = dequeue_out_vld_w;
+    endcase // case (dequeue_fsm_r)
 
   end // block: dequeue_fsm_PROC
 
-
   // ------------------------------------------------------------------------ //
   //
-  bank_state_t [BANKS_N - 1:0]             bank_state_r;
-  bank_state_t [BANKS_N - 1:0]             bank_state_w;
-  logic [BANKS_N - 1:0]                    bank_state_en;
-  //
-  logic [BANKS_N - 1:0]                    bank_state_enqueue_sel;
-  logic [BANKS_N - 1:0]                    bank_state_sort_sel;
-  logic [BANKS_N - 1:0]                    bank_state_dequeue_sel;
-  //
-  logic [BANKS_N - 1:0]                    bank_idle;
-  logic [BANKS_N - 1:0]                    bank_ready;
-  logic [BANKS_N - 1:0]                    bank_sorted;
-
   always_comb begin : bank_state_PROC
 
     for (int i = 0; i < BANKS_N; i++) begin
@@ -874,13 +872,9 @@ module qs #(// The maximum number of entries in the sort vector.,
       // TODO: deprecate; redundant.
       
       // Defaults:
-      bank_idle [i]   = 'b0;
-      bank_ready [i]  = 'b0;
       bank_sorted [i] = 'b0;
 
       case (bank_state_r [i].status)
-        BANK_IDLE:   bank_idle [i]   = 'b1;
-        BANK_READY:  bank_ready [i]  = 'b1;
         BANK_SORTED: bank_sorted [i] = 'b1;
         default: ;
       endcase
@@ -957,16 +951,6 @@ module qs #(// The maximum number of entries in the sort vector.,
 
   // ------------------------------------------------------------------------ //
   //
-  typedef struct packed {
-    logic        sop;
-    logic        eop;
-    logic        err;
-    w_t          dat;
-  } out_t;
-  
-  `LIBV_REG_RST_W(logic, out_vld, 'b0);
-  `LIBV_REG_EN(out_t, out);
-
   always_comb begin : out_PROC
 
     //
