@@ -74,7 +74,7 @@ module qs_srt (
    , input                                        clk
    , input                                        rst
 );
-/*
+
   // ======================================================================== //
   //                                                                          //
   // Wires                                                                    //
@@ -161,7 +161,7 @@ module qs_srt (
   // Combinatorial Logic                                                      //
   //                                                                          //
   // ======================================================================== //
-  
+
   // ------------------------------------------------------------------------ //
   //
   always_comb begin : fa_PROC
@@ -234,7 +234,7 @@ module qs_srt (
     xa_src1_forward = ca_rf_wen_r & rf_ren [1] & (rf_ra [1] == ca_rf_wa_r);
 
   end // block: xa_rf_PROC
-  
+
   // ------------------------------------------------------------------------ //
   //
   always_comb begin : xa_datapath_PROC
@@ -295,7 +295,7 @@ module qs_srt (
 	case (xa_ucode.special)
 	  qs_srt_pkg::REG_N: begin
 	    // Inject bank word count and extend as necessary.
-	    xa_dp_alu_1_pre = qs_pkg::w_t'(bank_state_r [sort_bank_idx_r].n);
+	    xa_dp_alu_1_pre = qs_pkg::w_t'(bank_in_r.n);
 	  end
 	  default: begin
 	    // Otherwise, unknown register. Instruction should have
@@ -322,7 +322,7 @@ module qs_srt (
     xa_dp_alu_cin = xa_ucode.cin;
 
     // Conditionally invert ALU input, if required.
-    xa_dp_alu_1   = xa_dp_alu_1_pre ^ {W{xa_ucode.inv_src1}};
+    xa_dp_alu_1   = xa_dp_alu_1_pre ^ {qs_pkg::W{xa_ucode.inv_src1}};
 
     // Compute output of arithmetic unit.
     { xa_dp_alu_cout, xa_dp_alu_y } = 
@@ -361,7 +361,7 @@ module qs_srt (
       end
       3'b001: begin
 	// Write data returning from currently owned bank.
-	ca_rf_wdata_w = bank_dout [sort_bank_idx_r];
+	ca_rf_wdata_w = bank_rdata_r;
       end
       default: begin
 	// Otherwise, write ALU output.
@@ -408,7 +408,7 @@ module qs_srt (
     ca_replay_pc_en 	  = ca_replay_w;
         
   end // block: xa_datapath_PROC
-  
+
   // ------------------------------------------------------------------------ //
   //
   always_comb begin : xa_stack_PROC
@@ -430,7 +430,7 @@ module qs_srt (
   // ------------------------------------------------------------------------ //
   //
   `LIBV_REG_EN(qs_pkg::bank_id_t, sort_bank_idx);
-  `LIBV_SPSRAM_SIGNALS(sort_, W, $clog2(N));
+  `LIBV_SPSRAM_SIGNALS(sort_, qs_pkg::W, $clog2(qs_pkg::N));
   //
   qs_pkg::bank_state_t                  sort_bank;
   logic                                 sort_bank_en;
@@ -439,7 +439,7 @@ module qs_srt (
 
     // Sort bank index update.
     sort_bank_idx_en = 'b0;
-    sort_bank_idx_w  = bank_id_inc(sort_bank_idx_r);
+    sort_bank_idx_w  = qs_pkg::bank_id_inc(sort_bank_idx_r);
 
     //
     casez ({// Instruction at XA commits
@@ -452,18 +452,18 @@ module qs_srt (
       3'b1_1?: begin
 	// AWAIT instruction commits; set bank status to SORTING
 	sort_bank_en 	 = 'b1;
-	sort_bank 	 = bank_state_r [sort_bank_idx_r];
-	sort_bank.status = BANK_SORTING;
+	sort_bank 	 = bank_in_r;
+	sort_bank.status = qs_pkg::BANK_SORTING;
       end
       3'b1_01: begin
 	// DONE instruction commits; set bank status to SORTED.
 	sort_bank_en 	 = 'b1;
-	sort_bank 	 = bank_state_r [sort_bank_idx_r];
-	sort_bank.status = BANK_SORTED;
+	sort_bank 	 = bank_in_r;
+	sort_bank.status = qs_pkg::BANK_SORTED;
       end
       default: begin
 	sort_bank_en     = 'b0;
-	sort_bank        = bank_state_r [sort_bank_idx_r];
+	sort_bank        = bank_in_r;
       end
     endcase // casez ({...
 
@@ -487,7 +487,7 @@ module qs_srt (
 	    })
       1'b1: begin
 	// Await for the current nominated stall to become ready
-	xa_stall = (bank_state_r [sort_bank_idx_r].status != BANK_READY);
+	xa_stall = (bank_in_r.status != qs_pkg::BANK_READY);
       end
       default: begin
 	xa_stall = 'b0;
@@ -511,7 +511,7 @@ module qs_srt (
     xa_pc_w   = fa_pc_r;
 
   end // block: xa_pipe_cntrl_PROC
-  
+
   // ======================================================================== //
   //                                                                          //
   // Instances                                                                //
@@ -520,7 +520,7 @@ module qs_srt (
 
   // ------------------------------------------------------------------------ //
   //
-  rf #(.W(W), .N(8), .RD_N(2)) u_rf (
+  rf #(.W(qs_pkg::W), .N(8), .RD_N(2)) u_rf (
     //
       .ra                (rf_ra                   )
     , .ren               (rf_ren                  )
@@ -536,7 +536,7 @@ module qs_srt (
 
   // ------------------------------------------------------------------------ //
   //
-  qs_srt_stack #(.W(W), .N(128)) u_qs_srt_stack (
+  qs_srt_stack #(.W(qs_pkg::W), .N(128)) u_qs_srt_stack (
     //
       .cmd_vld           (qs_stack_cmd_vld        )
     , .cmd_push          (qs_stack_cmd_push       )
@@ -577,5 +577,4 @@ module qs_srt (
 
   end // block: wires_PROC
 
- */
 endmodule // qs_deq

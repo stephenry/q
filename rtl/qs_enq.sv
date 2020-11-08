@@ -102,7 +102,7 @@ module qs_enq (
                                 } fsm_t;
   //
   `LIBV_REG_EN(fsm_encoding_t, fsm);
-  `LIBV_REG_EN_W(qs_pkg::bank_id_t, bank_idx);
+  `LIBV_REG_EN_RST_W(qs_pkg::bank_id_t, bank_idx, '0);
   `LIBV_REG_RST_W(logic, wr_en, 'b0);
   `LIBV_REG_EN_W(qs_pkg::addr_t, wr_addr);
   `LIBV_REG_EN_W(qs_pkg::w_t, wr_data);
@@ -151,20 +151,20 @@ module qs_enq (
 	case (bank_in_r.status)
 	  qs_pkg::BANK_IDLE: begin
 	    // Update bank status
-	    bank_out_vld_w 	= 'b1;
+	    bank_out_vld_w    = 'b1;
 
-	    bank_out_w 	= '0;
-	    bank_out_w.err 	= 'b0;
-	    bank_out_w.n 	= '0;
+	    bank_out_w 	      = '0;
+	    bank_out_w.err    = 'b0;
+	    bank_out_w.n      = '0;
 	    bank_out_w.status = qs_pkg::BANK_LOADING;
 
 	    // Reset index
-	    wr_addr_en 		= 'b1;
-	    wr_addr_w 		= '0;
+	    wr_addr_en 	      = 'b1;
+	    wr_addr_w 	      = '0;
 
 	    // Advance state.
-	    fsm_en 		= 'b1;
-	    fsm_w 		= FSM_LOAD;
+	    fsm_en 	      = 'b1;
+	    fsm_w 	      = FSM_LOAD;
 	  end
 	  default: ;
 	endcase // case (bank_in_r.status)
@@ -188,6 +188,8 @@ module qs_enq (
 	    wr_data_en 	      = 'b1;
 	    // Advance index.
 	    wr_addr_en 	      = 'b1;
+
+	    bank_idx_en       = 'b1;
 
 	    // Write to nominated bank.
 	    bank_out_vld_w    = 'b1;
@@ -215,7 +217,10 @@ module qs_enq (
     endcase // case (fsm_r)
     
     // Bank is ready to be loaded.
-    in_rdy_r = fsm_r.ready;
+    in_rdy_r 	= fsm_r.ready;
+
+    // Enables:
+    bank_out_en = bank_out_vld_w;
 
   end // block: enqueue_PROC
 

@@ -84,7 +84,7 @@ module qs_deq (
    , input                                        clk
    , input                                        rst
 );
-/*
+
   // ======================================================================== //
   //                                                                          //
   // Wires                                                                    //
@@ -94,25 +94,24 @@ module qs_deq (
   typedef struct packed {
     logic 	 busy;
     logic [1:0]  state;
-  } dequeue_fsm_encoding_t;
+  } fsm_encoding_t;
   
-  typedef enum   logic [2:0] {  DEQUEUE_FSM_IDLE   = 3'b000,
-                                DEQUEUE_FSM_UNLOAD = 3'b101
-                                } dequeue_fsm_t;
+  typedef enum   logic [2:0] {  FSM_IDLE     = 3'b000,
+                                FSM_UNLOAD   = 3'b101,
+				FSM_WAIT_EOP = 3'b110
+                                } fsm_t;
   //
-  `LIBV_REG_EN(dequeue_fsm_encoding_t, dequeue_fsm);
-  `LIBV_REG_EN(qs_pkg::bank_id_t, dequeue_bank_idx);
-  `LIBV_REG_EN(addr_t, dequeue_idx);
-  `LIBV_SPSRAM_SIGNALS(dequeue_, W, $clog2(N));
-  //
-  qs_pkg::bank_state_t                  dequeue_bank;
-  logic                                 dequeue_bank_en;
+  `LIBV_REG_EN(fsm_encoding_t, fsm);
+  `LIBV_REG_EN_W(qs_pkg::bank_id_t, bank_idx);
+  `LIBV_REG_RST_W(logic, rd_en, 'b0);
+  `LIBV_REG_EN_W(qs_pkg::addr_t, rd_addr);
+  `LIBV_REG_RST_W(logic, bank_out_vld, 'b0);
+  `LIBV_REG_EN_W(qs_pkg::bank_state_t, bank_out);
   //
   typedef struct packed {
     logic                sop;
     logic                eop;
     logic                err;
-    qs_pkg::bank_id_t    idx;
   } dequeue_t;
   //
   `LIBV_REG_RST(logic, dequeue_out_vld, 1'b0);
@@ -136,50 +135,44 @@ module qs_deq (
   
   // ------------------------------------------------------------------------ //
   //
-  always_comb begin : dequeue_fsm_PROC
+  always_comb begin : fsm_PROC
 
     // Defaults:
-    dequeue_fsm_en 	= 'b0;
-    dequeue_fsm_w 	= dequeue_fsm_r;
+    fsm_en 	      = 'b0;
+    fsm_w 	      = fsm_r;
 
-    dequeue_bank_en 	= 'b0;
-    dequeue_bank 	= bank_state_r [dequeue_bank_idx_r];
+    bank_out_vld_w    = 'b0;
+    bank_out_w 	      = '0;
 
-    dequeue_bank_idx_en = 'b0;
-    dequeue_bank_idx_w 	= bank_id_inc(dequeue_bank_idx_r);
+    bank_idx_en       = 'b0;
+    bank_idx_w 	      = qs_pkg::bank_id_inc(bank_idx_r);
 
-    dequeue_idx_en 	= 'b0;
-    dequeue_idx_w 	= dequeue_idx_r + 'b1;
-
-    // Dequeue out defaults.
-    dequeue_out_vld_w 	= 'b0;
-    dequeue_out_en 	= 'b0;
-    dequeue_out_w 	= dequeue_out_r;
+    rd_addr_en 	      = 'b0;
+    rd_addr_w 	      = rd_addr_r + 'b1;
 
     // Bank defaults:
-    dequeue_en 		= 'b0;
-    dequeue_wen 	= '0;
-    dequeue_addr 	= dequeue_idx_r;
-    dequeue_din 	= '0;
+    rd_en_w 	      = 'b0;
+    rd_addr_en 	      = 'b0;
     
-    case (dequeue_fsm_r)
+    case (fsm_r)
 
-      DEQUEUE_FSM_IDLE: begin
+      FSM_IDLE: begin
 
-	case (dequeue_bank.status)
+	case (bank_in_r.status)
 
-	  BANK_SORTED: begin
+	  qs_pkg::BANK_SORTED: begin
 	    // Update bank status.
-	    dequeue_bank_en 	= 'b1;
-	    dequeue_bank.status = BANK_UNLOADING;
+	    bank_out_en       = 'b1;
+	    bank_out_w 	      = bank_in_r;
+	    bank_out_w.status = qs_pkg::BANK_UNLOADING;
 
 	    // Reset index counter.
-	    dequeue_idx_en 	= 'b1;
-	    dequeue_idx_w 	= '0;
+	    rd_addr_en 	      = 'b1;
+	    rd_addr_w 	      = '0;
 
 	    // Transition to 
-	    dequeue_fsm_en 	= 'b1;
-	    dequeue_fsm_w 	= DEQUEUE_FSM_UNLOAD;
+	    fsm_en 	      = 'b1;
+	    fsm_w 	      = FSM_UNLOAD;
 	  end
 
 	  default:
@@ -191,39 +184,44 @@ module qs_deq (
 
       end
 
-      DEQUEUE_FSM_UNLOAD: begin
-
+      FSM_UNLOAD: begin
 	// Load bank
-	dequeue_en 	  = 'b1;
+	bank_out_vld_w 	  = 'b1;
 
-	dequeue_out_vld_w = 'b1;
+//	bank_out_en 	  = bank_out_vld_w;
+//	dequeue_out_en 	  = out_vld_w;
+//	dequeue_out_w 	  = '0;
+//	dequeue_out_w.sop = (rd_addr_r == '0);
 
-	dequeue_out_en 	  = out_vld_w;
-	dequeue_out_w 	  = '0;
-	dequeue_out_w.sop = (dequeue_idx_r == '0);
-	dequeue_out_w.idx = dequeue_bank_idx_r;
-
-	if (dequeue_bank.n == dequeue_idx_r) begin
+	if (bank_in_r.n == rd_addr_r) begin
 	  // Is final word, update status and return to IDLE.
-	  dequeue_out_w.eop   = '1;
-	  dequeue_out_w.err   = dequeue_bank.err;
+//	  dequeue_out_w.eop = '1;
+//	  dequeue_out_w.err = dequeue_bank.err;
 
-	  dequeue_bank_en     = 'b1;
-	  dequeue_bank.status = BANK_READY;
+	  bank_out_vld_w    = 'b1;
+	  bank_out_w 	    = bank_out_r;
+	  bank_out_w.status = qs_pkg::BANK_READY;
 
-	  dequeue_fsm_en      = 'b1;
-	  dequeue_fsm_w       = DEQUEUE_FSM_IDLE;
+	  fsm_en 	    = 'b1;
+	  fsm_w 	    = FSM_WAIT_EOP;
 	end
 
-      end // case: DEQUEUE_FSM_UNLOAD
+      end // case: FSM_UNLOAD
+
+      FSM_WAIT_EOP: begin
+	// Unload operation has completed, await for the final EOP to be
+	// emitted until transitioning back to the IDLE sate.
+	fsm_en = out_vld_r & out_eop_r;
+	fsm_w  = FSM_IDLE;
+      end
 
       default:
 	// Otherwise, invalid state
 	;
 
-    endcase // case (dequeue_fsm_r)
+    endcase // case (fsm_r)
 
-  end // block: dequeue_fsm_PROC
+  end // block: fsm_PROC
 
   // ------------------------------------------------------------------------ //
   //
@@ -237,7 +235,7 @@ module qs_deq (
     out_w.sop = dequeue_out_r.sop;
     out_w.eop = dequeue_out_r.eop;
     out_w.err = dequeue_out_r.err;
-    out_w.dat = bank_dout [dequeue_out_r.idx];
+    out_w.dat = rd_data_r;
 
     // Drive outputs
     out_sop_r = out_r.sop;
@@ -246,5 +244,5 @@ module qs_deq (
     out_dat_r = out_r.dat;
 
   end // block: out_PROC
-*/
+
 endmodule // qs_deq

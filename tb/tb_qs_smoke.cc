@@ -35,8 +35,12 @@ TEST(Smoke, SingleSort) {
   // Initialize randomization seed.
   tb::Random::init(1);
 
+  tb::Options opts;
+  opts.wave_enable = true;
+  opts.trace_enable = true;
+  
   // Construct testbench environment.
-  tb::TB tb;
+  tb::TB tb{opts};
 
   const std::vector<tb::word_type> dp = tb::test::generate_stimulus();
   tb.push_back(dp);

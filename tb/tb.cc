@@ -140,7 +140,7 @@ void TB::run() {
     drive_stimulus(data_packet);
     
     // Compuare output
-    const std::vector<word_type> actual = get_sorted_packet();
+    const std::vector<word_type> actual /* = get_sorted_packet() */;
 #ifdef OPT_TRACE_ENABLE
     log() << "Received: " << actual << "\n";
 #endif
@@ -174,7 +174,7 @@ void TB::drive_stimulus(const std::vector<word_type>& stimulus) {
 
   VSignals::VIn in;
   for (std::size_t i = 0; i < stimulus.size(); i) {
-    if (vs_.in_rdy_r()) {
+    if (true || vs_.in_rdy_r()) {
 
       // Drive interface
       in.vld = true;

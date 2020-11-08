@@ -68,6 +68,15 @@
     else\
       __name``_r <= __name``_w
 
+`define LIBV_REG_EN_RST_W(__type, __name, __reset = 'b0)\
+  __type __name``_w;\
+  logic              __name``_en;\
+  always_ff @(posedge clk) \
+    if (rst)\
+      __name``_r <= __reset;\
+    else if (__name``_en)\
+      __name``_r <= __name``_w
+
 `define LIBV_SPSRAM_SIGNALS(__prefix, __w, __a) \
     logic           __prefix``en;          \
     logic           __prefix``wen;         \
