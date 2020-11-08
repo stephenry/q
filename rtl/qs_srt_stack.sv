@@ -27,7 +27,7 @@
 
 `include "libv_pkg.vh"
 
-module qs_stack #(parameter int N = 16, parameter int W = 32) (
+module qs_srt_stack #(parameter int N = 16, parameter int W = 32) (
 
    //======================================================================== //
    //                                                                         //

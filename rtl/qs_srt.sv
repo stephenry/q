@@ -523,7 +523,7 @@ module qs_srt (
 
   // ------------------------------------------------------------------------ //
   //
-  qs_stack #(.W(W), .N(128)) u_qs_stack (
+  qs_srt_stack #(.W(W), .N(128)) u_qs_srt_stack (
     //
       .cmd_vld           (qs_stack_cmd_vld        )
     , .cmd_push          (qs_stack_cmd_push       )
