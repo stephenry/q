@@ -82,7 +82,7 @@ struct VSignals {
     vs.in_sop_ = std::addressof(u->in_sop);
     vs.in_eop_ = std::addressof(u->in_eop);
     vs.in_dat_ = std::addressof(u->in_dat);
-    vs.in_rdy_ = std::addressof(u->in_rdy);
+    vs.in_rdy_r_ = std::addressof(u->in_rdy_r);
     // Sorted out:
     vs.out_vld_r_ = std::addressof(u->out_vld_r);
     vs.out_sop_r_ = std::addressof(u->out_sop_r);
@@ -106,8 +106,8 @@ struct VSignals {
   // Set value of rst port.
   void set_rst(bool rst = true);
 
-  // Sample 'in_rdy' port.
-  bool in_rdy() const;
+  // Sample 'in_rdy_r' port.
+  bool in_rdy_r() const;
 
   // Sample sorted output interface.
   void get(VOut& out) const;
@@ -121,7 +121,7 @@ struct VSignals {
   vluint8_t* in_sop_;
   vluint8_t* in_eop_;
   vluint32_t* in_dat_;
-  vluint8_t* in_rdy_;
+  vluint8_t* in_rdy_r_;
 
   // Sorted out:
   vluint8_t* out_vld_r_;

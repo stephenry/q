@@ -38,7 +38,7 @@ module tb_qs (
   , input                                         in_eop
   , input [tb_qs_pkg::OPT_W - 1:0]                in_dat
 
-  , output                                        in_rdy
+  , output                                        in_rdy_r
 
   // Sorted output:
   , output logic                                  out_vld_r
@@ -72,7 +72,7 @@ module tb_qs (
     , .in_sop                 (in_sop                  )
     , .in_eop                 (in_eop                  )
     , .in_dat                 (in_dat                  )
-    , .in_rdy                 (in_rdy                  )
+    , .in_rdy_r               (in_rdy_r                )
     //
     , .out_vld_r              (out_vld_r               )
     , .out_sop_r              (out_sop_r               )

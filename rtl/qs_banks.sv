@@ -36,12 +36,11 @@ module qs_banks (
    //======================================================================== //
 
    //
-     input                                        enq_bnk_in_vld_r
-   , input qs_pkg::bank_state_t                   enq_bnk_in_r
-   , input qs_pkg::bank_id_t                      enq_bnk_idx_r
+     input qs_pkg::bank_id_t                      enq_bank_idx_r
    //
-   , output qs_pkg::bank_state_t                  enq_bnk_out_r
-
+   , input                                        enq_bank_in_vld_r
+   , input qs_pkg::bank_state_t                   enq_bank_in_r
+   , output qs_pkg::bank_state_t                  enq_bank_out_r
    //
    , input                                        enq_wr_en_r
    , input qs_pkg::addr_t                         enq_wr_addr_r
@@ -54,20 +53,17 @@ module qs_banks (
    //======================================================================== //
 
    //
-   , input                                        srt_bnk_in_vld_r
-   , input qs_pkg::bank_state_t                   srt_bnk_in_r
-   , input qs_pkg::bank_id_t                      srt_bnk_idx_r
+   , input qs_pkg::bank_id_t                      srt_bank_idx_r
    //
-   , output qs_pkg::bank_state_t                  srt_bnk_out_r
+   , input                                        srt_bank_in_vld_r
+   , input qs_pkg::bank_state_t                   srt_bank_in_r
+   , output qs_pkg::bank_state_t                  srt_bank_out_r
    //
-   , input                                        srt_wr_en_r
-   , input qs_pkg::addr_t                         srt_wr_addr_r
-   , input qs_pkg::w_t                            srt_wr_data_r
-   //
-   , input                                        srt_rd_en_r
-   , input qs_pkg::addr_t                         srt_rd_addr_r
-   //
-   , output qs_pkg::w_t                           srt_rd_data_r
+   , input                                        srt_bank_en_r
+   , input                                        srt_bank_wen_r
+   , input qs_pkg::addr_t                         srt_bank_addr_r
+   , input qs_pkg::w_t                            srt_bank_wdata_r
+   , output qs_pkg::w_t                           srt_bank_rdata_r
 
    //======================================================================== //
    //                                                                         //
@@ -75,17 +71,14 @@ module qs_banks (
    //                                                                         //
    //======================================================================== //
 
+   , input qs_pkg::bank_id_t                      deq_bank_idx_r
    //
-   , input                                        deq_bnk_in_vld_r
-   , input qs_pkg::bank_state_t                   deq_bnk_in_r
-   , input qs_pkg::bank_id_t                      deq_bnk_idx_r
-   //
-   , output qs_pkg::bank_state_t                  deq_bnk_out_r
-
+   , input                                        deq_bank_in_vld_r
+   , input qs_pkg::bank_state_t                   deq_bank_in_r
+   , output qs_pkg::bank_state_t                  deq_bank_out_r
    //
    , input                                        deq_rd_en_r
    , input qs_pkg::addr_t                         deq_rd_addr_r
-   //
    , output qs_pkg::w_t                           deq_rd_data_r
 
    //======================================================================== //
@@ -97,7 +90,6 @@ module qs_banks (
    , input                                        clk
    , input                                        rst
 );
-/*
 
   // ======================================================================== //
   //                                                                          //
@@ -105,116 +97,142 @@ module qs_banks (
   //                                                                          //
   // ======================================================================== //
   //
-  qs_pkg::bank_state_t [BANKS_N - 1:0]  bank_state_r;
-  qs_pkg::bank_state_t [BANKS_N - 1:0]  bank_state_w;
-  logic [BANKS_N - 1:0]                 bank_state_en;
+  qs_pkg::bank_state_t [qs_pkg::BANKS_N - 1:0]  bank_state_r;
+  qs_pkg::bank_state_t [qs_pkg::BANKS_N - 1:0]  bank_state_w;
+  logic [qs_pkg::BANKS_N - 1:0]                 bank_state_en;
   //
-  logic [BANKS_N - 1:0]                 bank_state_enqueue_sel;
-  logic [BANKS_N - 1:0]                 bank_state_sort_sel;
-  logic [BANKS_N - 1:0]                 bank_state_dequeue_sel;
+  logic [qs_pkg::BANKS_N - 1:0]                 bank_state_enq_sel;
+  logic [qs_pkg::BANKS_N - 1:0]                 bank_state_srt_sel;
+  logic [qs_pkg::BANKS_N - 1:0]                 bank_state_deq_sel;
 
   // ------------------------------------------------------------------------ //
   //
   always_comb begin : bank_state_PROC
 
-    for (int i = 0; i < BANKS_N; i++) begin
+    for (int i = 0; i < qs_pkg::BANKS_N; i++) begin
       // Synonym for readability
-      bank_id_t bank_id = bank_id_t'(i);
+      qs_pkg::bank_id_t bank_id = qs_pkg::bank_id_t'(i);
 
       // 
-      bank_state_enqueue_sel [i] =
-        enqueue_bank_en & (bank_id == enqueue_bank_idx_r);
+      bank_state_enq_sel [i] =
+        enq_bank_in_vld_r & (bank_id == enq_bank_idx_r);
 
       //
-      bank_state_sort_sel [i]    =
-        sort_bank_en & (bank_id == sort_bank_idx_r);
+      bank_state_srt_sel [i]    =
+        srt_bank_in_vld_r & (bank_id == srt_bank_idx_r);
 
       //
-      bank_state_dequeue_sel [i] =
-        dequeue_bank_en & (bank_id == dequeue_bank_idx_r);
+      bank_state_deq_sel [i] =
+        deq_bank_in_vld_r & (bank_id == deq_bank_idx_r);
 
       // Defaults:
       casez ({// Enqueue controller updates bank state
-	      bank_state_enqueue_sel [i],
+	      bank_state_enq_sel [i],
 	      // Sort controller updates bank state
-              bank_state_sort_sel [i],
+              bank_state_srt_sel [i],
 	      // Dequeue controller updates bank state
-              bank_state_dequeue_sel [i]
+              bank_state_deq_sel [i]
               })
         3'b1??: begin
           bank_state_en [i] = 'b1;
-          bank_state_w [i]  = enqueue_bank;
+          bank_state_w [i]  = enq_bank_in_r;
         end
         3'b01?: begin
           bank_state_en [i] = 'b1;
-          bank_state_w [i]  = sort_bank;
+          bank_state_w [i]  = srt_bank_in_r;
         end
         3'b001: begin
           bank_state_en [i] = 'b1;
-          bank_state_w [i]  = dequeue_bank;
+          bank_state_w [i]  = deq_bank_in_r;
         end
         default: begin
           bank_state_en [i] = 'b0;
           bank_state_w [i]  = bank_state_r [i];
         end
-      endcase // casez ({bank_enqueue_upt [i],...
+      endcase // casez ({bank_enq_upt [i],...
+
+    end // for (int i = 0; i < qs_pkg::BANKS_N; i++)
 
   end // block: bank_state_PROC
-  
+
   // ------------------------------------------------------------------------ //
   //
-  logic [BANKS_N - 1:0]                 bank_en;
-  logic [BANKS_N - 1:0]                 bank_wen;
-  w_t [BANKS_N - 1:0]                   bank_din;
-  w_t [BANKS_N - 1:0]                   bank_dout;
-  addr_t [BANKS_N - 1:0]                bank_addr;
-  logic [BANKS_N - 1:0]                 bank_enqueue_sel;
-  logic [BANKS_N - 1:0]                 bank_sort_sel;
-  logic [BANKS_N - 1:0]                 bank_dequeue_sel;
+  logic [qs_pkg::BANKS_N - 1:0]                 bank_en;
+  logic [qs_pkg::BANKS_N - 1:0]                 bank_wen;
+  qs_pkg::w_t [qs_pkg::BANKS_N - 1:0]           bank_din;
+  qs_pkg::w_t [qs_pkg::BANKS_N - 1:0]           bank_dout;
+  qs_pkg::addr_t [qs_pkg::BANKS_N - 1:0]        bank_addr;
+  //
+  logic [qs_pkg::BANKS_N - 1:0]                 bank_enq_sel;
+  logic [qs_pkg::BANKS_N - 1:0]                 bank_srt_sel;
+  logic [qs_pkg::BANKS_N - 1:0]                 bank_deq_sel;
+  `LIBV_REG_RST(logic, bank_deq_rd_vld, 'b0);
+  `LIBV_REG_EN(qs_pkg::bank_id_t, bank_deq_rd_idx);
+  `LIBV_REG_RST(logic, bank_srt_rd_vld, 'b0);
+  `LIBV_REG_EN(qs_pkg::bank_id_t, bank_srt_rd_idx);
 
   always_comb begin : bank_PROC
 
-    for (int i = 0; i < BANKS_N; i++) begin
+    // Defaults:
+    bank_deq_rd_vld_w  = 'b0;
+
+    bank_deq_rd_idx_en = 'b0;
+    bank_deq_rd_idx_w  = bank_deq_rd_idx_r;
+        
+    bank_srt_rd_vld_w  = 'b0;
+
+    bank_srt_rd_idx_en = 'b0;
+    bank_srt_rd_idx_w  = bank_srt_rd_idx_r;
+
+    for (int i = 0; i < qs_pkg::BANKS_N; i++) begin
       // Synonym for readability
-      bank_id_t bank_id = bank_id_t'(i);
+      qs_pkg::bank_id_t bank_id = qs_pkg::bank_id_t'(i);
 
       // 
-      bank_enqueue_sel [i] =
-        enqueue_en & (bank_id == enqueue_bank_idx_r);
+      bank_enq_sel [i] =
+        enq_wr_en_r & (bank_id == enq_bank_idx_r);
 
       //
-      bank_sort_sel [i]    =
-        sort_en & (bank_id == sort_bank_idx_r);
+      bank_srt_sel [i]    =
+        srt_bank_en_r & (bank_id == srt_bank_idx_r);
 
       //
-      bank_dequeue_sel [i] =
-        dequeue_en & (bank_id == dequeue_bank_idx_r);
+      bank_deq_sel [i] =
+        deq_rd_en_r & (bank_id == deq_bank_idx_r);
 
 
-      casez ({// Enqueue controller maintains ownership,
-              bank_enqueue_sel [i],
-              // Or, sort controller maintains ownership,
-              bank_sort_sel [i],
+      casez ({// Enq controller maintains ownership,
+              bank_enq_sel [i],
+              // Or, srt controller maintains ownership,
+              bank_srt_sel [i],
               // Or, dequeue controller maintains ownership (of current bank).
-              bank_dequeue_sel [i]
+              bank_deq_sel [i]
               })
         3'b1??: begin
           bank_en [i]   = 1'b1;
-          bank_wen [i]  = enqueue_wen;
-          bank_addr [i] = enqueue_addr;
-          bank_din [i]  = enqueue_din;
+          bank_wen [i]  = 1'b1;
+          bank_addr [i] = enq_wr_addr_r;
+          bank_din [i]  = enq_wr_data_r;
         end
         3'b01?: begin
-          bank_en [i]   = 1'b1;
-          bank_wen [i]  = sort_wen;
-          bank_addr [i] = sort_addr;
-          bank_din [i]  = sort_din;
+	  bank_srt_rd_vld_w  = 'b1;
+	  bank_srt_rd_idx_en = 'b1;
+	  bank_srt_rd_idx_w  = srt_bank_idx_r;
+	  
+          bank_en [i] 	     = 1'b1;
+          bank_wen [i] 	     = srt_bank_wen_r;
+          bank_addr [i]      = srt_bank_addr_r;
+          bank_din [i] 	     = srt_bank_wdata_r;
         end
         3'b001: begin
-          bank_en [i]   = 1'b1;
-          bank_wen [i]  = dequeue_wen;
-          bank_addr [i] = dequeue_addr;
-          bank_din [i]  = dequeue_din;
+	  bank_deq_rd_vld_w  = 'b1;
+	  bank_deq_rd_idx_en = 'b1;
+	  bank_deq_rd_idx_w  = enq_bank_idx_r;
+	  
+          bank_en [i] 	     = 1'b1;
+          bank_wen [i] 	     = 1'b0;
+          bank_addr [i]      = deq_rd_addr_r;
+          bank_din [i] 	     = '0;
         end
         default: begin
           bank_en [i]   = '0;
@@ -224,9 +242,24 @@ module qs_banks (
         end
       endcase // casez ({...
 
-    end // for (int i = 0; i < BANKS_N; i++)
+    end // for (int i = 0; i < qs_pkg::BANKS_N; i++)
 
   end // block: bank_PROC
+
+  // ------------------------------------------------------------------------ //
+  //
+  `LIBV_REG_EN_W(qs_pkg::w_t, srt_bank_rdata);
+  `LIBV_REG_EN_W(qs_pkg::w_t, deq_rd_data);
+
+  always_comb begin : out_PROC
+
+    srt_bank_rdata_en = bank_srt_rd_vld_r;
+    srt_bank_rdata_w  = bank_dout [bank_srt_rd_idx_r];
+
+    deq_rd_data_en    = bank_deq_rd_vld_r;
+    deq_rd_data_w     = bank_dout [bank_deq_rd_idx_r];
+
+  end // block: out_PROC
   
   // ======================================================================== //
   //                                                                          //
@@ -237,9 +270,9 @@ module qs_banks (
   // ------------------------------------------------------------------------ //
   //
   always_ff @(posedge clk) begin : bank_state_REG
-    for (int i = 0; i < BANKS_N; i++) begin
+    for (int i = 0; i < qs_pkg::BANKS_N; i++) begin
       if (rst)
-        bank_state_r [i] <= '{ status:BANK_IDLE, default:'0 };
+        bank_state_r [i] <= '{ status:qs_pkg::BANK_IDLE, default:'0 };
       else if (bank_state_en [i])
         bank_state_r [i] <= bank_state_w [i];
     end
@@ -253,9 +286,9 @@ module qs_banks (
 
   // ------------------------------------------------------------------------ //
   //
-  generate for (genvar g = 0; g < BANKS_N; g++) begin
+  generate for (genvar g = 0; g < qs_pkg::BANKS_N; g++) begin
   
-    spsram #(.W(W), .N(N)) u_bank (
+    spsram #(.W(qs_pkg::W), .N(qs_pkg::N)) u_bank (
       //
         .clk           (clk                       )
       //
@@ -267,6 +300,6 @@ module qs_banks (
       , .dout          (bank_dout [g]             )
     );
 
-  end endgenerate // for (genvar g = 0; g < BANKS_N; g++)
-*/
+  end endgenerate // for (genvar g = 0; g < qs_pkg::BANKS_N; g++)
+
 endmodule // qs_banks

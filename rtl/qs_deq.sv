@@ -45,16 +45,30 @@ module qs_deq (
 
    //======================================================================== //
    //                                                                         //
-   // Bank Interface                                                          //
+   // Bank Selection                                                          //
+   //                                                                         //
+   //======================================================================== //
+
+   , output qs_pkg::bank_id_t                     bank_idx_r
+
+   //======================================================================== //
+   //                                                                         //
+   // Scoreboard Interface                                                    //
    //                                                                         //
    //======================================================================== //
 
    //
-   , input qs_pkg::bank_state_t                   bnk_in
+   , input qs_pkg::bank_state_t                   bank_in_r
    //
-   , output logic                                 bnk_out_vld_r
-   , output qs_pkg::bank_state_t                  bnk_out_r
-   , output qs_pkg::bank_id_t                     bnk_idx_r
+   , output logic                                 bank_out_vld_r
+   , output qs_pkg::bank_state_t                  bank_out_r
+
+   //======================================================================== //
+   //                                                                         //
+   // Memory Bank Interface                                                   //
+   //                                                                         //
+   //======================================================================== //
+
    //
    , input qs_pkg::w_t                            rd_data_r
    //

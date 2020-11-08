@@ -33,25 +33,37 @@ module qs_srt (
 
    //======================================================================== //
    //                                                                         //
-   // Bank Interface                                                          //
+   // Bank Selection                                                          //
+   //                                                                         //
+   //======================================================================== //
+
+     output qs_pkg::bank_id_t                     bank_idx_r
+
+   //======================================================================== //
+   //                                                                         //
+   // Scoreboard Interface                                                    //
    //                                                                         //
    //======================================================================== //
 
    //
-     input qs_pkg::bank_state_t                   bnk_in
+   , input qs_pkg::bank_state_t                   bank_in_r
    //
-   , output logic                                 bnk_out_vld_r
-   , output qs_pkg::bank_state_t                  bnk_out_r
-   , output qs_pkg::bank_id_t                     bnk_idx_r
+   , output logic                                 bank_out_vld_r
+   , output qs_pkg::bank_state_t                  bank_out_r
+
+   //======================================================================== //
+   //                                                                         //
+   // Memory Bank Interface                                                   //
+   //                                                                         //
+   //======================================================================== //
+
    //
-   , input qs_pkg::w_t                            rd_data_r
+   , input qs_pkg::w_t                            bank_rdata_r
    //
-   , output logic                                 rd_en_r
-   , output qs_pkg::addr_t                        rd_addr_r
-   //
-   , output logic                                 wr_en_r
-   , output qs_pkg::addr_t                        wr_addr_r
-   , output qs_pkg::w_t                           wr_data_r
+   , output logic                                 bank_en_r
+   , output logic                                 bank_wen_r
+   , output qs_pkg::addr_t                        bank_addr_r
+   , output qs_pkg::w_t                           bank_wdata_r
 
    //======================================================================== //
    //                                                                         //

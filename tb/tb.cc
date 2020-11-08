@@ -67,9 +67,9 @@ void VSignals::set_rst(bool rst) {
   vsupport::set(rst_, rst);
 }
 
-// Sample 'in_rdy' port.
-bool VSignals::in_rdy() const {
-  return vsupport::get_as_bool(in_rdy_);
+// Sample 'in_rdy_r' port.
+bool VSignals::in_rdy_r() const {
+  return vsupport::get_as_bool(in_rdy_r_);
 }
 
 // Sample sorted output interface.
@@ -174,7 +174,7 @@ void TB::drive_stimulus(const std::vector<word_type>& stimulus) {
 
   VSignals::VIn in;
   for (std::size_t i = 0; i < stimulus.size(); i) {
-    if (vs_.in_rdy()) {
+    if (vs_.in_rdy_r()) {
 
       // Drive interface
       in.vld = true;

@@ -42,7 +42,7 @@ module qs (
    , input                                        in_eop
    , input [qs_pkg::W - 1:0]                      in_dat
    //
-   , output logic                                 in_rdy
+   , output logic                                 in_rdy_r
 
    //======================================================================== //
    //                                                                         //
@@ -74,29 +74,29 @@ module qs (
   // ======================================================================== //
 
   //
-  logic                                 enq_bnk_in_vld_r;
-  qs_pkg::bank_state_t                  enq_bnk_in_r;
-  qs_pkg::bank_id_t                     enq_bnk_idx_r;
-  qs_pkg::bank_state_t                  enq_bnk_out_r;
+  qs_pkg::bank_id_t                     enq_bank_idx_r;
+  logic                                 enq_bank_in_vld_r;
+  qs_pkg::bank_state_t                  enq_bank_in_r;
+  qs_pkg::bank_state_t                  enq_bank_out_r;
   logic                                 enq_wr_en_r;
   qs_pkg::addr_t                        enq_wr_addr_r;
   qs_pkg::w_t                           enq_wr_data_r;
   //
-  logic                                 srt_bnk_in_vld_r;
-  qs_pkg::bank_state_t                  srt_bnk_in_r;
-  qs_pkg::bank_id_t                     srt_bnk_idx_r;
-  qs_pkg::bank_state_t                  srt_bnk_out_r;
-  logic                                 srt_wr_en_r;
-  qs_pkg::addr_t                        srt_wr_addr_r;
-  qs_pkg::w_t                           srt_wr_data_r;
-  logic                                 srt_rd_en_r;
-  qs_pkg::addr_t                        srt_rd_addr_r;
-  qs_pkg::w_t                           srt_rd_data_r;
+  qs_pkg::bank_id_t                     srt_bank_idx_r;
+  logic                                 srt_bank_in_vld_r;
+  qs_pkg::bank_state_t                  srt_bank_in_r;
   //
-  logic                                 deq_bnk_in_vld_r;
-  qs_pkg::bank_state_t                  deq_bnk_in_r;
-  qs_pkg::bank_id_t                     deq_bnk_idx_r;
-  qs_pkg::bank_state_t                  deq_bnk_out_r;
+  qs_pkg::bank_state_t                  srt_bank_out_r;
+  logic                                 srt_bank_en_r;
+  logic                                 srt_bank_wen_r;
+  qs_pkg::addr_t                        srt_bank_addr_r;
+  qs_pkg::w_t                           srt_bank_wdata_r;
+  qs_pkg::w_t                           srt_bank_rdata_r;
+  //
+  logic                                 deq_bank_in_vld_r;
+  qs_pkg::bank_state_t                  deq_bank_in_r;
+  qs_pkg::bank_id_t                     deq_bank_idx_r;
+  qs_pkg::bank_state_t                  deq_bank_out_r;
   logic                                 deq_rd_en_r;
   qs_pkg::addr_t                        deq_rd_addr_r;
   qs_pkg::w_t                           deq_rd_data_r;
@@ -115,13 +115,13 @@ module qs (
     , .in_sop            (in_sop                  )
     , .in_eop            (in_eop                  )
     , .in_dat            (in_dat                  )
-    , .in_rdy            (in_rdy                  )
+    , .in_rdy_r          (in_rdy_r                )
     //
-    , .bnk_in            (enq_bnk_out_r           )
+    , .bank_idx_r        (enq_bank_idx_r          )
     //
-    , .bnk_out_vld_r     (enq_bnk_in_vld_r        )
-    , .bnk_out_r         (enq_bnk_in_r            )
-    , .bnk_idx_r         (enq_bnk_idx_r           )
+    , .bank_in_r         (enq_bank_out_r          )
+    , .bank_out_vld_r    (enq_bank_in_vld_r       )
+    , .bank_out_r        (enq_bank_in_r           )
     //
     , .wr_en_r           (enq_wr_en_r             )
     , .wr_addr_r         (enq_wr_addr_r           )
@@ -135,18 +135,17 @@ module qs (
   //
   qs_srt u_qs_srt (
     //
-      .bnk_in            (srt_bnk_out_r           )
-    , .bnk_out_vld_r     (srt_bnk_in_vld_r        )
-    , .bnk_out_r         (srt_bnk_in_r            )
-    , .bnk_idx_r         (srt_bnk_idx_r           )
+      .bank_idx_r        (srt_bank_idx_r          )
     //
-    , .rd_data_r         (srt_rd_data_r           )
-    , .rd_en_r           (srt_rd_en_r             )
-    , .rd_addr_r         (srt_rd_addr_r           )
+    , .bank_in_r         (srt_bank_out_r          )
+    , .bank_out_vld_r    (srt_bank_in_vld_r       )
+    , .bank_out_r        (srt_bank_in_r           )
     //
-    , .wr_en_r           (srt_wr_en_r             )
-    , .wr_addr_r         (srt_wr_addr_r           )
-    , .wr_data_r         (srt_wr_data_r           )
+    , .bank_en_r         (srt_bank_en_r           )
+    , .bank_wen_r        (srt_bank_wen_r          )
+    , .bank_addr_r       (srt_bank_addr_r         )
+    , .bank_wdata_r      (srt_bank_wdata_r        )
+    , .bank_rdata_r      (srt_bank_rdata_r        )
     //
     , .clk               (clk                     )
     , .rst               (rst                     )
@@ -162,10 +161,10 @@ module qs (
     , .out_err_r         (out_err_r               )
     , .out_dat_r         (out_dat_r               )
     //
-    , .bnk_in            (deq_bnk_out_r           )
-    , .bnk_out_vld_r     (deq_bnk_in_vld_r        )
-    , .bnk_out_r         (deq_bnk_in_r            )
-    , .bnk_idx_r         (deq_bnk_idx_r           )
+    , .bank_in_r         (deq_bank_out_r          )
+    , .bank_out_vld_r    (deq_bank_in_vld_r       )
+    , .bank_out_r        (deq_bank_in_r           )
+    , .bank_idx_r        (deq_bank_idx_r          )
     //
     , .rd_data_r         (deq_rd_data_r           )
     , .rd_en_r           (deq_rd_en_r             )
@@ -179,32 +178,33 @@ module qs (
   //
   qs_banks u_qs_banks (
     //
-      .enq_bnk_in_vld_r  (enq_bnk_in_vld_r        )
-    , .enq_bnk_in_r      (enq_bnk_in_r            )
-    , .enq_bnk_idx_r     (enq_bnk_idx_r           )
-    , .enq_bnk_out_r     (enq_bnk_out_r           )
+      .enq_bank_idx_r    (enq_bank_idx_r          )
+    //
+    , .enq_bank_in_vld_r (enq_bank_in_vld_r       )
+    , .enq_bank_in_r     (enq_bank_in_r           )
+    , .enq_bank_out_r    (enq_bank_out_r          )
     //
     , .enq_wr_en_r       (enq_wr_en_r             )
     , .enq_wr_addr_r     (enq_wr_addr_r           )
     , .enq_wr_data_r     (enq_wr_data_r           )
     //
-    , .srt_bnk_in_vld_r  (srt_bnk_in_vld_r        )
-    , .srt_bnk_in_r      (srt_bnk_in_r            )
-    , .srt_bnk_idx_r     (srt_bnk_idx_r           )
-    , .srt_bnk_out_r     (srt_bnk_out_r           )
+    , .srt_bank_idx_r    (srt_bank_idx_r          )
     //
-    , .srt_wr_en_r       (srt_wr_en_r             )
-    , .srt_wr_addr_r     (srt_wr_addr_r           )
-    , .srt_wr_data_r     (srt_wr_data_r           )
+    , .srt_bank_in_vld_r (srt_bank_in_vld_r       )
+    , .srt_bank_in_r     (srt_bank_in_r           )
+    , .srt_bank_out_r    (srt_bank_out_r          )
     //
-    , .srt_rd_en_r       (srt_rd_en_r             )
-    , .srt_rd_addr_r     (srt_rd_addr_r           )
-    , .srt_rd_data_r     (srt_rd_data_r           )
+    , .srt_bank_en_r     (srt_bank_en_r           )
+    , .srt_bank_wen_r    (srt_bank_wen_r          )
+    , .srt_bank_addr_r   (srt_bank_addr_r         )
+    , .srt_bank_wdata_r  (srt_bank_wdata_r        )
+    , .srt_bank_rdata_r  (srt_bank_rdata_r        )
     //
-    , .deq_bnk_in_vld_r  (deq_bnk_in_vld_r        )
-    , .deq_bnk_in_r      (deq_bnk_in_r            )
-    , .deq_bnk_idx_r     (deq_bnk_idx_r           )
-    , .deq_bnk_out_r     (deq_bnk_out_r           )
+    , .deq_bank_idx_r    (deq_bank_idx_r          )
+    //
+    , .deq_bank_in_vld_r (deq_bank_in_vld_r       )
+    , .deq_bank_in_r     (deq_bank_in_r           )
+    , .deq_bank_out_r    (deq_bank_out_r          )
     //
     , .deq_rd_en_r       (deq_rd_en_r             )
     , .deq_rd_addr_r     (deq_rd_addr_r           )

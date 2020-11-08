@@ -42,21 +42,34 @@ module qs_enq (
    , input                                        in_eop
    , input [qs_pkg::W - 1:0]                      in_dat
    //
-   , output logic                                 in_rdy
+   , output logic                                 in_rdy_r
 
    //======================================================================== //
    //                                                                         //
-   // Bank Interface                                                          //
+   // Bank Selection                                                          //
+   //                                                                         //
+   //======================================================================== //
+
+   , output qs_pkg::bank_id_t                     bank_idx_r
+
+   //======================================================================== //
+   //                                                                         //
+   // Scoreboard Interface                                                    //
    //                                                                         //
    //======================================================================== //
 
    //
-   , input qs_pkg::bank_state_t                   bnk_in
+   , input qs_pkg::bank_state_t                   bank_in_r
    //
-   , output logic                                 bnk_out_vld_r
-   , output qs_pkg::bank_state_t                  bnk_out_r
-   , output qs_pkg::bank_id_t                     bnk_idx_r
-   //
+   , output logic                                 bank_out_vld_r
+   , output qs_pkg::bank_state_t                  bank_out_r
+
+   //======================================================================== //
+   //                                                                         //
+   // Memory Bank Interface                                                   //
+   //                                                                         //
+   //======================================================================== //
+
    , output logic                                 wr_en_r
    , output qs_pkg::addr_t                        wr_addr_r
    , output qs_pkg::w_t                           wr_data_r
@@ -71,7 +84,7 @@ module qs_enq (
    , input                                        clk
    , input                                        rst
 );
-/*
+
   // ======================================================================== //
   //                                                                          //
   // Wires                                                                    //
@@ -82,19 +95,19 @@ module qs_enq (
     logic 	 busy;
     logic        ready;
     logic [1:0]  state;
-  } enqueue_fsm_encoding_t;
+  } fsm_encoding_t;
   
-  typedef enum   logic [3:0] {  ENQUEUE_FSM_IDLE = 4'b0000,
-                                ENQUEUE_FSM_LOAD = 4'b1101
-                                } enqueue_fsm_t;
+  typedef enum   logic [3:0] {  FSM_IDLE = 4'b0000,
+                                FSM_LOAD = 4'b1101
+                                } fsm_t;
   //
-  `LIBV_REG_EN(enqueue_fsm_encoding_t, enqueue_fsm);
-  `LIBV_REG_EN(bank_id_t, enqueue_bank_idx);
-  `LIBV_REG_EN(addr_t, enqueue_idx);
-  `LIBV_SPSRAM_SIGNALS(enqueue_, qs_pkg::W, $clog2(qs_pkg::N));
-  //
-  qs_pkg::bank_state_t                  enqueue_bank;
-  logic                                 enqueue_bank_en;
+  `LIBV_REG_EN(fsm_encoding_t, fsm);
+  `LIBV_REG_EN_W(qs_pkg::bank_id_t, bank_idx);
+  `LIBV_REG_RST_W(logic, wr_en, 'b0);
+  `LIBV_REG_EN_W(qs_pkg::addr_t, wr_addr);
+  `LIBV_REG_EN_W(qs_pkg::w_t, wr_data);
+  `LIBV_REG_RST_W(logic, bank_out_vld, 'b0);
+  `LIBV_REG_EN_W(qs_pkg::bank_state_t, bank_out);
 
   // ======================================================================== //
   //                                                                          //
@@ -109,98 +122,101 @@ module qs_enq (
     // Defaults:
 
     // FSM state
-    enqueue_fsm_en 	= 'b0;
-    enqueue_fsm_w 	= enqueue_fsm_r;
+    fsm_en 	   = 'b0;
+    fsm_w 	   = fsm_r;
 
     // Bank state
-    enqueue_bank 	= bank_state_r [enqueue_bank_idx_r];
-    enqueue_bank_en 	= 'b0;
+    bank_out_vld_w = 'b0;
+    bank_out_w 	   = bank_out_r;
 
     // Bank index
-    enqueue_bank_idx_en = 'b0;
-    enqueue_bank_idx_w 	= bank_id_inc(enqueue_bank_idx_r);
+    bank_idx_en    = 'b0;
+    bank_idx_w 	   = qs_pkg::bank_id_inc(bank_idx_r);
 
-    enqueue_idx_en 	= 'b0;
-    enqueue_idx_w 	= enqueue_idx_r + 'b1;
-    
-    // Enqueue bank update
-    enqueue_en 		= 'b0;
-    enqueue_wen 	= 'b1;
-    enqueue_addr 	= '0;
-    enqueue_din 	= in_dat;
+    // Memory bank defaults:
+    wr_en_w 	   = 'b0;
+    wr_addr_en 	   = 'b0;
+    wr_addr_w 	   = wr_addr_r + 'b1;
+    wr_data_en 	   = 'b0;
+    wr_data_w 	   = in_dat;
 
-    case (enqueue_fsm_r)
+    case (fsm_r)
 
-      ENQUEUE_FSM_IDLE: begin
+      FSM_IDLE: begin
 	// Enqueue FSM is IDLE awaiting for the current selected bank
 	// to become READY. When it becomes READY, bank transitions to
 	// the LOADING status and entries are pushed from the IN
 	// interface.
 
-	case (enqueue_bank.status)
-	  BANK_IDLE: begin
+	case (bank_in_r.status)
+	  qs_pkg::BANK_IDLE: begin
 	    // Update bank status
-	    enqueue_bank_en 	 = 'b1;
+	    bank_out_vld_w 	= 'b1;
 
-	    enqueue_bank 	 = '0;
-	    enqueue_bank.err 	 = 'b0;
-	    enqueue_bank.n 	 = '0;
-	    enqueue_bank.status  = qs_pkg::BANK_LOADING;
+	    bank_out_w 	= '0;
+	    bank_out_w.err 	= 'b0;
+	    bank_out_w.n 	= '0;
+	    bank_out_w.status = qs_pkg::BANK_LOADING;
 
 	    // Reset index
-	    enqueue_idx_en 	 = 'b1;
-	    enqueue_idx_w 	 = '0;
+	    wr_addr_en 		= 'b1;
+	    wr_addr_w 		= '0;
 
 	    // Advance state.
-	    enqueue_fsm_en = 'b1;
-	    enqueue_fsm_w  = ENQUEUE_FSM_LOAD;
+	    fsm_en 		= 'b1;
+	    fsm_w 		= FSM_LOAD;
 	  end
 	  default: ;
-	endcase // case (bank_state_r [enqueue_bank_idx_r].status)
+	endcase // case (bank_in_r.status)
 
-      end // case: ENQUEUE_FSM_IDLE
+      end // case: FSM_IDLE
 
-      ENQUEUE_FSM_LOAD: begin
+      FSM_LOAD: begin
 	// Enqueue FSM is loading data from the IN interface.
 
-	casez ({in_vld, in_eop}) 
+	casez ({in_vld, in_eop})
 	  2'b1_0: begin
 	    // Write to nominated bank.
-	    enqueue_en 	   = 'b1;
-	    enqueue_bank.n = enqueue_bank.n + 'b1;
-
+	    wr_en_w 	   = 'b1;
+	    wr_data_en 	   = 'b1;
 	    // Advance index.
-	    enqueue_idx_en = 'b1;
+	    wr_addr_en 	   = 'b1;
 	  end
 	  2'b1_1: begin
 	    // Write to nominated bank.
-	    enqueue_en 		= 'b1;
+	    wr_en_w 	      = 'b1;
+	    wr_data_en 	      = 'b1;
+	    // Advance index.
+	    wr_addr_en 	      = 'b1;
+
+	    // Write to nominated bank.
+	    bank_out_vld_w    = 'b1;
 	    
 	    // Update bank status, now ready to be sorted.
-	    enqueue_bank_en 	= 'b1;
-	    enqueue_bank.n 	= enqueue_idx_r;
-	    enqueue_bank.status = qs_pkg::BANK_READY;
+	    bank_out_vld_w    = 'b1;
+	    bank_out_w.n      = wr_addr_r;
+	    bank_out_w.status = qs_pkg::BANK_READY;
 
 	    // Done, transition back to idle state.
-	    enqueue_fsm_en 	= 'b1;
-	    enqueue_fsm_w 	= ENQUEUE_FSM_IDLE;
+	    fsm_en 	      = 'b1;
+	    fsm_w 	      = FSM_IDLE;
 	  end
 	  default: begin
 	    // Otherwise, bubble. Do nothing.
 	  end
 	endcase
 	
-      end // case: ENQUEUE_FSM_LOAD
+      end // case: FSM_LOAD
 
       default:
 	// Otherwise, invalid state.
 	;
 
-    endcase // case (enqueue_fsm_r)
+    endcase // case (fsm_r)
     
     // Bank is ready to be loaded.
-    in_rdy = enqueue_fsm_r.ready;
+    in_rdy_r = fsm_r.ready;
 
   end // block: enqueue_PROC
-*/
+
 endmodule // qs_enq
