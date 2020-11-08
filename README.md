@@ -1,6 +1,6 @@
 # Introduction
 
-A microcoded implementation of the Quicksort algorithm.
+A hardware implementation of the Quicksort algorithm.
 
 # Dependencies
 
