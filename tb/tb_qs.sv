@@ -26,6 +26,8 @@
 //========================================================================== //
 
 `include "tb_qs_pkg.vh"
+`include "qs_pkg.vh"
+`include "qs_srt_pkg.vh"
 
 module tb_qs (
 
@@ -46,6 +48,18 @@ module tb_qs (
   , output logic                                  out_eop_r
   , output logic                                  out_err_r
   , output logic [tb_qs_pkg::OPT_W - 1:0]         out_dat_r
+
+  // ======================================================================== //
+  // Micro-code probes
+
+  // Disassembly interface
+  , output logic                                  uc_inst_commit
+  , output qs_srt_pkg::inst_t                     uc_inst
+
+  //
+  , output logic                                  uc_rf_wen
+  , output qs_srt_pkg::reg_t                      uc_rf_wa
+  , output qs_pkg::w_t                            uc_rf_wdata
 
   // ======================================================================== //
   // TB support
@@ -83,6 +97,21 @@ module tb_qs (
     , .clk                    (clk                     )
     , .rst                    (rst                     )
   );
+
+  // ------------------------------------------------------------------------ //
+  //
+  always_comb begin : uc_probes_PROC
+
+    // Probe instruction at execution stage.
+    uc_inst_commit = u_qs.u_qs_srt.xa_commit;
+    uc_inst 	   = u_qs.u_qs_srt.xa_inst_r;
+
+    // Probe writebacks to register file.
+    uc_rf_wen 	   = u_qs.u_qs_srt.ca_rf_wen_w;
+    uc_rf_wa 	   = u_qs.u_qs_srt.ca_rf_wa_w;
+    uc_rf_wdata    = u_qs.u_qs_srt.ca_rf_wdata_w;
+
+  end // block: uc_probes_PROC
 
 endmodule // tb_qs
   

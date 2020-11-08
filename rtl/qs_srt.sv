@@ -399,7 +399,7 @@ module qs_srt (
 	ca_replay_pc_w = qs_srt_pkg::pc_t'(xa_dp_alu_1);
       end
       default: begin
-	ca_replay_w    = 'b1;
+	ca_replay_w    = 'b0;
 	ca_replay_pc_w = '0;
       end
     endcase // casez ({...

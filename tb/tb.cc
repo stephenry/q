@@ -80,6 +80,19 @@ void VSignals::get(VOut& out) const {
   out.dat = vsupport::get(out_dat_r_);
 }
 
+// Get microcode instruction packet.
+void VSignals::get(UCInst& inst) const {
+  inst.commit = vsupport::get_as_bool(uc_inst_commit_);
+  inst.inst = vsupport::get(uc_inst_);
+}
+
+  // Get microcode writeback packet
+void VSignals::get(UCWriteback& wrbk) const {
+  wrbk.wen = vsupport::get_as_bool(uc_rf_wen_);
+  wrbk.wa = vsupport::get(uc_rf_wa_);
+  wrbk.wdata = vsupport::get(uc_rf_wdata_);
+}
+
 // Obtain current simulation cycle.
 vluint64_t VSignals::cycle() const {
   return vsupport::get(tb_cycle_);

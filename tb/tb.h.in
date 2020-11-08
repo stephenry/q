@@ -73,6 +73,17 @@ struct VSignals {
     vluint8_t eop;
     vluint32_t dat;
   };
+
+  struct UCInst {
+    bool commit;
+    vluint16_t inst;
+  };
+
+  struct UCWriteback {
+    bool wen;
+    vluint8_t wa;
+    vluint32_t wdata;
+  };
   
   template<typename U>
   static VSignals bind(U* u) {
@@ -88,6 +99,13 @@ struct VSignals {
     vs.out_sop_r_ = std::addressof(u->out_sop_r);
     vs.out_eop_r_ = std::addressof(u->out_eop_r);
     vs.out_dat_r_ = std::addressof(u->out_dat_r);
+    // Disassembly interface:
+    vs.uc_inst_commit_ = std::addressof(u->uc_inst_commit);
+    vs.uc_inst_ = std::addressof(u->uc_inst);
+    // Writeback interface
+    vs.uc_rf_wen_ = std::addressof(u->uc_rf_wen);
+    vs.uc_rf_wa_ = std::addressof(u->uc_rf_wa);
+    vs.uc_rf_wdata_ = std::addressof(u->uc_rf_wdata);
     // Testbench monitors:
     vs.tb_cycle_ = std::addressof(u->tb_cycle);
     // Clk/Rst:
@@ -112,6 +130,12 @@ struct VSignals {
   // Sample sorted output interface.
   void get(VOut& out) const;
 
+  // Get microcode instruction packet.
+  void get(UCInst& inst) const;
+
+  // Get microcode writeback packet
+  void get(UCWriteback& wrbk) const;
+
   // Obtain current simulation cycle.
   vluint64_t cycle() const;
   
@@ -128,6 +152,15 @@ struct VSignals {
   vluint8_t* out_sop_r_;
   vluint8_t* out_eop_r_;
   vluint32_t* out_dat_r_;
+
+  // Disassembly interface
+  vluint8_t* uc_inst_commit_;
+  vluint16_t* uc_inst_;
+
+  // Writeback interface
+  vluint8_t* uc_rf_wen_;
+  vluint8_t* uc_rf_wa_;
+  vluint32_t* uc_rf_wdata_;
 
   // Testbench monitor
   vluint64_t* tb_cycle_;
