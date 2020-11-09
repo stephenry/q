@@ -158,7 +158,8 @@ module qs_srt_ucode_decoder (
     endcase // case (inst.opcode)
 
     //
-    ucode.dst_is_blink  = (ucode.dst == BLINK);
+    ucode.src0_is_blink  = ucode.src0_en & (ucode.src0 == BLINK);
+    ucode.src1_is_blink  = ucode.src1_en & (ucode.src1 == BLINK);
 
   end // block: decode_PROC
 

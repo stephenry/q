@@ -32,6 +32,7 @@
 #include "vobj/Vtb_qs.h"
 #ifdef OPT_TRACE_ENABLE
 #  include <iostream>
+#  include <sstream>
 #endif
 #ifdef OPT_VCD_ENABLE
 #  include "verilated_vcd_c.h"
@@ -68,6 +69,10 @@ void VSignals::set_rst(bool rst) {
   vsupport::set(rst_, rst);
 }
 
+bool VSignals::get_rst() const {
+  return vsupport::get_as_bool(rst_);
+}
+
 // Sample 'in_rdy_r' port.
 bool VSignals::in_rdy_r() const {
   return vsupport::get_as_bool(in_rdy_r_);
@@ -85,6 +90,7 @@ void VSignals::get(VOut& out) const {
 void VSignals::get(UCInst& inst) const {
   inst.commit = vsupport::get_as_bool(uc_inst_commit_);
   inst.inst = vsupport::get(uc_inst_);
+  inst.pc = vsupport::get(uc_inst_pc_);
 }
 
   // Get microcode writeback packet
@@ -92,6 +98,10 @@ void VSignals::get(UCWriteback& wrbk) const {
   wrbk.wen = vsupport::get_as_bool(uc_rf_wen_);
   wrbk.wa = vsupport::get(uc_rf_wa_);
   wrbk.wdata = vsupport::get(uc_rf_wdata_);
+  wrbk.flags_en = vsupport::get_as_bool(uc_flags_en_);
+  wrbk.c = vsupport::get_as_bool(uc_flags_c_);
+  wrbk.n = vsupport::get_as_bool(uc_flags_n_);
+  wrbk.z = vsupport::get_as_bool(uc_flags_z_);
 }
 
 // Obtain current simulation cycle.
@@ -100,48 +110,50 @@ vluint64_t VSignals::cycle() const {
 }
 
 class Instruction {
+  
  public:
-  Instruction(vluint16_t i)
-      : i_(i)
+  Instruction(vluint16_t enc)
+      : enc_(enc)
   {}
+
+  vluint16_t enc() const { return enc_; }
 
   std::string dis() const {
     using std::to_string;
     
     std::string s;
 
-    switch (opcode()) {
+    switch (opcode_field()) {
       case 0x0: {
         s += "nop";
       } break;
       case 0x1: {
         // Jcc
-        s += "J";
-        s += " ";
-        switch (cc()) {
-          case 1:
+        s += "j";
+        switch (cc_field()) {
+          case 1: {
             s += "eq";
-            break;
-          case 2:
+          } break;
+          case 2: {
             s += "gt";
-            break;
-          case 3:
+          } break;
+          case 3: {
             s += "le";
-            break;
+          } break;
         }
         s += " ";
-        s += to_string(A());
+        s += hex(A_field());
       } break;
       case 0x2: {
         // Push/Pop:
         if (sel0()) {
           s += "pop";
           s += " ";
-          s += reg(u());
+          s += reg(r_field());
         } else {
           s += "push";
           s += " ";
-          s += reg(r());
+          s += reg(u_field());
         }
       } break;
       case 0x4: {
@@ -150,16 +162,16 @@ class Instruction {
           // St
           s += "st";
           s += " [";
-          s += reg(r());
+          s += reg(r_field());
           s += "], ";
-          s += reg(u());
+          s += reg(u_field());
         } else {
           // Ld
           s += "ld";
           s += " ";
-          s += reg(r());
+          s += reg(r_field());
           s += ", [";
-          s += reg(u());
+          s += reg(u_field());
           s += "]";
         }
       } break;
@@ -169,21 +181,23 @@ class Instruction {
         if (!sel0() && !sel1()) {
           // Mov
           s += " ";
-          s += reg(r());
+          s += reg(r_field());
           s += ", ";
-          s += reg(u());
+          s += reg(u_field());
         } else if (!sel0() && sel1()) {
           // Movi
           s += "i";
+          s += " ";
+          s += reg(r_field());
           s += ", ";
-          s += to_string(i());
+          s += to_string(i_field());
         } else if(sel0()) {
           // Movs
           s += "s";
           s += " ";
-          s += reg(r());
+          s += reg(r_field());
           s += ", ";
-          s += regs(S());
+          s += regs(S_field());
         }
       } break;
       case 0x7: {
@@ -192,76 +206,82 @@ class Instruction {
           // Sub
           s += "sub";
           s += sel1() ? "i " : " ";
-          s += reg(r());
-          s += sel1() ? to_string(i()) : reg(u());
+          s += reg(r_field());
+          s += ", ";
+          s += reg(s_field());
+          s += ", ";
+          s += sel1() ? to_string(i_field()) : reg(u_field());
         } else {
           // Add
           s += "add";
           s += sel1() ? "i " : " ";
-          s += reg(r());
-          s += sel1() ? to_string(i()) : reg(u());
+          s += reg(r_field());
+          s += ", ";
+          s += reg(s_field());
+          s += ", ";
+          s += sel1() ? to_string(i_field()) : reg(u_field());
         }
       } break;
-      case 0xA: {
+      case 0xC: {
         // Call/Ret:
         if (sel0()) {
           s += "ret";
         } else {
           s += "call";
           s += " ";
-          s += hex(A());
+          s += hex(A_field());
         }
       } break;
       case 0xF: {
-        // Wait/Emit
-        s += sel0() ? "emit" : "wait";
+        // Await/Emit
+        s += sel0() ? "emit" : "await";
       }
     }
 
     return s;
   }
 
-  vluint16_t opcode() const {
-    return mask_bits(i_, 15, 12);
+  vluint16_t opcode_field() const {
+    return extract_field(enc_, 15, 12);
   }
 
   bool sel0() const {
-    return get_bit(i_, 11);
+    return get_bit(enc_, 11);
   }
 
   bool sel1() const {
-    return get_bit(i_, 3);
+    return get_bit(enc_, 3);
   }
 
-  vluint8_t cc() const {
-    return mask_bits(i_, 9, 8);
+  vluint8_t cc_field() const {
+    return extract_field(enc_, 9, 8);
   }
 
-  vluint16_t r() const {
-    return mask_bits(i_, 10, 8);
+  vluint16_t r_field() const {
+    return extract_field(enc_, 10, 8);
   }
 
-  vluint16_t s() const {
-    return mask_bits(i_, 6, 4);
+  vluint16_t s_field() const {
+    return extract_field(enc_, 6, 4);
   }
 
-  vluint16_t S() const {
-    return mask_bits(i_, 3, 0);
+  vluint16_t S_field() const {
+    return extract_field(enc_, 3, 0);
   }
 
-  vluint16_t i() const {
-    return mask_bits(i_, 2, 0);
+  vluint16_t i_field() const {
+    return extract_field(enc_, 2, 0);
   }
 
-  vluint16_t A() const {
-    return mask_bits(i_, 7, 0);
+  vluint16_t A_field() const {
+    return extract_field(enc_, 7, 0);
   }
 
-  vluint16_t u() const {
-    return mask_bits(i_, 3, 0);
+  vluint16_t u_field() const {
+    return extract_field(enc_, 3, 0);
   }
 
- private:
+
   std::string reg(std::size_t i) const {
     using std::to_string;
 
@@ -284,13 +304,26 @@ class Instruction {
       } break;
     }
   }
-  
-  vluint16_t i_;
+ private:  
+  vluint16_t enc_;
 };
 
 Model::Model(TB* tb)
-    : tb_(tb), is_valid_(true)
-{}
+    : tb_(tb), is_valid_(true) {
+  reset();
+}
+
+void Model::reset() {
+  // Point PC back to reset vector.
+  arch_.pc = 0;
+  // Clear general purpose registers.
+  for (std::size_t i = 0; i < 8; i++)
+    arch_.rf[i] = 0;
+  // Clear special registers
+  arch_.N = 0;
+  // Clear stack.
+  arch_.stack.clear();
+}
 
 void Model::step() {
   if (!is_valid_) return;
@@ -298,46 +331,214 @@ void Model::step() {
   VSignals::UCInst ucinst;
   tb_->vs_.get(ucinst);
   if (ucinst.commit) {
+    VSignals::UCWriteback ucwrbk;
+    tb_->vs_.get(ucwrbk);
     const Instruction inst(ucinst.inst);
 #ifdef OPT_TRACE_ENABLE
-    std::cout << tb_->cycle() << " ("
-              << tb::hex(ucinst.pc) << "): " << inst.dis();
+    std::stringstream ss;
+    ss.seekp(0, std::ios::end);
+    ss << tb_->cycle() << " [" << tb::hex(ucinst.pc) << "]: " << inst.dis();
+       
 
-    switch (inst.opcode()) {
+    if (ucwrbk.wen) {
+      std::stringstream::pos_type offset = ss.tellp();
+      ss << std::string(50 - offset, ' ')
+         << inst.reg(ucwrbk.wa) << " <- " << hex(ucwrbk.wdata)
+         << "\t["
+         << (ucwrbk.flags_en && ucwrbk.c ? "c" : " ")
+         << (ucwrbk.flags_en && ucwrbk.n ? "n" : " ")
+         << (ucwrbk.flags_en && ucwrbk.z ? "z" : " ")
+         << "]";
+    }
+    ss << "\n";
+    std::cout << ss.str();
+#endif
+
+    // Check expected program counter.
+    EXPECT_EQ(arch_.pc, ucinst.pc);
+
+    switch (inst.opcode_field()) {
       case 0: {
         // Nop
+
+        // Advance to next instruction
+        arch_.pc++;
       } break;
       case 0x1: {
         // Jcc
+        bool is_taken = false;
+        switch (inst.cc_field()) {
+          case 0: {
+            // Unconditional
+            is_taken = true;
+          } break;
+          case 1: {
+            // EQ condition
+          } break;
+          case 2: {
+            // GT condition
+          } break;
+          case 3: {
+            // LE condition
+          } break;
+        }
+        // Update program counter.
+        arch_.pc = is_taken ? inst.A_field() : (arch_.pc + 1);
       } break;
       case 0x2: {
         // Push/Pop:
+        if (!inst.sel0()) {
+          // Push
+          const vluint8_t ra_expected = inst.u_field();
+          arch_.stack.push_back(arch_.rf[ra_expected]);
+        } else {
+          // Pop
+
+          // Should not pop from empty stack.
+          EXPECT_FALSE(arch_.stack.empty());
+
+          // Validate writeback destination register.
+          const vluint8_t  wa_expected = inst.r_field();
+          const vluint8_t  wa_actual = ucwrbk.wa;
+          EXPECT_EQ(wa_expected, wa_actual);
+
+          // Validate state written back.
+          const vluint32_t wdata_expected = arch_.stack.back();
+          const vluint32_t wdata_actual = ucwrbk.wdata;
+          EXPECT_EQ(wdata_expected, wdata_actual);
+        }
+
+        // Advance to next instruction
+        arch_.pc++;
       } break;
       case 0x4: {
         // Ld/St
+        if (!inst.sel0()) {
+          // Load
+
+          // Expect a write to the register file to take place.
+          EXPECT_TRUE(ucwrbk.wen);
+
+          // Expect write registers to be equal
+          const vluint8_t wa_expected = inst.r_field();
+          const vluint8_t wa_actual = ucwrbk.wa;
+          EXPECT_EQ(wa_expected, wa_actual);
+
+          // Expect write back data to be correct.
+          const vluint8_t ra_expected = inst.u_field();
+          const vluint32_t wdata_expected = arch_.mem[ra_expected];
+          const vluint32_t wdata_actual = ucwrbk.wdata;
+          EXPECT_EQ(wdata_expected, wdata_actual);
+
+          // Update architectural state.
+          arch_.rf[wa_actual] = wdata_actual;
+        } else {
+          // Store
+
+          const vluint8_t wa_expected = inst.s_field();
+          const vluint8_t ra_expected = inst.u_field();
+          const vluint32_t wdata_expected = arch_.rf[ra_expected];
+
+          // Update architectural state.
+          arch_.rf[wa_expected] = wdata_expected;
+        }
+        // Advance to next instruction
+        arch_.pc++;
       } break;
       case 0x6: {
         // Mov/Movi/Movs
+
+        // Expect write to register file.
+        EXPECT_TRUE(ucwrbk.wen);
+
+        // Expect write to correct register.
+        const vluint8_t wa_expected = inst.r_field();
+        const vluint8_t wa_actual = ucwrbk.wa;
+        EXPECT_EQ(wa_expected, wa_actual);
+
+        vluint32_t wdata_expected;
+
+        if (       !inst.sel0() && !inst.sel1()) {
+          // Mov
+          const vluint8_t ra_expected = inst.u_field();
+          wdata_expected = arch_.rf[ra_expected];
+        } else if (!inst.sel0() &&  inst.sel1()) {
+          // Movi
+          wdata_expected = inst.i_field();
+        } else if ( inst.sel0() ) {
+          // Movs
+          switch (inst.S_field()) {
+            case 0: {
+              // Writing 'N' register
+              wdata_expected = arch_.N;
+            } break;
+          }
+        } else {
+          // Illegal encoding; unreachable.
+          ADD_FAILURE() << "Bad MOV{i,s} instruction encoding.\n";
+        }
+
+        // Validate expected vs. actual
+        const vluint32_t wdata_actual = ucwrbk.wdata;
+        EXPECT_EQ(wdata_expected, wdata_actual);
+
+        // Update architectural state
+        arch_.rf[wa_expected] = wdata_actual;
+
+        // Advance to next instruction
+        arch_.pc++;
       } break;
       case 0x7: {
         // Add/Sub
+
+        // Advance to next instruction
+        arch_.pc++;
       } break;
-      case 0xA: {
+      case 0xC: {
         // Call/Ret
+        if (!inst.sel0()) {
+          // Call
+          arch_.pc = inst.A_field();
+        } else {
+          // Ret
+          arch_.pc = arch_.rf[7];
+        }
+
       } break;
       case 0xF: {
-        // Wait/Emit
+        // Await/Emit
+
+        // Advance to next instruction
+        arch_.pc++;
       } break;
       default: {
-        ADD_FAILURE() << "Invalid instruction decoded.";
+        ADD_FAILURE() << "Invalid instruction decoded; instruction was: "
+                      << hex(inst.enc())
+                      << "\n";
       };
     }
-    
-    std::cout << "\n";
-#endif
   }
 }
 
+void Model::set_special_register(vluint8_t i, vluint32_t v) {
+  switch (i) {
+    case 0: {
+      arch_.N = v;
+    } break;
+    default: {
+      ADD_FAILURE() << "Invalid special register index " << i;
+    } break;
+  }
+}
+
+void Model::set_memory_dims(std::size_t lo, std::size_t hi) {
+  // Disregard lo
+  arch_.mem.resize(hi + 1);
+}
+
+void Model::set_memory(std::size_t i, vluint32_t word) {
+  arch_.mem[i] = word;
+}
 
 TB::TB(const Options& opts)
     : opts_(opts) {
@@ -358,8 +559,6 @@ TB::TB(const Options& opts)
 #endif
   }
 #endif
-  // Construct behavioral model
-  model_ = Model(this);
 }
 
 TB::~TB() {
@@ -381,6 +580,9 @@ void TB::run() {
   cycle_ = 0;
   time_ = 0;
 
+  // Construct behavioral model
+  model_ = Model(this);
+
   // Run reset
   reset();
 
@@ -394,6 +596,12 @@ void TB::run() {
 
     // Drive packet
     drive_stimulus(data_packet);
+    // Fix up context set outside of the microprogram.
+    model_.set_special_register(0, data_packet.size() - 1);
+    model_.set_memory_dims(0, data_packet.size() - 1);
+    for (std::size_t i = 0; i < data_packet.size(); i++) {
+      model_.set_memory(i, data_packet[i]);
+    }
     
     // Compuare output
     const std::vector<word_type> actual /* = get_sorted_packet() */;
@@ -405,7 +613,7 @@ void TB::run() {
   }
   
   // Wind-down simulation
-  step(20);
+  step(200);
 }
 #ifdef OPT_TRACE_ENABLE
 
@@ -419,7 +627,7 @@ void TB::reset() {
   vs_.set_rst(false);
   for (vluint64_t i = 0; i < 20; i++) {
     vs_.set_rst((i > 5) && (i < 15));
-    step();
+    step(1);
   }
   vs_.set_rst(false);
 }
@@ -503,7 +711,11 @@ void TB::step(std::size_t n) {
       wave_->dump(time());
     }
 #endif
-    model_.step();
+    if (vs_.get_rst()) {
+      model_.reset();
+    } else {
+      model_.step();
+    }
     time_ += 5;
 
     // CLK region
@@ -515,7 +727,6 @@ void TB::step(std::size_t n) {
       wave_->dump(time());
     }
 #endif
-    model_.step();
     time_ += 5;
   }
 }

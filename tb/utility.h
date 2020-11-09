@@ -51,8 +51,8 @@ constexpr T mask(std::size_t bits) {
 
 // Mask bits in 't' such that only [msb:lsb] can be set.
 template<typename T>
-T mask_bits(T t, std::size_t msb, std::size_t lsb) {
-  return t & (mask<T>(msb - lsb + 1) << lsb);
+T extract_field(T t, std::size_t msb, std::size_t lsb) {
+  return (t >> lsb) & mask<T>(msb - lsb + 1);
 }
 
 template<typename T>

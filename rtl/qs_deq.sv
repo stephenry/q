@@ -58,10 +58,10 @@ module qs_deq (
    //======================================================================== //
 
    //
-   , input qs_pkg::bank_state_t                   bank_in_r
+   , input qs_pkg::bank_state_t                   bank_in
    //
-   , output logic                                 bank_out_vld_r
-   , output qs_pkg::bank_state_t                  bank_out_r
+   , output logic                                 bank_out_vld
+   , output qs_pkg::bank_state_t                  bank_out
 
    //======================================================================== //
    //                                                                         //
@@ -105,8 +105,6 @@ module qs_deq (
   `LIBV_REG_EN_W(qs_pkg::bank_id_t, bank_idx);
   `LIBV_REG_RST_W(logic, rd_en, 'b0);
   `LIBV_REG_EN_W(qs_pkg::addr_t, rd_addr);
-  `LIBV_REG_RST_W(logic, bank_out_vld, 'b0);
-  `LIBV_REG_EN_W(qs_pkg::bank_state_t, bank_out);
   //
   typedef struct packed {
     logic                sop;
@@ -141,8 +139,8 @@ module qs_deq (
     fsm_en 	      = 'b0;
     fsm_w 	      = fsm_r;
 
-    bank_out_vld_w    = 'b0;
-    bank_out_w 	      = '0;
+    bank_out_vld      = 'b0;
+    bank_out 	      = bank_in;
 
     bank_idx_en       = 'b0;
     bank_idx_w 	      = qs_pkg::bank_id_inc(bank_idx_r);
@@ -158,21 +156,21 @@ module qs_deq (
 
       FSM_IDLE: begin
 
-	case (bank_in_r.status)
+	case (bank_in.status)
 
 	  qs_pkg::BANK_SORTED: begin
 	    // Update bank status.
-	    bank_out_en       = 'b1;
-	    bank_out_w 	      = bank_in_r;
-	    bank_out_w.status = qs_pkg::BANK_UNLOADING;
+	    bank_out_vld    = 'b1;
+	    bank_out 	    = bank_in;
+	    bank_out.status = qs_pkg::BANK_UNLOADING;
 
 	    // Reset index counter.
-	    rd_addr_en 	      = 'b1;
-	    rd_addr_w 	      = '0;
+	    rd_addr_en 	    = 'b1;
+	    rd_addr_w 	    = '0;
 
 	    // Transition to 
-	    fsm_en 	      = 'b1;
-	    fsm_w 	      = FSM_UNLOAD;
+	    fsm_en 	    = 'b1;
+	    fsm_w 	    = FSM_UNLOAD;
 	  end
 
 	  default:
@@ -186,24 +184,23 @@ module qs_deq (
 
       FSM_UNLOAD: begin
 	// Load bank
-	bank_out_vld_w 	  = 'b1;
+	bank_out_vld = 'b1;
 
 //	bank_out_en 	  = bank_out_vld_w;
 //	dequeue_out_en 	  = out_vld_w;
 //	dequeue_out_w 	  = '0;
 //	dequeue_out_w.sop = (rd_addr_r == '0);
 
-	if (bank_in_r.n == rd_addr_r) begin
+	if (bank_in.n == rd_addr_r) begin
 	  // Is final word, update status and return to IDLE.
 //	  dequeue_out_w.eop = '1;
 //	  dequeue_out_w.err = dequeue_bank.err;
 
-	  bank_out_vld_w    = 'b1;
-	  bank_out_w 	    = bank_out_r;
-	  bank_out_w.status = qs_pkg::BANK_READY;
+	  bank_out_vld 	  = 'b1;
+	  bank_out.status = qs_pkg::BANK_READY;
 
-	  fsm_en 	    = 'b1;
-	  fsm_w 	    = FSM_WAIT_EOP;
+	  fsm_en 	  = 'b1;
+	  fsm_w 	  = FSM_WAIT_EOP;
 	end
 
       end // case: FSM_UNLOAD

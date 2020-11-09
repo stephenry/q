@@ -1,5 +1,5 @@
 //========================================================================== //
-// Copyright (c) 2018, Stephen Henry
+// Copyright (c) 2020, Stephen Henry
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -36,10 +36,10 @@ module qs_srt_ucode_rom (
    //======================================================================== //
 
    // Input address
-     input qs_srt_pkg::pc_t                     ra
+     input qs_srt_pkg::pc_t                  ra
 
    // Instruction
-   , output qs_srt_pkg::inst_t                  rout
+   , output qs_srt_pkg::inst_t               rout
 );
   // Import everything in this scope for readability.
   import qs_srt_pkg::*;
@@ -166,14 +166,14 @@ module qs_srt_ucode_rom (
   // Reset label:
   localparam pc_t SYM_RESET = 'd0;
 
-  // Start (entry-point) label.
-  localparam pc_t SYM_START = 'd32;
-
   // Partition subroutine.
-  localparam pc_t SYM_PARTITION = 'd64;
+  localparam pc_t SYM_PARTITION = 'd32;
 
   // Quicksort subroutine.
-  localparam pc_t SYM_QUICKSORT = 'd96;
+  localparam pc_t SYM_QUICKSORT = 'd64;
+
+  // Start (entry-point) label.
+  localparam pc_t SYM_START = 'd96;
 
   // Quicksort subroutine.
   localparam pc_t SYM_ERR = 'd128;
@@ -188,10 +188,15 @@ module qs_srt_ucode_rom (
     // microcode would need to be hand assembled and loaded as a HEX-file.
     
     case (ra)
+      // ------------------------------------------------------------------- //
+      // Exception table
+
       // Reset vector
       SYM_RESET          : rout = j(SYM_START);
 
-      // Parition subroutine entry point
+      // ------------------------------------------------------------------- //
+      // Parition sub-routine
+
       SYM_PARTITION      : rout = push(R2);
       SYM_PARTITION +   1: rout = push(R3);
       SYM_PARTITION +   2: rout = push(R4);
@@ -223,7 +228,9 @@ module qs_srt_ucode_rom (
       SYM_PARTITION +  28: rout = pop(R2);
       SYM_PARTITION +  29: rout = ret();
 
-      // Quicksort subroutine entry point
+      // ------------------------------------------------------------------- //
+      // Quicksort sub-routine.
+      
       SYM_QUICKSORT      : rout = push(BLINK);
       SYM_QUICKSORT +   1: rout = push(R2);
       SYM_QUICKSORT +   2: rout = push(R3);
@@ -246,14 +253,37 @@ module qs_srt_ucode_rom (
       SYM_QUICKSORT +  19: rout = pop(BLINK);
       SYM_QUICKSORT +  20: rout = ret();
 
-      // Algorithm start label.
-      SYM_START          : rout = await();
-      SYM_START +       1: rout = movi(R0, '0);
-      SYM_START +       2: rout = movs(R1, REG_N);
-      SYM_START +       3: rout = call(SYM_QUICKSORT);
-      SYM_START +       4: rout = done();
-      SYM_START +       5: rout = j(SYM_START);
+      // ------------------------------------------------------------------- //
+      // Start (start_); program entry point.
 
+      // Initialize machine state to zero, also serves to set the
+      // cosimulation environment to the initial RTL state.
+      SYM_START          : rout = movi(R0, '0);
+      SYM_START +       1: rout = movi(R1, '0);
+      SYM_START +       2: rout = movi(R2, '0);
+      SYM_START +       3: rout = movi(R3, '0);
+      SYM_START +       4: rout = movi(R4, '0);
+      SYM_START +       5: rout = movi(R5, '0);
+      SYM_START +       6: rout = movi(R6, '0);
+      SYM_START +       7: rout = movi(BLINK, '0);
+
+      // Await availability of new data at current bank.
+      SYM_START +       8: rout = await();
+
+      // Call Quicksort routine on the range [0, REGN].
+      SYM_START +       9: rout = movi(R0, '0);
+      SYM_START +      10: rout = movs(R1, REG_N);
+      SYM_START +      11: rout = call(SYM_QUICKSORT);
+
+      // Flag availability of new data and move to next bank.
+      SYM_START +      12: rout = done();
+
+      // Return to start and repeat.
+      SYM_START +      13: rout = j(SYM_START + 'd8);
+
+      // ------------------------------------------------------------------- //
+      // Error handler.
+      
       // Error label (jump to self for all enternity).
       SYM_ERR            : rout = j(SYM_ERR);
             

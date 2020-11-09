@@ -33,11 +33,14 @@ package qs_srt_pkg;
   // Program counter type.
   typedef logic [7:0] pc_t;
 
+  // Machine reset vector.
+  localparam pc_t RESET_VECTOR 	    = '0;
+
   // Condition codes
-  typedef enum logic [1:0] { UNCOND  = 2'b00,
-                             EQ      = 2'b01,
-                             GT      = 2'b10,
-                             LE      = 2'b11
+  typedef enum logic [1:0] { UNCOND = 2'b00,
+                             EQ     = 2'b01,
+                             GT     = 2'b10,
+                             LE     = 2'b11
                              } cc_t;
 
   // Immediate field
@@ -47,14 +50,14 @@ package qs_srt_pkg;
   typedef logic [7:0] field_A_t;
 
   // Register synonyms:
-  typedef enum logic [2:0] { R0     = 3'b000,
-                             R1     = 3'b001,
-                             R2     = 3'b010,
-                             R3     = 3'b011,
-                             R4     = 3'b100,
-                             R5     = 3'b101,
-                             R6     = 3'b110,
-                             BLINK  = 3'b111
+  typedef enum logic [2:0] { R0    = 3'b000,
+                             R1    = 3'b001,
+                             R2    = 3'b010,
+                             R3    = 3'b011,
+                             R4    = 3'b100,
+                             R5    = 3'b101,
+                             R6    = 3'b110,
+                             BLINK = 3'b111
 			     } reg_t;
 
   typedef enum logic [2:0] { REG_N   = 3'b000
@@ -165,7 +168,8 @@ package qs_srt_pkg;
     reg_t            dst;
 
     //
-    logic            dst_is_blink;
+    logic            src0_is_blink;
+    logic            src1_is_blink;
 
     //
     logic            src0_en;

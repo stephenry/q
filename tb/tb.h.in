@@ -86,6 +86,11 @@ struct VSignals {
     bool wen;
     vluint8_t wa;
     vluint32_t wdata;
+
+    bool flags_en;
+    bool c;
+    bool n;
+    bool z;
   };
   
   template<typename U>
@@ -110,6 +115,10 @@ struct VSignals {
     vs.uc_rf_wen_ = std::addressof(u->uc_rf_wen);
     vs.uc_rf_wa_ = std::addressof(u->uc_rf_wa);
     vs.uc_rf_wdata_ = std::addressof(u->uc_rf_wdata);
+    vs.uc_flags_en_ = std::addressof(u->uc_flags_en);
+    vs.uc_flags_c_ = std::addressof(u->uc_flags_n);
+    vs.uc_flags_n_ = std::addressof(u->uc_flags_c);
+    vs.uc_flags_z_ = std::addressof(u->uc_flags_z);
     // Testbench monitors:
     vs.tb_cycle_ = std::addressof(u->tb_cycle);
     // Clk/Rst:
@@ -127,6 +136,9 @@ struct VSignals {
 
   // Set value of rst port.
   void set_rst(bool rst = true);
+
+  // Get current value of rst port.
+  bool get_rst() const;
 
   // Sample 'in_rdy_r' port.
   bool in_rdy_r() const;
@@ -166,6 +178,10 @@ struct VSignals {
   vluint8_t* uc_rf_wen_;
   vluint8_t* uc_rf_wa_;
   vluint32_t* uc_rf_wdata_;
+  vluint8_t* uc_flags_en_;
+  vluint8_t* uc_flags_c_;
+  vluint8_t* uc_flags_n_;
+  vluint8_t* uc_flags_z_;
 
   // Testbench monitor
   vluint64_t* tb_cycle_;
@@ -181,7 +197,20 @@ class Model {
 
   Model(TB* tb);
 
+  // Reset the architectural stae of the model.
+  void reset();
+
+  // Advance the model by one cycle.
   void step();
+
+  // Set architectural state not visible to the microcode.
+  void set_special_register(vluint8_t i, vluint32_t v);
+
+  // Set memory dimensions
+  void set_memory_dims(std::size_t lo, std::size_t hi);
+
+  // Set initial memory state.
+  void set_memory(std::size_t i, vluint32_t word);
 
  private:
 
@@ -193,8 +222,14 @@ class Model {
     // Machine register file.
     vluint32_t rf [8];
 
+    // Special registers
+    vluint32_t N;
+
     // Stack model.
     std::vector<vluint32_t> stack;
+
+    // Memory model
+    std::vector<vluint32_t> mem;
   } arch_;
   
   // Model is bound to an RTL instance.
