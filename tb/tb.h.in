@@ -48,6 +48,8 @@ class Vtb_qs;
 
 namespace tb {
 
+class TB;
+
 constexpr std::size_t OPT_N = ${OPT_N};
 
 constexpr std::size_t OPT_W = ${OPT_W};
@@ -77,6 +79,7 @@ struct VSignals {
   struct UCInst {
     bool commit;
     vluint16_t inst;
+    vluint8_t pc;
   };
 
   struct UCWriteback {
@@ -102,6 +105,7 @@ struct VSignals {
     // Disassembly interface:
     vs.uc_inst_commit_ = std::addressof(u->uc_inst_commit);
     vs.uc_inst_ = std::addressof(u->uc_inst);
+    vs.uc_inst_pc_ = std::addressof(u->uc_inst_pc);
     // Writeback interface
     vs.uc_rf_wen_ = std::addressof(u->uc_rf_wen);
     vs.uc_rf_wa_ = std::addressof(u->uc_rf_wa);
@@ -156,6 +160,7 @@ struct VSignals {
   // Disassembly interface
   vluint8_t* uc_inst_commit_;
   vluint16_t* uc_inst_;
+  vluint8_t* uc_inst_pc_;
 
   // Writeback interface
   vluint8_t* uc_rf_wen_;
@@ -170,6 +175,38 @@ struct VSignals {
   vluint8_t* clk_;
 };
 
+class Model {
+ public:
+  Model() = default;
+
+  Model(TB* tb);
+
+  void step();
+
+ private:
+
+  // The machines architectural state (predicted)
+  struct {
+    // Current program counter
+    vluint16_t pc;
+
+    // Machine register file.
+    vluint32_t rf [8];
+
+    // Stack model.
+    std::vector<vluint32_t> stack;
+  } arch_;
+  
+  // Model is bound to an RTL instance.
+  bool is_valid_ = false;
+
+  // Verilated interface
+  VSignals vs_;
+
+  // Testbench instance.
+  TB* tb_ = nullptr;
+};
+
 struct Options {
   // Enable waveform dumping
   bool wave_enable = false;
@@ -182,6 +219,8 @@ struct Options {
 };
 
 class TB {
+  friend class Model;
+
  public:
   // Constructor
   TB(const Options& opts = Options{});
@@ -238,6 +277,9 @@ class TB {
 
   // Current operationg cycle.
   vluint64_t cycle_;
+
+  // Behavioral model of sorter.
+  Model model_;
 
   // Testbench options
   Options opts_;

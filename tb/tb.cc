@@ -28,6 +28,7 @@
 #include "tb.h"
 #include "vsupport.h"
 #include "test.h"
+#include "utility.h"
 #include "vobj/Vtb_qs.h"
 #ifdef OPT_TRACE_ENABLE
 #  include <iostream>
@@ -98,6 +99,246 @@ vluint64_t VSignals::cycle() const {
   return vsupport::get(tb_cycle_);
 }
 
+class Instruction {
+ public:
+  Instruction(vluint16_t i)
+      : i_(i)
+  {}
+
+  std::string dis() const {
+    using std::to_string;
+    
+    std::string s;
+
+    switch (opcode()) {
+      case 0x0: {
+        s += "nop";
+      } break;
+      case 0x1: {
+        // Jcc
+        s += "J";
+        s += " ";
+        switch (cc()) {
+          case 1:
+            s += "eq";
+            break;
+          case 2:
+            s += "gt";
+            break;
+          case 3:
+            s += "le";
+            break;
+        }
+        s += " ";
+        s += to_string(A());
+      } break;
+      case 0x2: {
+        // Push/Pop:
+        if (sel0()) {
+          s += "pop";
+          s += " ";
+          s += reg(u());
+        } else {
+          s += "push";
+          s += " ";
+          s += reg(r());
+        }
+      } break;
+      case 0x4: {
+        // Ld/St:
+        if (sel0()) {
+          // St
+          s += "st";
+          s += " [";
+          s += reg(r());
+          s += "], ";
+          s += reg(u());
+        } else {
+          // Ld
+          s += "ld";
+          s += " ";
+          s += reg(r());
+          s += ", [";
+          s += reg(u());
+          s += "]";
+        }
+      } break;
+      case 0x6: {
+        // Mov:
+        s += "mov";
+        if (!sel0() && !sel1()) {
+          // Mov
+          s += " ";
+          s += reg(r());
+          s += ", ";
+          s += reg(u());
+        } else if (!sel0() && sel1()) {
+          // Movi
+          s += "i";
+          s += ", ";
+          s += to_string(i());
+        } else if(sel0()) {
+          // Movs
+          s += "s";
+          s += " ";
+          s += reg(r());
+          s += ", ";
+          s += regs(S());
+        }
+      } break;
+      case 0x7: {
+        // Add/Sub:
+        if (sel0()) {
+          // Sub
+          s += "sub";
+          s += sel1() ? "i " : " ";
+          s += reg(r());
+          s += sel1() ? to_string(i()) : reg(u());
+        } else {
+          // Add
+          s += "add";
+          s += sel1() ? "i " : " ";
+          s += reg(r());
+          s += sel1() ? to_string(i()) : reg(u());
+        }
+      } break;
+      case 0xA: {
+        // Call/Ret:
+        if (sel0()) {
+          s += "ret";
+        } else {
+          s += "call";
+          s += " ";
+          s += hex(A());
+        }
+      } break;
+      case 0xF: {
+        // Wait/Emit
+        s += sel0() ? "emit" : "wait";
+      }
+    }
+
+    return s;
+  }
+
+  vluint16_t opcode() const {
+    return mask_bits(i_, 15, 12);
+  }
+
+  bool sel0() const {
+    return get_bit(i_, 11);
+  }
+
+  bool sel1() const {
+    return get_bit(i_, 3);
+  }
+
+  vluint8_t cc() const {
+    return mask_bits(i_, 9, 8);
+  }
+
+  vluint16_t r() const {
+    return mask_bits(i_, 10, 8);
+  }
+
+  vluint16_t s() const {
+    return mask_bits(i_, 6, 4);
+  }
+
+  vluint16_t S() const {
+    return mask_bits(i_, 3, 0);
+  }
+
+  vluint16_t i() const {
+    return mask_bits(i_, 2, 0);
+  }
+
+  vluint16_t A() const {
+    return mask_bits(i_, 7, 0);
+  }
+
+  vluint16_t u() const {
+    return mask_bits(i_, 3, 0);
+  }
+
+ private:
+  std::string reg(std::size_t i) const {
+    using std::to_string;
+
+    std::string s;
+    s += "r";
+    s += to_string(i);
+    return s;
+  }
+
+  std::string regs(std::size_t i) const {
+    using std::to_string;
+    
+    switch (i) {
+      case 0: {
+        return "N";
+      } break;
+      default: {
+        ADD_FAILURE() << "Invalid special register id " << to_string(i) << "\n";
+        return "Invalid";
+      } break;
+    }
+  }
+  
+  vluint16_t i_;
+};
+
+Model::Model(TB* tb)
+    : tb_(tb), is_valid_(true)
+{}
+
+void Model::step() {
+  if (!is_valid_) return;
+  
+  VSignals::UCInst ucinst;
+  tb_->vs_.get(ucinst);
+  if (ucinst.commit) {
+    const Instruction inst(ucinst.inst);
+#ifdef OPT_TRACE_ENABLE
+    std::cout << tb_->cycle() << " ("
+              << tb::hex(ucinst.pc) << "): " << inst.dis();
+
+    switch (inst.opcode()) {
+      case 0: {
+        // Nop
+      } break;
+      case 0x1: {
+        // Jcc
+      } break;
+      case 0x2: {
+        // Push/Pop:
+      } break;
+      case 0x4: {
+        // Ld/St
+      } break;
+      case 0x6: {
+        // Mov/Movi/Movs
+      } break;
+      case 0x7: {
+        // Add/Sub
+      } break;
+      case 0xA: {
+        // Call/Ret
+      } break;
+      case 0xF: {
+        // Wait/Emit
+      } break;
+      default: {
+        ADD_FAILURE() << "Invalid instruction decoded.";
+      };
+    }
+    
+    std::cout << "\n";
+#endif
+  }
+}
+
+
 TB::TB(const Options& opts)
     : opts_(opts) {
 #ifdef OPT_VCD_ENABLE
@@ -117,6 +358,8 @@ TB::TB(const Options& opts)
 #endif
   }
 #endif
+  // Construct behavioral model
+  model_ = Model(this);
 }
 
 TB::~TB() {
@@ -260,6 +503,7 @@ void TB::step(std::size_t n) {
       wave_->dump(time());
     }
 #endif
+    model_.step();
     time_ += 5;
 
     // CLK region
@@ -271,6 +515,7 @@ void TB::step(std::size_t n) {
       wave_->dump(time());
     }
 #endif
+    model_.step();
     time_ += 5;
   }
 }

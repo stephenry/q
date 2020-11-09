@@ -55,7 +55,7 @@ module tb_qs (
   // Disassembly interface
   , output logic                                  uc_inst_commit
   , output qs_srt_pkg::inst_t                     uc_inst
-
+  , output qs_srt_pkg::pc_t                       uc_inst_pc
   //
   , output logic                                  uc_rf_wen
   , output qs_srt_pkg::reg_t                      uc_rf_wa
@@ -105,6 +105,7 @@ module tb_qs (
     // Probe instruction at execution stage.
     uc_inst_commit = u_qs.u_qs_srt.xa_commit;
     uc_inst 	   = u_qs.u_qs_srt.xa_inst_r;
+    uc_inst_pc     = u_qs.u_qs_srt.xa_pc_r;
 
     // Probe writebacks to register file.
     uc_rf_wen 	   = u_qs.u_qs_srt.ca_rf_wen_w;

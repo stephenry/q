@@ -57,7 +57,7 @@ package qs_srt_pkg;
                              BLINK  = 3'b111
 			     } reg_t;
 
-  typedef enum logic [2:0] { REG_N
+  typedef enum logic [2:0] { REG_N   = 3'b000
                              } reg_special_t;
 
   // Instruction oprands:
