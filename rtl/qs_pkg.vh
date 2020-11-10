@@ -34,6 +34,8 @@ package qs_pkg;
 
   localparam int W = 32;
 
+  localparam int STACK_N = 128;
+
   localparam int BANKS_N = 4;
 
   // Word type:

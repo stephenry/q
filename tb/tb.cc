@@ -47,7 +47,7 @@ std::ostream& operator<<(std::ostream& os, const std::vector<word_type>& dp) {
     if (i != 0) {
       os << ", ";
     }
-    os << dp[i];
+    os << hex(dp[i]);
   }
   os << "]";
   return os;
@@ -162,7 +162,7 @@ class Instruction {
           // St
           s += "st";
           s += " [";
-          s += reg(r_field());
+          s += reg(s_field());
           s += "], ";
           s += reg(u_field());
         } else {
@@ -249,6 +249,10 @@ class Instruction {
     return get_bit(enc_, 11);
   }
 
+  bool W_bit() const {
+    return get_bit(enc_, 7);
+  }
+
   bool sel1() const {
     return get_bit(enc_, 3);
   }
@@ -323,6 +327,10 @@ void Model::reset() {
   arch_.N = 0;
   // Clear stack.
   arch_.stack.clear();
+  // Clear architectural flags
+  arch_.z = false;
+  arch_.c = false;
+  arch_.n = false;
 }
 
 void Model::step() {
@@ -340,17 +348,19 @@ void Model::step() {
     ss << tb_->cycle() << " [" << tb::hex(ucinst.pc) << "]: " << inst.dis();
        
 
+    std::stringstream::pos_type offset;
     if (ucwrbk.wen) {
-      std::stringstream::pos_type offset = ss.tellp();
+      offset = ss.tellp();
       ss << std::string(50 - offset, ' ')
-         << inst.reg(ucwrbk.wa) << " <- " << hex(ucwrbk.wdata)
-         << "\t["
-         << (ucwrbk.flags_en && ucwrbk.c ? "c" : " ")
-         << (ucwrbk.flags_en && ucwrbk.n ? "n" : " ")
-         << (ucwrbk.flags_en && ucwrbk.z ? "z" : " ")
-         << "]";
+         << inst.reg(ucwrbk.wa) << " <- " << hex(ucwrbk.wdata);
     }
-    ss << "\n";
+    offset = ss.tellp();
+    ss << std::string(70 - offset, ' ')
+       << "\t["
+       << (ucwrbk.c ? "c" : " ")
+       << (ucwrbk.n ? "n" : " ")
+       << (ucwrbk.z ? "z" : " ")
+       << "]\n";
     std::cout << ss.str();
 #endif
 
@@ -367,6 +377,9 @@ void Model::step() {
       case 0x1: {
         // Jcc
         bool is_taken = false;
+
+        // ZNC flags are considered valid at this point.
+        
         switch (inst.cc_field()) {
           case 0: {
             // Unconditional
@@ -374,12 +387,15 @@ void Model::step() {
           } break;
           case 1: {
             // EQ condition
+            is_taken =   arch_.z;
           } break;
           case 2: {
             // GT condition
+            is_taken = (!arch_.z) && (!arch_.n);
           } break;
           case 3: {
             // LE condition
+            is_taken =   arch_.z  ||   arch_.n;
           } break;
         }
         // Update program counter.
@@ -406,8 +422,8 @@ void Model::step() {
           const vluint32_t wdata_expected = arch_.stack.back();
           const vluint32_t wdata_actual = ucwrbk.wdata;
           EXPECT_EQ(wdata_expected, wdata_actual);
+          arch_.stack.pop_back();
         }
-
         // Advance to next instruction
         arch_.pc++;
       } break;
@@ -425,22 +441,32 @@ void Model::step() {
           EXPECT_EQ(wa_expected, wa_actual);
 
           // Expect write back data to be correct.
-          const vluint8_t ra_expected = inst.u_field();
+          const vluint8_t ra_expected = arch_.rf[inst.u_field()];
           const vluint32_t wdata_expected = arch_.mem[ra_expected];
           const vluint32_t wdata_actual = ucwrbk.wdata;
-          EXPECT_EQ(wdata_expected, wdata_actual);
+          EXPECT_EQ(wdata_expected, wdata_actual)
+              << "Miscompare of load writeback data expected "
+              << hex(wdata_expected) << " vs actual "
+              << hex(wdata_actual);
 
           // Update architectural state.
           arch_.rf[wa_actual] = wdata_actual;
         } else {
           // Store
 
-          const vluint8_t wa_expected = inst.s_field();
-          const vluint8_t ra_expected = inst.u_field();
-          const vluint32_t wdata_expected = arch_.rf[ra_expected];
+          // We do not expect a write to the register file.
+          EXPECT_FALSE(ucwrbk.wen);
+
+          // Little checking here as we do not sample the state
+          // written back to memory and therefore a mismatch is
+          // detected only when we attempt to read the invalid data.
+
+          // Expect read addresses to be equal.
+          const vluint8_t mem_addr = arch_.rf[inst.s_field()];
+          const vluint32_t mem_data = arch_.rf[inst.u_field()];
 
           // Update architectural state.
-          arch_.rf[wa_expected] = wdata_expected;
+          arch_.mem[mem_addr] = mem_data;
         }
         // Advance to next instruction
         arch_.pc++;
@@ -491,6 +517,56 @@ void Model::step() {
       case 0x7: {
         // Add/Sub
 
+        // Validate that a write takes place
+        const bool expect_writeback = inst.W_bit();
+        if (expect_writeback) {
+          EXPECT_TRUE(ucwrbk.wen);
+        }
+        
+        const vluint8_t wa_expected = inst.r_field();
+        const vluint8_t wa_actual = ucwrbk.wa;
+        EXPECT_EQ(wa_expected, wa_actual);
+
+        const vluint32_t lhs_expected = arch_.rf[inst.s_field()];
+        vluint32_t rhs_expected =
+            inst.sel1() ? inst.i_field() : arch_.rf[inst.u_field()];
+
+        const vluint32_t wdata_actual = ucwrbk.wdata;
+        vluint32_t wdata_expected = 0;
+        if (!inst.sel0()) {
+          // Add
+          wdata_expected = lhs_expected + rhs_expected;
+
+          // Update flags;
+          arch_.z = (wdata_expected == 0);
+          arch_.c = false;
+          arch_.n = (wdata_expected < 0);
+
+          EXPECT_EQ(ucwrbk.z, arch_.z);
+          // EXPECT_EQ(ucwrbk.c, arch_.c);
+          EXPECT_EQ(ucwrbk.n, arch_.n);
+        } else {
+          // Sub
+          wdata_expected = lhs_expected - rhs_expected;
+
+          // Update flags;
+          arch_.z = (wdata_expected == 0);
+          arch_.c = false;
+          arch_.n = (rhs_expected > lhs_expected);
+
+          EXPECT_EQ(ucwrbk.z, arch_.z);
+          // EXPECT_EQ(ucwrbk.c, arch_.c);
+          EXPECT_EQ(ucwrbk.n, arch_.n)
+              << "Flag miscompare: lhs = " << hex(lhs_expected)
+              << " rhs = " << hex(rhs_expected);
+        }
+        if (expect_writeback) {
+          // Validate writeback data
+          EXPECT_EQ(wdata_actual, wdata_expected);
+          // Update architectural state.
+          arch_.rf[wa_actual] = wdata_actual;
+        }
+        
         // Advance to next instruction
         arch_.pc++;
       } break;
@@ -498,9 +574,25 @@ void Model::step() {
         // Call/Ret
         if (!inst.sel0()) {
           // Call
+
+          // Expect BLINK register to be written.
+          EXPECT_TRUE(ucwrbk.wen);
+
+          // Expect BLINK regisster to be written,
+          EXPECT_EQ(ucwrbk.wa, 7);
+          // with the link address
+          EXPECT_EQ(ucwrbk.wdata, arch_.pc + 1);
+
+          // Set BLINK to link address.
+          arch_.rf[7] = arch_.pc + 1;
+          // Update architectural state; jump to the (absolute) offset
+          // pointed to by the instruction.
           arch_.pc = inst.A_field();
         } else {
           // Ret
+
+          // Update architectural state; next PC becomes the value of
+          // the BLINK register.
           arch_.pc = arch_.rf[7];
         }
 
@@ -603,8 +695,8 @@ void TB::run() {
       model_.set_memory(i, data_packet[i]);
     }
     
-    // Compuare output
-    const std::vector<word_type> actual /* = get_sorted_packet() */;
+    // Compare output
+    const std::vector<word_type> actual/* = get_sorted_packet()*/;
 #ifdef OPT_TRACE_ENABLE
     log() << "Received: " << actual << "\n";
 #endif
@@ -613,7 +705,7 @@ void TB::run() {
   }
   
   // Wind-down simulation
-  step(200);
+  step(2000);
 }
 #ifdef OPT_TRACE_ENABLE
 

@@ -115,9 +115,8 @@ struct VSignals {
     vs.uc_rf_wen_ = std::addressof(u->uc_rf_wen);
     vs.uc_rf_wa_ = std::addressof(u->uc_rf_wa);
     vs.uc_rf_wdata_ = std::addressof(u->uc_rf_wdata);
-    vs.uc_flags_en_ = std::addressof(u->uc_flags_en);
-    vs.uc_flags_c_ = std::addressof(u->uc_flags_n);
-    vs.uc_flags_n_ = std::addressof(u->uc_flags_c);
+    vs.uc_flags_c_ = std::addressof(u->uc_flags_c);
+    vs.uc_flags_n_ = std::addressof(u->uc_flags_n);
     vs.uc_flags_z_ = std::addressof(u->uc_flags_z);
     // Testbench monitors:
     vs.tb_cycle_ = std::addressof(u->tb_cycle);
@@ -230,6 +229,9 @@ class Model {
 
     // Memory model
     std::vector<vluint32_t> mem;
+
+    // Architectural flags
+    bool z, c, n;
   } arch_;
   
   // Model is bound to an RTL instance.

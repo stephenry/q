@@ -97,15 +97,21 @@ module qs_enq (
     logic [1:0]  state;
   } fsm_encoding_t;
   
-  typedef enum   logic [3:0] {  FSM_IDLE = 4'b0000,
-                                FSM_LOAD = 4'b1101
+  typedef enum   logic [3:0] {  FSM_IDLE       = 4'b0000,
+                                FSM_LOAD       = 4'b1101,
+				FSM_UPDATE_IDX = 4'b1001
                                 } fsm_t;
   //
   `LIBV_REG_EN(fsm_encoding_t, fsm);
   `LIBV_REG_EN_RST_W(qs_pkg::bank_id_t, bank_idx, '0);
+
+  `LIBV_REG_EN(qs_pkg::addr_t, wr_ptr);
   `LIBV_REG_RST_W(logic, wr_en, 'b0);
-  `LIBV_REG_EN_W(qs_pkg::addr_t, wr_addr);
-  `LIBV_REG_EN_W(qs_pkg::w_t, wr_data);
+  typedef struct packed {
+    qs_pkg::addr_t addr;
+    qs_pkg::w_t    data;
+  } wr_cmd_t;
+  `LIBV_REG_EN(wr_cmd_t, wr_cmd);
 
   // ======================================================================== //
   //                                                                          //
@@ -120,23 +126,26 @@ module qs_enq (
     // Defaults:
 
     // FSM state
-    fsm_en 	 = 'b0;
-    fsm_w 	 = fsm_r;
+    fsm_en 	  = 'b0;
+    fsm_w 	  = fsm_r;
 
     // Bank state
-    bank_out_vld = 'b0;
-    bank_out 	 = bank_in;
+    bank_out_vld  = 'b0;
+    bank_out 	  = bank_in;
 
     // Bank index
-    bank_idx_en  = 'b0;
-    bank_idx_w 	 = qs_pkg::bank_id_inc(bank_idx_r);
+    bank_idx_en   = 'b0;
+    bank_idx_w 	  = qs_pkg::bank_id_inc(bank_idx_r);
 
+    //
+    wr_ptr_en 	  = 'b0;
+    wr_ptr_w 	  = wr_ptr_r + 'b1;
+    
     // Memory bank defaults:
-    wr_en_w 	 = 'b0;
-    wr_addr_en 	 = 'b0;
-    wr_addr_w 	 = wr_addr_r + 'b1;
-    wr_data_en 	 = 'b0;
-    wr_data_w 	 = in_dat;
+    wr_en_w 	  = 'b0;
+    wr_cmd_w 	  = '0;
+    wr_cmd_w.addr = wr_ptr_r;
+    wr_cmd_w.data = in_dat;
 
     case (fsm_r)
 
@@ -156,8 +165,8 @@ module qs_enq (
 	    bank_out.status = qs_pkg::BANK_LOADING;
 
 	    // Reset index
-	    wr_addr_en 	    = 'b1;
-	    wr_addr_w 	    = '0;
+	    wr_ptr_en 	    = 'b1;
+	    wr_ptr_w 	    = '0;
 
 	    // Advance state.
 	    fsm_en 	    = 'b1;
@@ -175,27 +184,22 @@ module qs_enq (
 	  2'b1_0: begin
 	    // Write to nominated bank.
 	    wr_en_w 	   = 'b1;
-	    wr_data_en 	   = 'b1;
 	    // Advance index.
-	    wr_addr_en 	   = 'b1;
+	    wr_ptr_en 	   = 'b1;
 	  end
 	  2'b1_1: begin
 	    // Write to nominated bank.
 	    wr_en_w 	    = 'b1;
-	    wr_data_en 	    = 'b1;
 	    // Advance index.
-	    wr_addr_en 	    = 'b1;
-
-	    bank_idx_en     = 'b1;
-
+	    wr_ptr_en 	    = 'b1;
 	    // Update bank status, now ready to be sorted.
 	    bank_out_vld    = 'b1;
-	    bank_out.n 	    = wr_addr_r;
+	    bank_out.n 	    = wr_ptr_r;
 	    bank_out.status = qs_pkg::BANK_READY;
 
 	    // Done, transition back to idle state.
 	    fsm_en 	    = 'b1;
-	    fsm_w 	    = FSM_IDLE;
+	    fsm_w 	    = FSM_UPDATE_IDX;
 	  end
 	  default: begin
 	    // Otherwise, bubble. Do nothing.
@@ -204,6 +208,16 @@ module qs_enq (
 	
       end // case: FSM_LOAD
 
+      FSM_UPDATE_IDX: begin
+	// One cycle delay to update index such that prior commands
+	// can be emitted to the bank block (presently at the output
+	// flop).
+	bank_idx_en = 'b1;
+
+	fsm_en 	    = 'b1;
+	fsm_w 	    = FSM_IDLE;
+      end
+
       default:
 	// Otherwise, invalid state.
 	;
@@ -211,8 +225,26 @@ module qs_enq (
     endcase // case (fsm_r)
     
     // Bank is ready to be loaded.
-    in_rdy_r 	= fsm_r.ready;
+    in_rdy_r  = fsm_r.ready;
+
+    // Enables
+    wr_cmd_en = wr_en_w;
 
   end // block: enqueue_PROC
+
+  // ======================================================================== //
+  //                                                                          //
+  // Wires/Synonyms                                                           //
+  //                                                                          //
+  // ======================================================================== //
+
+  // ------------------------------------------------------------------------ //
+  //
+  always_comb begin : wires_PROC
+
+    wr_addr_r = wr_cmd_r.addr;
+    wr_data_r = wr_cmd_r.data;
+
+  end // block: wires_PROC
 
 endmodule // qs_enq

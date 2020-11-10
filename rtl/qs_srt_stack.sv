@@ -35,12 +35,13 @@ module qs_srt_stack #(parameter int N = 16, parameter int W = 32) (
    //                                                                         //
    //======================================================================== //
 
-     input                                   cmd_vld
-   , input                                   cmd_push
-   , input        [W - 1:0]                  cmd_push_dat
-   , input                                   cmd_clr
+     input                                   cmd_vld_r
+   , input                                   cmd_push_r
+   , input        [W - 1:0]                  cmd_push_dat_r
+   , input                                   cmd_clr_r
    //
    , output logic [W - 1:0]                  head_r
+   , output logic                            head_vld_r
    //
    , output logic                            cmd_err_w
 
@@ -78,9 +79,6 @@ module qs_srt_stack #(parameter int N = 16, parameter int W = 32) (
     is_first_entry = (addr == '0);
   end endfunction
     
-
-  //
-  `LIBV_SPSRAM_SIGNALS(spram__, W, $clog2(N));
   //
   logic                           empty_mem_r;
   logic                           empty_mem_w;  
@@ -101,8 +99,7 @@ module qs_srt_stack #(parameter int N = 16, parameter int W = 32) (
   //
   `LIBV_REG_RST_R(logic, empty, 'b1);
   `LIBV_REG_RST_R(logic, full, 'b0);
-  `LIBV_REG_EN(addr_t, rd_ptr);
-  `LIBV_REG_EN(addr_t, wr_ptr);
+  `LIBV_REG_EN(addr_t, ptr);
   `LIBV_REG_RST(logic, stack_was_read, 'b0);
 
   `LIBV_SPSRAM_SIGNALS(stack_mem_, W, $bits(addr_t));
@@ -111,11 +108,8 @@ module qs_srt_stack #(parameter int N = 16, parameter int W = 32) (
 
     // Defaults:
 
-    rd_ptr_en 	     = 1'b0;
-    rd_ptr_w 	     = rd_ptr_r;
-
-    wr_ptr_en 	     = 1'b0;
-    wr_ptr_w 	     = wr_ptr_r;
+    ptr_en 	     = 1'b0;
+    ptr_w 	     = ptr_r;
 
     cmd_err_w 	     = 1'b0;
 
@@ -127,9 +121,9 @@ module qs_srt_stack #(parameter int N = 16, parameter int W = 32) (
 
     //
     casez ({// Command is valid,
-	    cmd_vld,
+	    cmd_vld_r,
 	    // Command type
-	    cmd_push,
+	    cmd_push_r,
 	    // Stack is full
 	    full_r,
 	    // Stack is empty
@@ -139,12 +133,12 @@ module qs_srt_stack #(parameter int N = 16, parameter int W = 32) (
 
       4'b1_0_?_0: begin
 	// Pop from non-empty stack
-
-	empty_w   = is_first_entry(rd_ptr_r);
+	empty_w = is_first_entry(ptr_r);
+	full_w 	= 'b0;
 
 	// Decrement read pointer unless stack is becoming empty.
-	rd_ptr_en = (~empty_w);
-	rd_ptr_w  = rd_ptr_r - 'b1;
+	ptr_en 	= (~empty_w);
+	ptr_w 	= ptr_en ? (ptr_r - 'b1) : ptr;
       end
       
       4'b1_0_?_1: begin
@@ -154,11 +148,12 @@ module qs_srt_stack #(parameter int N = 16, parameter int W = 32) (
 
       4'b1_1_0_?: begin
 	// Push to non-full stack.
-	full_w 	  = is_last_entry(wr_ptr_r);
+	full_w 	= is_last_entry(ptr_r);
+	empty_w = 'b0;
 
 	// Increment write pointer unless stack is becoming full.
-	wr_ptr_en = (~full_w);
-	wr_ptr_w  = wr_ptr_r + 'b1;
+	ptr_en 	= (~full_w);
+	ptr_w 	= ptr_en ? (ptr_r + 'b1) : ptr_r;
       end
 
       4'b1_1_1_?: begin
@@ -172,11 +167,11 @@ module qs_srt_stack #(parameter int N = 16, parameter int W = 32) (
 
     //
     casez ({ // Command is valid
-	     cmd_vld,
+	     cmd_vld_r,
 	     // Command validity
 	     cmd_err_w,
 	     // Command type
-	     cmd_push
+	     cmd_push_r
 	     })
       3'b1_0_0: begin
 	// Pop command
@@ -184,38 +179,39 @@ module qs_srt_stack #(parameter int N = 16, parameter int W = 32) (
 	// Data from stack memory becomes valid in the next cycle.
 	stack_was_read_w = 'b1;
 	
-	stack_mem_en   = 'b1;
-	stack_mem_wen  = 'b0;
-	stack_mem_addr = rd_ptr_r;
-	stack_mem_din  = cmd_push_dat;
+	stack_mem_en 	 = 'b1;
+	stack_mem_wen 	 = 'b0;
       end
       3'b1_0_1: begin
 	// Push command
 	stack_mem_en   = 'b1;
 	stack_mem_wen  = 'b1;
-	stack_mem_addr = wr_ptr_r;
-	stack_mem_din  = 'b0;
       end
       default: begin
 	//
 	stack_mem_en   = 'b0;
 	stack_mem_wen  = 'b0;
-	stack_mem_addr = 'b0;
-	stack_mem_din  = 'b0;
       end
     endcase // casez ({...
+
+    stack_mem_addr = ptr_r;
+    stack_mem_din  = cmd_push_dat_r;
 
   end // block: stack_PROC
   
   // ------------------------------------------------------------------------ //
   //
   `LIBV_REG_EN_W(w_t, head);
+  `LIBV_REG_RST_W(logic, head_vld, 1'b0);
   
   always_comb begin : out_PROC
 
     // Latch output if the stack was read in the previously cycle.
-    head_en = stack_was_read_r;
-    head_w  = stack_mem_dout;
+    head_en    = stack_was_read_r;
+    head_w     = stack_mem_dout;
+
+    // Head out validity.
+    head_vld_w = stack_was_read_r;
 
   end // block: out_PROC
 
@@ -227,7 +223,7 @@ module qs_srt_stack #(parameter int N = 16, parameter int W = 32) (
 
   // ------------------------------------------------------------------------ //
   //
-  spsram #(.W(W), .N(N), .ASYNC_DOUT('b1)) u_stack_mem (
+  spsram #(.W(W), .N(N)) u_stack_mem (
     //
       .clk          (clk                )
     //

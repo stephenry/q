@@ -279,10 +279,10 @@ package qs_srt_pkg;
 
   // Return instruction
   function automatic inst_t ret; begin
-    ret = '0;
+    ret 	      = '0;
     //
-    ret.opcode         = CRET;
-    ret.u.cret.is_ret  = 'b1;
+    ret.opcode 	      = CRET;
+    ret.u.cret.is_ret = 'b1;
   end endfunction
 
   // Push instruction

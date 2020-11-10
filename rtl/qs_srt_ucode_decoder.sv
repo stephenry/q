@@ -129,8 +129,7 @@ module qs_srt_ucode_decoder (
         end
       end
       CRET: begin
-        ucode.is_jump       = 'b1;
-        ucode.src0_is_zero  = 'b1;
+        ucode.src0_is_zero = 'b1;
         case (decode_sel)
           1'b1: begin
             // RET
@@ -140,9 +139,11 @@ module qs_srt_ucode_decoder (
           end
           default: begin
             // CALL
-            ucode.is_call  = 'b1;
-            ucode.dst_en   = 'b1;
-            ucode.dst      = BLINK;
+	    ucode.is_jump = 'b1;
+            ucode.is_call = 'b1;
+
+	    ucode.dst_en  = 'b1;
+	    ucode.dst 	  = BLINK;
           end
         endcase // case (inst.u.cret.is_call)
       end
