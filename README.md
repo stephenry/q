@@ -9,7 +9,7 @@ easier life would have been had we chosen a career in software. One of
 the individuals at this gathering, a software engineer, lamented that
 he had been passed over by Google for not being able to explain the
 quicksort algorithm. Quicksort is a fundamental algorithm in computer
-science and is used heavily in just about every aspect of
+science and it is used heavily in just about every aspect of
 software. Although, a software engineer may not know precisely how to
 implement it in an interview setting, a good understanding at a
 high-level is really necessary, particularly when interviewing for a
