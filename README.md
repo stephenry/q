@@ -104,8 +104,9 @@ cmake .
   addressed shift register is used to compute, in parallel, the
   correct location into which an entry is to be placed, after which
   insertion can be carried out in constant time. This approach has
-  been used in the "ob" project, which implements a high-performance
-  financial matching engine in hardware.
+  been used in the [OB](http://www.github.com/stephenry/ob) project,
+  which implements a high-performance financial matching engine in
+  hardware.
 * For the purpose of this demonstrationm, quicksort was chosen because
   of its complex nature and the difficulty one would have when
   attempting to implement the necessary control structures in hardware
