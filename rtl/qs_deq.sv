@@ -96,7 +96,7 @@ module qs_deq (
     logic        busy;
     logic [1:0]  state;
   } fsm_encoding_t;
-  
+
   typedef enum   logic [2:0] {  FSM_IDLE     = 3'b000,
                                 FSM_UNLOAD   = 3'b101,
                                 FSM_WAIT_EOP = 3'b110
@@ -123,7 +123,7 @@ module qs_deq (
   // Combinatorial Logic                                                      //
   //                                                                          //
   // ======================================================================== //
-  
+
   // ------------------------------------------------------------------------ //
   //
   always_comb begin : fsm_PROC
@@ -136,15 +136,15 @@ module qs_deq (
     bank_out     = bank_in;
 
     bank_idx_en  = 'b0;
-    bank_idx_w           = qs_pkg::bank_id_inc(bank_idx_r);
+    bank_idx_w   = qs_pkg::bank_id_inc(bank_idx_r);
 
-    rd_addr_en           = 'b0;
+    rd_addr_en   = 'b0;
     rd_addr_w    = rd_addr_r + 'b1;
 
     // Bank defaults:
     rd_en_w      = 'b0;
-    rd_addr_en           = 'b0;
-    
+    rd_addr_en   = 'b0;
+
     case (fsm_r)
 
       FSM_IDLE: begin
@@ -159,10 +159,10 @@ module qs_deq (
             // Reset index counter.
             rd_en_w         = 'b1;
             
-            rd_addr_en              = 'b1;
+            rd_addr_en      = 'b1;
             rd_addr_w       = '0;
 
-            // Transition to 
+            // Transition to UNLOAD state
             fsm_en          = 'b1;
             fsm_w           = FSM_UNLOAD;
           end
@@ -195,8 +195,11 @@ module qs_deq (
       FSM_WAIT_EOP: begin
         if (out_vld_r & out_eop_r) begin
           // Is final word, update status and return to IDLE.
-          bank_out_vld            = 'b1;
-          bank_out.status = qs_pkg::BANK_READY;
+          bank_out_vld    = 'b1;
+          bank_out.status = qs_pkg::BANK_IDLE;
+
+          bank_idx_en     = 'b1;
+
 
           // Unload operation has completed, await for the final EOP
           // to be emitted until transitioning back to the IDLE sate.

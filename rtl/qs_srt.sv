@@ -141,15 +141,10 @@ module qs_srt (
   logic                                 xa_src0_forward;
   logic                                 xa_src1_forward;
   //
-  typedef struct packed {
-    logic                pad;
-    qs_pkg::w_t          w;
-  } w_plus1_t;
-  //
-  w_plus1_t                             xa_dp_alu_0;
-  w_plus1_t                             xa_dp_alu_1_pre;
-  w_plus1_t                             xa_dp_alu_1;
-  w_plus1_t                             xa_dp_alu_y;
+  qs_pkg::w_t                           xa_dp_alu_0;
+  qs_pkg::w_t                           xa_dp_alu_1_pre;
+  qs_pkg::w_t                           xa_dp_alu_1;
+  qs_pkg::w_t                           xa_dp_alu_y;
   logic                                 xa_dp_alu_cout;
   //
   `LIBV_REG_RST(logic, xa_stack_cmd_vld, 'b0);
@@ -293,7 +288,88 @@ module qs_srt (
   //
   always_comb begin : xa_datapath_PROC
 
+    // Compute ALU input A.
+    //
+    casez ({// Instruction is zero; uninitialized.
+            xa_ucode.src0_is_zero,
+            // Inject BLINK
+            xa_ucode.src0_is_blink,
+            // Forward writeback
+            xa_src0_forward
+            })
+      3'b1??: begin
+        // Inject '0.
+        xa_dp_alu_0 = '0;
+      end
+      3'b01?: begin
+        // Inject link address.
+        xa_dp_alu_0 = qs_pkg::w_t'(xa_pc_r) + 'b1;
+      end
+      3'b001: begin
+        // Forward writeback
+        xa_dp_alu_0 = rf_wdata;
+      end
+      default: begin
+        // Otherwise, select register-file state.
+        xa_dp_alu_0 = rf_rdata [0];
+      end
+    endcase // casez ({...
+
+    // Compute ALU input B.
+    //
+    xa_dp_alu_1     = '0;
+
+    casez ({// Instruction has special field.
+            xa_ucode.has_special,
+            // Inject BLINK
+            xa_ucode.is_call,
+            // Instruction has immediate
+            xa_ucode.has_imm,
+            // Forward writeback
+            xa_src1_forward
+            })
+      4'b1???: begin
+        // Inject "special" register.
+        case (xa_ucode.special)
+          qs_srt_pkg::REG_N: begin
+            // Inject bank word count and extend as necessary.
+            xa_dp_alu_1_pre = qs_pkg::w_t'(bank_in.n);
+          end
+          default: begin
+            // Otherwise, unknown register. Instruction should have
+            // been flagged as invalid during initial decode.
+            xa_dp_alu_1_pre = '0;
+          end
+        endcase
+      end // case: 4'b1???
+      4'b01??: begin
+        // Inject link address.
+        xa_dp_alu_1_pre = qs_pkg::w_t'(xa_pc_r) + 'b1;
+      end
+      4'b001?: begin
+        // Inject ucode immediate field and extend as appropriate.
+        xa_dp_alu_1_pre = qs_pkg::w_t'(xa_ucode.imm);
+      end
+      4'b0001: begin
+        // Forward writeback
+        xa_dp_alu_1_pre = rf_wdata;
+      end
+      default: begin
+        // Otherwise, inject register file data.
+        xa_dp_alu_1_pre = rf_rdata [1];
+      end
+    endcase // casez ({...
+
+    // Conditionally invert ALU input, if required.
+    xa_dp_alu_1   = xa_dp_alu_1_pre ^ {qs_pkg::W{xa_ucode.inv_src1}};
+
+    // Compute output of arithmetic unit.
+    { xa_dp_alu_cout, xa_dp_alu_y } =
+       xa_dp_alu_0 + xa_dp_alu_1 + (xa_ucode.cin ? 'h1 : 'h0);
+
     // Consider Condition Code (CC) for current instruction.
+    //
+    // NOTE: will need to update these conditions 
     //
     case (xa_ucode.cc)
       qs_srt_pkg::EQ: begin
@@ -313,87 +389,6 @@ module qs_srt (
         xa_cc_hit = 1'b1;
       end
     endcase // case (xa_ucode)
-
-    // Compute ALU input A.
-    //
-    xa_dp_alu_0 = '0;
-
-    casez ({// Instruction is zero; uninitialized.
-            xa_ucode.src0_is_zero,
-            // Inject BLINK
-            xa_ucode.src0_is_blink,
-            // Forward writeback
-            xa_src0_forward
-            })
-      3'b1??: begin
-        // Inject '0.
-        xa_dp_alu_0.w = '0;
-      end
-      3'b01?: begin
-        // Inject link address.
-        xa_dp_alu_0.w = qs_pkg::w_t'(xa_pc_r) + 'b1;
-      end
-      3'b001: begin
-        // Forward writeback
-        xa_dp_alu_0.w = rf_wdata;
-      end
-      default: begin
-        // Otherwise, select register-file state.
-        xa_dp_alu_0.w = rf_rdata [0];
-      end
-    endcase // casez ({...
-
-    // Compute ALU input B.
-    //
-    xa_dp_alu_1 = '0;
-
-    casez ({// Instruction has special field.
-            xa_ucode.has_special,
-            // Inject BLINK
-            xa_ucode.is_call,
-            // Instruction has immediate
-            xa_ucode.has_imm,
-            // Forward writeback
-            xa_src1_forward
-            })
-      4'b1???: begin
-        // Inject "special" register.
-        case (xa_ucode.special)
-          qs_srt_pkg::REG_N: begin
-            // Inject bank word count and extend as necessary.
-            xa_dp_alu_1_pre.w = qs_pkg::w_t'(bank_in.n);
-          end
-          default: begin
-            // Otherwise, unknown register. Instruction should have
-            // been flagged as invalid during initial decode.
-            xa_dp_alu_1_pre.w = '0;
-          end
-        endcase
-      end // case: 4'b1???
-      4'b01??: begin
-        // Inject link address.
-        xa_dp_alu_1_pre.w = qs_pkg::w_t'(xa_pc_r) + 'b1;
-      end
-      4'b001?: begin
-        // Inject ucode immediate field and extend as appropriate.
-        xa_dp_alu_1_pre.w = qs_pkg::w_t'(xa_ucode.imm);
-      end
-      4'b0001: begin
-        // Forward writeback
-        xa_dp_alu_1_pre.w = rf_wdata;
-      end
-      default: begin
-        // Otherwise, inject register file data.
-        xa_dp_alu_1_pre.w = rf_rdata [1];
-      end
-    endcase // casez ({...
-
-    // Conditionally invert ALU input, if required.
-    xa_dp_alu_1   = xa_dp_alu_1_pre ^ {qs_pkg::W + 1{xa_ucode.inv_src1}};
-
-    // Compute output of arithmetic unit.
-    { xa_dp_alu_cout, xa_dp_alu_y } =
-       xa_dp_alu_0 + xa_dp_alu_1 + (xa_ucode.cin ? 'h1 : 'h0);
 
     // Architectural flags
     ar_flags_en  = xa_commit & xa_ucode.flag_en;
@@ -425,7 +420,7 @@ module qs_srt (
       end
       default: begin
         // Otherwise, write ALU output.
-        xa_rf_wdata = xa_dp_alu_y.w;
+        xa_rf_wdata = xa_dp_alu_y;
       end
     endcase // casez ({...
 
@@ -470,7 +465,7 @@ module qs_srt (
     ca_stack_cmd_en         = ca_stack_cmd_vld_w;
     ca_stack_cmd_w          = '0;
     ca_stack_cmd_w.push     = xa_ucode.is_push;
-    ca_stack_cmd_w.push_dat = xa_dp_alu_1.w;
+    ca_stack_cmd_w.push_dat = xa_dp_alu_1;
 
     // Unused
     ca_stack_cmd_w.clr      = 'b0;
@@ -538,7 +533,7 @@ module qs_srt (
         bank_w          = '0;
         bank_w.wen      = 'b1;
         bank_w.addr     = qs_pkg::addr_t'(xa_dp_alu_0);
-        bank_w.wdata    = xa_dp_alu_1.w;
+        bank_w.wdata    = xa_dp_alu_1;
 
         ca_pending_load = 'b0;
       end
@@ -549,7 +544,7 @@ module qs_srt (
         bank_w          = '0;
         bank_w.wen      = 'b0;
         bank_w.addr     = qs_pkg::addr_t'(xa_dp_alu_1);
-        bank_w.wdata    = xa_dp_alu_1.w;
+        bank_w.wdata    = xa_dp_alu_1;
 
         // Await pending load data from banks.
         ca_pending_load = 'b1;

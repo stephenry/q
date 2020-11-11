@@ -25,9 +25,27 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //========================================================================== //
 
+#include "tb.h"
+#include "random.h"
+#include "test.h"
+#include "gtest/gtest.h"
 #include "gtest/gtest.h"
 
-TEST(Smoke, SingleSort) {
+TEST(Regress, SortMany) {
+  // Initialize randomization seed.
+  tb::Random::init(1);
+
+  tb::Options opts;
+  opts.wave_enable = true;
+  opts.trace_enable = true;
+  
+  // Construct testbench environment.
+  tb::TB tb{opts};
+  for (std::size_t i = 0; i < 10000; i++) {
+    tb.push_back(tb::test::generate_stimulus());
+  }
+
+  tb.run();
 }
 
 int main(int argc, char** argv) {

@@ -56,7 +56,7 @@ std::ostream& operator<<(std::ostream& os, const std::vector<word_type>& dp) {
     if (i != 0) {
       os << ", ";
     }
-    os << hex(dp[i]);
+    os << static_cast<vlsint32_t>(dp[i]);
   }
   os << "]";
   return os;
@@ -549,12 +549,12 @@ void Model::step() {
         const vluint8_t wa_actual = ucwrbk.wa;
         EXPECT_EQ(wa_expected, wa_actual);
 
-        const vluint32_t lhs_expected = arch_.rf_read(inst.s_field());
-        vluint32_t rhs_expected =
+        const vlsint32_t lhs_expected = arch_.rf_read(inst.s_field());
+        vlsint32_t rhs_expected =
             inst.sel1() ? inst.i_field() : arch_.rf_read(inst.u_field());
 
         const vluint32_t wdata_actual = ucwrbk.wdata;
-        vluint32_t wdata_expected = 0;
+        vlsint32_t wdata_expected = 0;
         if (!inst.sel0()) {
           // Add
           wdata_expected = lhs_expected + rhs_expected;

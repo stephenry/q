@@ -237,6 +237,12 @@ module qs_srt_ucode_rom (
       SYM_QUICKSORT +   3: rout = push(R4);
       SYM_QUICKSORT +   4: rout = mov(R2, R0);
       SYM_QUICKSORT +   5: rout = mov(R4, R1);
+
+      // Gotcha; the quicksort algorithm expects the indices (R0, R1)
+      // to be signed quantities whereas the comparison logic always
+      // assumes unsigned. In the boundary case where pivot = 0,
+      // quicksort should immediate exit when (0; lo) is not < (-1;
+      // hi).
       SYM_QUICKSORT +   6: rout = sub(R0, R1, R0, .dst_en('b0));
       SYM_QUICKSORT +   7: rout = j(SYM_QUICKSORT + 16, LE);
       SYM_QUICKSORT +   8: rout = call(SYM_PARTITION);
