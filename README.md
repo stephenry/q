@@ -113,7 +113,7 @@ cmake .
   to realize its implementation.
 * The implementation of quicksort in hardware is complicated by its
   recursive nature. In quicksort, a number of comparsion are carried
-  out so as to partition an array around some value. Was this
+  out so as to partition an array around some value. When this
   partitioning is carried out, the process is repeated recursively in
   each of these partitions, until their size as fallen to zero
   elements.
