@@ -122,7 +122,7 @@ cmake .
   of three pipeline stages and implements a small RISC-like assembly
   language, with specialized instructions to handle synchronization
   between memory banks.
-* A DSP-like multibanked arrangement is implemented to allow data to
+* A DSP-like multibanked arrangement was implemented to allow data to
   be enqueued and dequeued from the sorter while it is active. In this
   case, the advantage of such a scheme is perhaps minimal as the
   overall duration of the sort operation vastly exceeds the time taken
@@ -139,7 +139,7 @@ cmake .
   by the stack capacity, which grows substantially in relation. This
   difficulty too renders the algorithmic approach somewhat inpractical
   in a serious system.
-* An alternative approach would have to used other in-place approaches
+* An alternative approach would have to use other in-place approaches
   such as Insertion Sort or Bubble Sort, as these do not require
   recursion. In anycase, these approaches too remain very uncommon in
   a hardware setting and therefore have not been explored.
