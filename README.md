@@ -22,9 +22,7 @@ implemented as part of any serious design as there are better
 approaches to sorting that can be performed more efficiently in
 hardware. Nevertheless, the complexity in its implementation is
 noteworthy and interesting from a pedagogical perspective, even if
-from a practical standpoint it makes little sense. Also, if any one
-from Google is reading this, I would be very interested in a software
-position with you!
+from a practical standpoint it makes little sense.
 
 # Dependencies
 
