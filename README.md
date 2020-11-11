@@ -97,8 +97,8 @@ cmake .
   resources and is carried out using a parallel sorting network. Such
   sort networks utlitise a series of comparions and swaps in
   parallel. Traditional sort algorithm, such as quicksort, are
-  atypical in computer hardware because of their recursive nature and
-  because of the non-trivial complexity in its implementation.
+  atypical in computer hardware because of their recursive nature,
+  which brings with it non-trivial complexity in its implementation.
 * Sorting can also be carried out in hardware in O(N) using the
   insertion sort algorithm. In this approach, an associatively
   addressed shift register is used to compute, in parallel, the
@@ -138,7 +138,7 @@ cmake .
   by the stack capacity, which grows substantially in relation. This
   difficulty too renders the algorithmic approach somewhat inpractical
   in a serious system.
-* An alternative approach would have to used other inplace approaches
+* An alternative approach would have to used other in-place approaches
   such as Insertion Sort or Bubble Sort, as these do not require
   recursion. In anycase, these approaches too remain very uncommon in
   a hardware setting and therefore have not been explored.
