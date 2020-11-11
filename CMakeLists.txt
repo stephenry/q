@@ -63,5 +63,7 @@ add_subdirectory(third_party)
 add_subdirectory(pd)
 add_subdirectory(libv)
 add_subdirectory(rtl)
+
+enable_testing()
 add_subdirectory(tb)
 
