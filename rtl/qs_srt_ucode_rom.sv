@@ -138,7 +138,7 @@ module qs_srt_ucode_rom (
   //               : MOV R2, R0       ; R2 <- LO
   //               : MOV R4, R1       ; R4 <- HI
   //               : SUB.F 0, R1, R0  ;
-  //               : JGT __qs_end     ; if ((hi - lo) <= 0) goto __end;
+  //               : JLE __qs_end     ; if ((hi - lo) < 0) goto __end;
   //               : CALL PARTITION   ; R0 <- partition(lo, hi);
   //               : MOV R3, R0       ; R3 <- PIVOT
   //               : MOV R0, R2       ;
@@ -159,7 +159,7 @@ module qs_srt_ucode_rom (
   //               : MOVI R0, 0       ; R0 <- "Initial LO"
   //               : MOVS R1, N       ; R1 <- "Initial HI (N)" 
   //               : CALL __qs        ; call quicksort(A, lo, hi);
-  //               : DONE             ;
+  //               : EMIT             ;
   //               : J __main         ; goto __main
   //
 
@@ -237,8 +237,8 @@ module qs_srt_ucode_rom (
       SYM_QUICKSORT +   3: rout = push(R4);
       SYM_QUICKSORT +   4: rout = mov(R2, R0);
       SYM_QUICKSORT +   5: rout = mov(R4, R1);
-      SYM_QUICKSORT +   6: rout = sub(R0, R0, R1, .dst_en('b0));
-      SYM_QUICKSORT +   7: rout = j(SYM_QUICKSORT + 16, GT);
+      SYM_QUICKSORT +   6: rout = sub(R0, R1, R0, .dst_en('b0));
+      SYM_QUICKSORT +   7: rout = j(SYM_QUICKSORT + 16, LE);
       SYM_QUICKSORT +   8: rout = call(SYM_PARTITION);
       SYM_QUICKSORT +   9: rout = mov(R3, R0);
       SYM_QUICKSORT +  10: rout = mov(R0, R2);
@@ -276,7 +276,7 @@ module qs_srt_ucode_rom (
       SYM_START +      11: rout = call(SYM_QUICKSORT);
 
       // Flag availability of new data and move to next bank.
-      SYM_START +      12: rout = done();
+      SYM_START +      12: rout = emit();
 
       // Return to start and repeat.
       SYM_START +      13: rout = j(SYM_START + 'd8);

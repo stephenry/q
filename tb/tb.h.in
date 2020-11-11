@@ -214,25 +214,49 @@ class Model {
  private:
 
   // The machines architectural state (predicted)
-  struct {
+  struct Arch {
+    // Set initial architectural state.
+    void reset();
+    
     // Current program counter
     vluint16_t pc;
-
-    // Machine register file.
-    vluint32_t rf [8];
 
     // Special registers
     vluint32_t N;
 
+    // Architectural flags
+    bool z, c, n;
+
+    // Pop value from the top of the stack.
+    vluint32_t stack_pop();
+
+    // Push value into the stack.
+    void stack_push(vluint32_t d);
+
+    // Write 'd' to memory location 'a'.
+    void mem_write(vluint8_t a, vluint32_t d);
+
+    void mem_resize(std::size_t n);
+
+    // Read address 'a' from memory.
+    vluint32_t mem_read(vluint8_t a);
+
+    vluint32_t rf_read(vluint8_t a);
+
+    void rf_write(vluint8_t a, vluint32_t d);
+
+   private:
+    // Machine register file.
+    vluint32_t rf [8];
+    
     // Stack model.
     std::vector<vluint32_t> stack;
 
     // Memory model
     std::vector<vluint32_t> mem;
+  };
 
-    // Architectural flags
-    bool z, c, n;
-  } arch_;
+  Arch arch_;
   
   // Model is bound to an RTL instance.
   bool is_valid_ = false;

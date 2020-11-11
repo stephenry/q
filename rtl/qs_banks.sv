@@ -81,6 +81,8 @@ module qs_banks (
    //
    , input                                        deq_rd_en_r
    , input qs_pkg::addr_t                         deq_rd_addr_r
+   //
+   , output logic                                 deq_rd_data_vld_r
    , output qs_pkg::w_t                           deq_rd_data_r
 
    //======================================================================== //
@@ -228,7 +230,7 @@ module qs_banks (
         3'b001: begin
 	  bank_deq_rd_vld_w  = 'b1;
 	  bank_deq_rd_idx_en = 'b1;
-	  bank_deq_rd_idx_w  = enq_bank_idx_r;
+	  bank_deq_rd_idx_w  = deq_bank_idx_r;
 	  
           bank_en [i] 	     = 1'b1;
           bank_wen [i] 	     = 1'b0;
@@ -251,14 +253,16 @@ module qs_banks (
   //
   `LIBV_REG_RST_W(logic, srt_bank_rdata_vld, 1'b0);
   `LIBV_REG_EN_W(qs_pkg::w_t, srt_bank_rdata);
+  `LIBV_REG_RST_W(logic, deq_rd_data_vld, 'b0);
   `LIBV_REG_EN_W(qs_pkg::w_t, deq_rd_data);
 
   always_comb begin : out_PROC
 
-    srt_bank_rdata_en 	 = bank_srt_rd_vld_r;
     srt_bank_rdata_vld_w = bank_srt_rd_vld_r;
+    srt_bank_rdata_en 	 = bank_srt_rd_vld_r;
     srt_bank_rdata_w 	 = bank_dout [bank_srt_rd_idx_r];
 
+    deq_rd_data_vld_w    = bank_deq_rd_vld_r;
     deq_rd_data_en 	 = bank_deq_rd_vld_r;
     deq_rd_data_w 	 = bank_dout [bank_deq_rd_idx_r];
 

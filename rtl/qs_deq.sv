@@ -70,6 +70,7 @@ module qs_deq (
    //======================================================================== //
 
    //
+   , input                                        rd_data_vld_r
    , input qs_pkg::w_t                            rd_data_r
    //
    , output logic                                 rd_en_r
@@ -105,15 +106,7 @@ module qs_deq (
   `LIBV_REG_EN_W(qs_pkg::bank_id_t, bank_idx);
   `LIBV_REG_RST_W(logic, rd_en, 'b0);
   `LIBV_REG_EN_W(qs_pkg::addr_t, rd_addr);
-  //
-  typedef struct packed {
-    logic                sop;
-    logic                eop;
-    logic                err;
-  } dequeue_t;
-  //
-  `LIBV_REG_RST(logic, dequeue_out_vld, 1'b0);
-  `LIBV_REG_EN(dequeue_t, dequeue_out);
+  `LIBV_REG_EN(qs_pkg::addr_t, deq_ptr);
   //
   typedef struct packed {
     logic        sop;
@@ -136,21 +129,21 @@ module qs_deq (
   always_comb begin : fsm_PROC
 
     // Defaults:
-    fsm_en 	      = 'b0;
-    fsm_w 	      = fsm_r;
+    fsm_en 	 = 'b0;
+    fsm_w 	 = fsm_r;
 
-    bank_out_vld      = 'b0;
-    bank_out 	      = bank_in;
+    bank_out_vld = 'b0;
+    bank_out 	 = bank_in;
 
-    bank_idx_en       = 'b0;
-    bank_idx_w 	      = qs_pkg::bank_id_inc(bank_idx_r);
+    bank_idx_en  = 'b0;
+    bank_idx_w 	 = qs_pkg::bank_id_inc(bank_idx_r);
 
-    rd_addr_en 	      = 'b0;
-    rd_addr_w 	      = rd_addr_r + 'b1;
+    rd_addr_en 	 = 'b0;
+    rd_addr_w 	 = rd_addr_r + 'b1;
 
     // Bank defaults:
-    rd_en_w 	      = 'b0;
-    rd_addr_en 	      = 'b0;
+    rd_en_w 	 = 'b0;
+    rd_addr_en 	 = 'b0;
     
     case (fsm_r)
 
@@ -161,10 +154,11 @@ module qs_deq (
 	  qs_pkg::BANK_SORTED: begin
 	    // Update bank status.
 	    bank_out_vld    = 'b1;
-	    bank_out 	    = bank_in;
 	    bank_out.status = qs_pkg::BANK_UNLOADING;
 
 	    // Reset index counter.
+	    rd_en_w 	    = 'b1;
+	    
 	    rd_addr_en 	    = 'b1;
 	    rd_addr_w 	    = '0;
 
@@ -185,31 +179,30 @@ module qs_deq (
       FSM_UNLOAD: begin
 	// Load bank
 	bank_out_vld = 'b1;
-
-//	bank_out_en 	  = bank_out_vld_w;
-//	dequeue_out_en 	  = out_vld_w;
-//	dequeue_out_w 	  = '0;
-//	dequeue_out_w.sop = (rd_addr_r == '0);
-
 	if (bank_in.n == rd_addr_r) begin
-	  // Is final word, update status and return to IDLE.
-//	  dequeue_out_w.eop = '1;
-//	  dequeue_out_w.err = dequeue_bank.err;
-
-	  bank_out_vld 	  = 'b1;
-	  bank_out.status = qs_pkg::BANK_READY;
-
 	  fsm_en 	  = 'b1;
 	  fsm_w 	  = FSM_WAIT_EOP;
+	end else begin
+	  // Still reading.
+	  
+	  // Emit read commit
+	  rd_en_w      = 'b1;
+	  rd_addr_en   = 'b1;
 	end
 
       end // case: FSM_UNLOAD
 
       FSM_WAIT_EOP: begin
-	// Unload operation has completed, await for the final EOP to be
-	// emitted until transitioning back to the IDLE sate.
-	fsm_en = out_vld_r & out_eop_r;
-	fsm_w  = FSM_IDLE;
+	if (out_vld_r & out_eop_r) begin
+	  // Is final word, update status and return to IDLE.
+	  bank_out_vld 	  = 'b1;
+	  bank_out.status = qs_pkg::BANK_READY;
+
+	  // Unload operation has completed, await for the final EOP
+	  // to be emitted until transitioning back to the IDLE sate.
+	  fsm_en 	  = 'b1;
+	  fsm_w 	  = FSM_IDLE;
+	end
       end
 
       default:
@@ -224,15 +217,39 @@ module qs_deq (
   //
   always_comb begin : out_PROC
 
-    //
-    out_vld_w = dequeue_out_vld_r;
+    // Defaults:
+    deq_ptr_en = 'b0;
+    deq_ptr_w  = deq_ptr_r + 'b1;
 
-    // Stage outputs
-    out_en    = out_vld_w;
-    out_w.sop = dequeue_out_r.sop;
-    out_w.eop = dequeue_out_r.eop;
-    out_w.err = dequeue_out_r.err;
-    out_w.dat = rd_data_r;
+    //
+    out_vld_w  = '0;
+
+    out_en     = 'b0;
+    out_w.sop  = (deq_ptr_r == '0);
+    out_w.eop  = (deq_ptr_r == bank_in.n);
+    out_w.err  = '0;
+    out_w.dat  = rd_data_r;
+
+    case (fsm_r)
+
+      FSM_IDLE: begin
+
+	// On tradition out of IDLE state, initialize read pointer.
+	deq_ptr_en = fsm_en;
+	deq_ptr_w  = '0;
+      end
+
+      default: begin
+	if (rd_data_vld_r) begin
+	  // Emit returning data.
+	  out_vld_w  = 'b1;
+	  out_en     = 'b1;
+
+	  deq_ptr_en = 'b1;
+	end
+      end
+
+    endcase // block: out_PROC
 
     // Drive outputs
     out_sop_r = out_r.sop;

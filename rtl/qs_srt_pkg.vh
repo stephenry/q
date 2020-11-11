@@ -145,7 +145,7 @@ package qs_srt_pkg;
         field_A_t a;
       } cret;
       struct  packed {
-        logic is_done;
+        logic is_emit;
         logic [10:0] padding;
       } cntrl;
     } u;
@@ -153,7 +153,7 @@ package qs_srt_pkg;
 
   // Decoded horizontal microcode.
   typedef struct packed {
-    logic            is_done;
+    logic            is_emit;
     logic            is_await;
     logic            is_call;
     logic            is_ret;
@@ -260,13 +260,13 @@ package qs_srt_pkg;
     await.opcode  = CNTRL;
   end endfunction
 
-  // Done instruction; notifies completion status of the currently
+  // Emit instruction; notifies completion status of the currently
   // selected bank.
-  function automatic inst_t done; begin
-    done = '0;
+  function automatic inst_t emit; begin
+    emit = '0;
     //
-    done.opcode           = CNTRL;
-    done.u.cntrl.is_done  = 'b1;
+    emit.opcode           = CNTRL;
+    emit.u.cntrl.is_emit  = 'b1;
   end endfunction
 
   // Call instruction

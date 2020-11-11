@@ -149,7 +149,7 @@ module qs_srt_ucode_decoder (
       end
       CNTRL: begin
         if (decode_sel)
-          ucode.is_done  = 'b1;
+          ucode.is_emit  = 'b1;
         else
           ucode.is_await = 'b1;
       end

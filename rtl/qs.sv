@@ -105,6 +105,7 @@ module qs (
   //
   logic                                 deq_rd_en_r;
   qs_pkg::addr_t                        deq_rd_addr_r;
+  logic                                 deq_rd_data_vld_r;
   qs_pkg::w_t                           deq_rd_data_r;
 
   // ======================================================================== //
@@ -175,6 +176,7 @@ module qs (
     , .bank_out_vld      (deq_bank_in_vld         )
     , .bank_out          (deq_bank_in             )
     //
+    , .rd_data_vld_r     (deq_rd_data_vld_r       )
     , .rd_data_r         (deq_rd_data_r           )
     , .rd_en_r           (deq_rd_en_r             )
     , .rd_addr_r         (deq_rd_addr_r           )
@@ -220,6 +222,7 @@ module qs (
     , .deq_rd_en_r       (deq_rd_en_r             )
     , .deq_rd_addr_r     (deq_rd_addr_r           )
     , .deq_rd_data_r     (deq_rd_data_r           )
+    , .deq_rd_data_vld_r (deq_rd_data_vld_r       )
     //
     , .clk               (clk                     )
     , .rst               (rst                     )

@@ -33,6 +33,7 @@
 #ifdef OPT_TRACE_ENABLE
 #  include <iostream>
 #  include <sstream>
+#  include <map>
 #endif
 #ifdef OPT_VCD_ENABLE
 #  include "verilated_vcd_c.h"
@@ -40,6 +41,14 @@
 #include "gtest/gtest.h"
 
 namespace tb {
+
+static const std::map<vluint8_t, const char*> labels{
+  { 0, "reset" },
+  { 32, "partition" },
+  { 64, "quicksort" },
+  { 96, "start" },
+  { 129, "err" }
+};
 
 std::ostream& operator<<(std::ostream& os, const std::vector<word_type>& dp) {
   os << "[";
@@ -143,6 +152,11 @@ class Instruction {
         }
         s += " ";
         s += hex(A_field());
+        if (auto it = labels.find(A_field()); it != labels.end()) {
+          s += " (";
+          s += it->second;
+          s += ")";
+        }
       } break;
       case 0x2: {
         // Push/Pop:
@@ -230,6 +244,11 @@ class Instruction {
           s += "call";
           s += " ";
           s += hex(A_field());
+          if (auto it = labels.find(A_field()); it != labels.end()) {
+            s += " (";
+            s += it->second;
+            s += ")";
+          }
         }
       } break;
       case 0xF: {
@@ -318,19 +337,23 @@ Model::Model(TB* tb)
 }
 
 void Model::reset() {
+  arch_.reset();
+}
+
+void Model::Arch::reset() {
   // Point PC back to reset vector.
-  arch_.pc = 0;
+  pc = 0;
   // Clear general purpose registers.
   for (std::size_t i = 0; i < 8; i++)
-    arch_.rf[i] = 0;
+    rf[i] = 0;
   // Clear special registers
-  arch_.N = 0;
+  N = 0;
   // Clear stack.
-  arch_.stack.clear();
+  stack.clear();
   // Clear architectural flags
-  arch_.z = false;
-  arch_.c = false;
-  arch_.n = false;
+  z = false;
+  c = false;
+  n = false;
 }
 
 void Model::step() {
@@ -406,12 +429,9 @@ void Model::step() {
         if (!inst.sel0()) {
           // Push
           const vluint8_t ra_expected = inst.u_field();
-          arch_.stack.push_back(arch_.rf[ra_expected]);
+          arch_.stack_push(arch_.rf_read(ra_expected));
         } else {
           // Pop
-
-          // Should not pop from empty stack.
-          EXPECT_FALSE(arch_.stack.empty());
 
           // Validate writeback destination register.
           const vluint8_t  wa_expected = inst.r_field();
@@ -419,10 +439,12 @@ void Model::step() {
           EXPECT_EQ(wa_expected, wa_actual);
 
           // Validate state written back.
-          const vluint32_t wdata_expected = arch_.stack.back();
+          const vluint32_t wdata_expected = arch_.stack_pop();
           const vluint32_t wdata_actual = ucwrbk.wdata;
           EXPECT_EQ(wdata_expected, wdata_actual);
-          arch_.stack.pop_back();
+
+          // Update architectural state.
+          arch_.rf_write(wa_actual, wdata_actual);
         }
         // Advance to next instruction
         arch_.pc++;
@@ -441,8 +463,8 @@ void Model::step() {
           EXPECT_EQ(wa_expected, wa_actual);
 
           // Expect write back data to be correct.
-          const vluint8_t ra_expected = arch_.rf[inst.u_field()];
-          const vluint32_t wdata_expected = arch_.mem[ra_expected];
+          const vluint8_t ra_expected = arch_.rf_read(inst.u_field());
+          const vluint32_t wdata_expected = arch_.mem_read(ra_expected);
           const vluint32_t wdata_actual = ucwrbk.wdata;
           EXPECT_EQ(wdata_expected, wdata_actual)
               << "Miscompare of load writeback data expected "
@@ -450,7 +472,7 @@ void Model::step() {
               << hex(wdata_actual);
 
           // Update architectural state.
-          arch_.rf[wa_actual] = wdata_actual;
+          arch_.rf_write(wa_actual, wdata_actual);
         } else {
           // Store
 
@@ -462,11 +484,11 @@ void Model::step() {
           // detected only when we attempt to read the invalid data.
 
           // Expect read addresses to be equal.
-          const vluint8_t mem_addr = arch_.rf[inst.s_field()];
-          const vluint32_t mem_data = arch_.rf[inst.u_field()];
+          const vluint8_t mem_addr = arch_.rf_read(inst.s_field());
+          const vluint32_t mem_data = arch_.rf_read(inst.u_field());
 
           // Update architectural state.
-          arch_.mem[mem_addr] = mem_data;
+          arch_.mem_write(mem_addr, mem_data);
         }
         // Advance to next instruction
         arch_.pc++;
@@ -487,7 +509,7 @@ void Model::step() {
         if (       !inst.sel0() && !inst.sel1()) {
           // Mov
           const vluint8_t ra_expected = inst.u_field();
-          wdata_expected = arch_.rf[ra_expected];
+          wdata_expected = arch_.rf_read(ra_expected);
         } else if (!inst.sel0() &&  inst.sel1()) {
           // Movi
           wdata_expected = inst.i_field();
@@ -509,7 +531,7 @@ void Model::step() {
         EXPECT_EQ(wdata_expected, wdata_actual);
 
         // Update architectural state
-        arch_.rf[wa_expected] = wdata_actual;
+        arch_.rf_write(wa_expected, wdata_actual);
 
         // Advance to next instruction
         arch_.pc++;
@@ -527,9 +549,9 @@ void Model::step() {
         const vluint8_t wa_actual = ucwrbk.wa;
         EXPECT_EQ(wa_expected, wa_actual);
 
-        const vluint32_t lhs_expected = arch_.rf[inst.s_field()];
+        const vluint32_t lhs_expected = arch_.rf_read(inst.s_field());
         vluint32_t rhs_expected =
-            inst.sel1() ? inst.i_field() : arch_.rf[inst.u_field()];
+            inst.sel1() ? inst.i_field() : arch_.rf_read(inst.u_field());
 
         const vluint32_t wdata_actual = ucwrbk.wdata;
         vluint32_t wdata_expected = 0;
@@ -564,7 +586,7 @@ void Model::step() {
           // Validate writeback data
           EXPECT_EQ(wdata_actual, wdata_expected);
           // Update architectural state.
-          arch_.rf[wa_actual] = wdata_actual;
+          arch_.rf_write(wa_actual, wdata_actual);
         }
         
         // Advance to next instruction
@@ -584,7 +606,7 @@ void Model::step() {
           EXPECT_EQ(ucwrbk.wdata, arch_.pc + 1);
 
           // Set BLINK to link address.
-          arch_.rf[7] = arch_.pc + 1;
+          arch_.rf_write(7, arch_.pc + 1);
           // Update architectural state; jump to the (absolute) offset
           // pointed to by the instruction.
           arch_.pc = inst.A_field();
@@ -593,7 +615,7 @@ void Model::step() {
 
           // Update architectural state; next PC becomes the value of
           // the BLINK register.
-          arch_.pc = arch_.rf[7];
+          arch_.pc = arch_.rf_read(7);
         }
 
       } break;
@@ -625,11 +647,51 @@ void Model::set_special_register(vluint8_t i, vluint32_t v) {
 
 void Model::set_memory_dims(std::size_t lo, std::size_t hi) {
   // Disregard lo
-  arch_.mem.resize(hi + 1);
+  arch_.mem_resize(hi + 1);
 }
 
 void Model::set_memory(std::size_t i, vluint32_t word) {
-  arch_.mem[i] = word;
+  arch_.mem_write(i, word);
+}
+
+
+vluint32_t Model::Arch::stack_pop() {
+  EXPECT_FALSE(stack.empty());
+  const vluint32_t d = stack.back();
+  stack.pop_back();
+  return d;
+}
+
+void Model::Arch::stack_push(vluint32_t d) {
+  stack.push_back(d);
+}
+
+void Model::Arch::mem_write(vluint8_t a, vluint32_t d) {
+  EXPECT_GE(a, 0);
+  EXPECT_LT(a, mem.size());
+  mem[a] = d;
+}
+
+void Model::Arch::mem_resize(std::size_t n) {
+  mem.resize(n);
+}
+
+vluint32_t Model::Arch::mem_read(vluint8_t a) {
+  EXPECT_GE(a, 0);
+  EXPECT_LT(a, mem.size());
+  return mem[a];
+}
+
+vluint32_t Model::Arch::rf_read(vluint8_t a) {
+  EXPECT_GE(a, 0);
+  EXPECT_LT(a, 8);
+  return rf [a];
+}
+
+void Model::Arch::rf_write(vluint8_t a, vluint32_t d) {
+  EXPECT_GE(a, 0);
+  EXPECT_LT(a, 8);
+  rf[a] = d;
 }
 
 TB::TB(const Options& opts)
@@ -696,7 +758,7 @@ void TB::run() {
     }
     
     // Compare output
-    const std::vector<word_type> actual/* = get_sorted_packet()*/;
+    const std::vector<word_type> actual = get_sorted_packet();
 #ifdef OPT_TRACE_ENABLE
     log() << "Received: " << actual << "\n";
 #endif
@@ -705,7 +767,7 @@ void TB::run() {
   }
   
   // Wind-down simulation
-  step(2000);
+  step(20);
 }
 #ifdef OPT_TRACE_ENABLE
 
@@ -783,10 +845,10 @@ std::vector<word_type> TB::get_sorted_packet() {
 
       // Sample data
       r.push_back(out.dat);
-
-      // Advance model.
-      step();
     }
+
+    // Advance model.
+    step();
 
   } while (!done);
   

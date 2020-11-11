@@ -481,8 +481,7 @@ module qs_srt (
     
   // ------------------------------------------------------------------------ //
   //
-  `LIBV_REG_EN(qs_pkg::bank_id_t, sort_bank_idx);
-  `LIBV_SPSRAM_SIGNALS(sort_, qs_pkg::W, $clog2(qs_pkg::N));
+  `LIBV_REG_EN_RST_W(qs_pkg::bank_id_t, bank_idx, 'd0);
   //
   qs_pkg::bank_state_t                  sort_bank;
   logic                                 sort_bank_en;
@@ -490,33 +489,35 @@ module qs_srt (
   always_comb begin : xa_bank_PROC
 
     // Sort bank index update.
-    sort_bank_idx_en = 'b0;
-    sort_bank_idx_w  = qs_pkg::bank_id_inc(sort_bank_idx_r);
+    bank_idx_en  = 'b0;
+    bank_idx_w 	 = qs_pkg::bank_id_inc(bank_idx_r);
 
+    // Defaults:
+    bank_out 	 = bank_in;
+    bank_out_vld = 'b0;
+    
     //
     casez ({// Instruction at XA commits
 	    xa_commit,
 	    // Instruction is an AWAIT
 	    xa_ucode.is_await,
-	    // Instruction is a DONE
-	    xa_ucode.is_done
+	    // Instruction is a EMIT
+	    xa_ucode.is_emit
 	    })
       3'b1_1?: begin
 	// AWAIT instruction commits; set bank status to SORTING
-	sort_bank_en 	 = 'b1;
-	sort_bank 	 = bank_in;
-	sort_bank.status = qs_pkg::BANK_SORTING;
+	bank_out_vld 	= 'b1;
+	bank_out.status = qs_pkg::BANK_SORTING;
       end
       3'b1_01: begin
+	// Advance bank index.
+	bank_idx_en 	= 'b1;
+	
 	// DONE instruction commits; set bank status to SORTED.
-	sort_bank_en 	 = 'b1;
-	sort_bank 	 = bank_in;
-	sort_bank.status = qs_pkg::BANK_SORTED;
+	bank_out_vld 	= 'b1;
+	bank_out.status = qs_pkg::BANK_SORTED;
       end
-      default: begin
-	sort_bank_en     = 'b0;
-	sort_bank        = bank_in;
-      end
+      default: ;
     endcase // casez ({...
 
     // Issue transaction to memory; subsequent command is held-up back

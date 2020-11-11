@@ -130,7 +130,6 @@ module qs_srt_stack #(parameter int N = 16, parameter int W = 32) (
 	    empty_r
 	    })
 
-
       4'b1_0_?_0: begin
 	// Pop from non-empty stack
 	empty_w = is_first_entry(ptr_r);
@@ -138,7 +137,7 @@ module qs_srt_stack #(parameter int N = 16, parameter int W = 32) (
 
 	// Decrement read pointer unless stack is becoming empty.
 	ptr_en 	= (~empty_w);
-	ptr_w 	= ptr_en ? (ptr_r - 'b1) : ptr;
+	ptr_w 	= ptr_r - 'b1;
       end
       
       4'b1_0_?_1: begin
@@ -147,13 +146,13 @@ module qs_srt_stack #(parameter int N = 16, parameter int W = 32) (
       end
 
       4'b1_1_0_?: begin
-	// Push to non-full stack.
-	full_w 	= is_last_entry(ptr_r);
-	empty_w = 'b0;
-
 	// Increment write pointer unless stack is becoming full.
-	ptr_en 	= (~full_w);
-	ptr_w 	= ptr_en ? (ptr_r + 'b1) : ptr_r;
+	ptr_en 	= 1'b1;
+	ptr_w 	= empty_r ? ptr_r : (ptr_r + 'b1);
+
+	// Push to non-full stack.
+	full_w 	= is_last_entry(ptr_w);
+	empty_w = 'b0;
       end
 
       4'b1_1_1_?: begin
@@ -181,20 +180,22 @@ module qs_srt_stack #(parameter int N = 16, parameter int W = 32) (
 	
 	stack_mem_en 	 = 'b1;
 	stack_mem_wen 	 = 'b0;
+	stack_mem_addr 	 = ptr_r;
       end
       3'b1_0_1: begin
 	// Push command
 	stack_mem_en   = 'b1;
 	stack_mem_wen  = 'b1;
+	stack_mem_addr = ptr_w;
       end
       default: begin
 	//
 	stack_mem_en   = 'b0;
 	stack_mem_wen  = 'b0;
+	stack_mem_addr = ptr_r;
       end
     endcase // casez ({...
 
-    stack_mem_addr = ptr_r;
     stack_mem_din  = cmd_push_dat_r;
 
   end // block: stack_PROC
