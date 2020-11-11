@@ -83,7 +83,7 @@ module qs_srt (
   // ======================================================================== //
 
   // qs_stack:
-  logic 		                qs_stack_cmd_vld_r;
+  logic                                 qs_stack_cmd_vld_r;
   logic                                 qs_stack_cmd_push_r;
   qs_pkg::w_t                           qs_stack_cmd_push_dat_r;
   logic                                 qs_stack_cmd_clr_r;
@@ -106,7 +106,7 @@ module qs_srt (
   `LIBV_REG_RST_W(logic, bank_en, 'b0);
   typedef struct packed {
     // Command is write
-    logic 	    wen;
+    logic           wen;
     // Read/Write address
     qs_pkg::addr_t  addr;
     // Write data
@@ -128,13 +128,13 @@ module qs_srt (
   `LIBV_REG_EN_RST(logic, xa_vld, 1'b0);
   `LIBV_REG_EN(qs_srt_pkg::pc_t, xa_pc);
   `LIBV_REG_EN(qs_srt_pkg::inst_t, xa_inst);
-  logic 	                        xa_enable;
-  logic 	                        xa_stall_cond;
-  logic 	                        xa_stall;
-  logic 				xa_kill;
-  logic 	                        xa_commit;
-  logic 	                        xa_pass;
-  logic 				xa_cc_hit;
+  logic                                 xa_enable;
+  logic                                 xa_stall_cond;
+  logic                                 xa_stall;
+  logic                                 xa_kill;
+  logic                                 xa_commit;
+  logic                                 xa_pass;
+  logic                                 xa_cc_hit;
   logic                                 xa_rf_wen;
   qs_srt_pkg::reg_t                     xa_rf_wa;
   qs_pkg::w_t                           xa_rf_wdata;
@@ -142,7 +142,7 @@ module qs_srt (
   logic                                 xa_src1_forward;
   //
   typedef struct packed {
-    logic 	         pad;
+    logic                pad;
     qs_pkg::w_t          w;
   } w_plus1_t;
   //
@@ -155,7 +155,7 @@ module qs_srt (
   `LIBV_REG_RST(logic, xa_stack_cmd_vld, 'b0);
 
   typedef struct packed {
-    logic 	    push;
+    logic           push;
     qs_pkg::w_t     push_dat;
     logic           clr;
   } xa_stack_cmd_t;
@@ -169,7 +169,7 @@ module qs_srt (
     qs_srt_pkg::inst_t   inst;
     // Awaiting completion of load
     logic                pending_load;
-    logic 		 pending_pop;
+    logic                pending_pop;
     //
     logic                flags_en;
     // Register-file writeback
@@ -183,15 +183,15 @@ module qs_srt (
   `LIBV_REG_EN(qs_srt_pkg::pc_t, ca_replay_pc);
   `LIBV_REG_EN(ca_ucode_t, ca_ucode);
   `LIBV_REG_EN_RST(logic, ca_vld, 1'b0);
-  logic 	                        ca_stall_cond;
-  logic 	                        ca_stall;
-  logic 	                        ca_enable;
-  logic 				ca_pending_load;
-  logic 				ca_pending_pop;
-  logic 				ca_commit;
+  logic                                         ca_stall_cond;
+  logic                                         ca_stall;
+  logic                                         ca_enable;
+  logic                                         ca_pending_load;
+  logic                                         ca_pending_pop;
+  logic                                         ca_commit;
 
   typedef struct packed {
-    logic 		      push;
+    logic                     push;
     qs_pkg::w_t               push_dat;
     logic                     clr;
   } ca_stack_t;
@@ -200,13 +200,13 @@ module qs_srt (
 
   typedef struct packed {
     // Carry bit
-    logic 	 c;
+    logic        c;
     // Negative bit
-    logic 	 n;
+    logic        n;
     // Zero bit
-    logic 	 z;
+    logic        z;
   } ar_flags_t;
-  
+
   `LIBV_REG_EN(ar_flags_t, ar_flags);
 
   // ======================================================================== //
@@ -226,7 +226,7 @@ module qs_srt (
     fa_stall  = fa_vld_r & xa_stall & (~fa_kill);
 
     fa_enable = fa_kill | (~fa_stall);
-    
+
     // Update FA PC on restart or when FA advances.
     fa_pc_en  = fa_enable;
     fa_vld_en = fa_enable;
@@ -238,10 +238,10 @@ module qs_srt (
     // Compute next fetch program counter
     //
     casez ({// Commit-stage pipeline replay
-	    ca_replay_r,
-	    // Or, fetch stage advances
-	    fa_adv
-	    })
+            ca_replay_r,
+            // Or, fetch stage advances
+            fa_adv
+            })
       2'b1?:   fa_pc_w = ca_replay_pc_r;
       2'b01:   fa_pc_w = fa_pc_r + 'b1;
       default: fa_pc_w = fa_pc_r;
@@ -261,7 +261,7 @@ module qs_srt (
   // ------------------------------------------------------------------------ //
   //
   qs_srt_pkg::ucode_t                 xa_ucode;
-  
+
   qs_srt_ucode_decoder u_qs_srt_ucode_decoder (
     //
       .inst              (xa_inst_r               )
@@ -276,12 +276,12 @@ module qs_srt (
     // Register file lookup
 
     //
-    rf_ren [0] 	    = xa_vld_r;
-    rf_ra [0] 	    = xa_ucode.src0;
+    rf_ren [0]              = xa_vld_r;
+    rf_ra [0]       = xa_ucode.src0;
 
     //
-    rf_ren [1] 	    = xa_vld_r;
-    rf_ra [1] 	    = xa_ucode.src1;
+    rf_ren [1]              = xa_vld_r;
+    rf_ra [1]       = xa_ucode.src1;
 
     // Forwarding (CA -> XA)
     xa_src0_forward = rf_wen & rf_ren [0] & (rf_ra [0] == rf_wa);
@@ -297,19 +297,19 @@ module qs_srt (
     //
     case (xa_ucode.cc)
       qs_srt_pkg::EQ: begin
-	// Architectural flags compare equal.
-	xa_cc_hit =   ar_flags_r.z;
+        // Architectural flags compare equal.
+        xa_cc_hit =   ar_flags_r.z;
       end
       qs_srt_pkg::GT: begin
-	// Architectural flags compare greater-than or equal.
-	xa_cc_hit = (~ar_flags_r.z) & (~ar_flags_r.n);
+        // Architectural flags compare greater-than or equal.
+        xa_cc_hit = (~ar_flags_r.z) & (~ar_flags_r.n);
       end
       qs_srt_pkg::LE: begin
-	// Architectural flags compare less-than or equal.
-	xa_cc_hit =   ar_flags_r.z  |   ar_flags_r.n;
+        // Architectural flags compare less-than or equal.
+        xa_cc_hit =   ar_flags_r.z  |   ar_flags_r.n;
       end
       default: begin
-	// Otherwise, CC is not considered for the current instruction.
+        // Otherwise, CC is not considered for the current instruction.
         xa_cc_hit = 1'b1;
       end
     endcase // case (xa_ucode)
@@ -317,74 +317,74 @@ module qs_srt (
     // Compute ALU input A.
     //
     xa_dp_alu_0 = '0;
-    
+
     casez ({// Instruction is zero; uninitialized.
-	    xa_ucode.src0_is_zero,
-	    // Inject BLINK
-	    xa_ucode.src0_is_blink,
-	    // Forward writeback
-	    xa_src0_forward
-	    })
+            xa_ucode.src0_is_zero,
+            // Inject BLINK
+            xa_ucode.src0_is_blink,
+            // Forward writeback
+            xa_src0_forward
+            })
       3'b1??: begin
-	// Inject '0.
-	xa_dp_alu_0.w = '0;
+        // Inject '0.
+        xa_dp_alu_0.w = '0;
       end
       3'b01?: begin
-	// Inject link address.
-	xa_dp_alu_0.w = qs_pkg::w_t'(xa_pc_r) + 'b1;
+        // Inject link address.
+        xa_dp_alu_0.w = qs_pkg::w_t'(xa_pc_r) + 'b1;
       end
       3'b001: begin
-	// Forward writeback
-	xa_dp_alu_0.w = rf_wdata;
+        // Forward writeback
+        xa_dp_alu_0.w = rf_wdata;
       end
       default: begin
-	// Otherwise, select register-file state.
-	xa_dp_alu_0.w = rf_rdata [0];
+        // Otherwise, select register-file state.
+        xa_dp_alu_0.w = rf_rdata [0];
       end
     endcase // casez ({...
 
     // Compute ALU input B.
     //
     xa_dp_alu_1 = '0;
-    
+
     casez ({// Instruction has special field.
-	    xa_ucode.has_special,
-	    // Inject BLINK
-	    xa_ucode.is_call,
-	    // Instruction has immediate
-	    xa_ucode.has_imm,
-	    // Forward writeback
-	    xa_src1_forward
-	    })
+            xa_ucode.has_special,
+            // Inject BLINK
+            xa_ucode.is_call,
+            // Instruction has immediate
+            xa_ucode.has_imm,
+            // Forward writeback
+            xa_src1_forward
+            })
       4'b1???: begin
-	// Inject "special" register.
-	case (xa_ucode.special)
-	  qs_srt_pkg::REG_N: begin
-	    // Inject bank word count and extend as necessary.
-	    xa_dp_alu_1_pre.w = qs_pkg::w_t'(bank_in.n);
-	  end
-	  default: begin
-	    // Otherwise, unknown register. Instruction should have
-	    // been flagged as invalid during initial decode.
-	    xa_dp_alu_1_pre.w = '0;
-	  end
-	endcase
+        // Inject "special" register.
+        case (xa_ucode.special)
+          qs_srt_pkg::REG_N: begin
+            // Inject bank word count and extend as necessary.
+            xa_dp_alu_1_pre.w = qs_pkg::w_t'(bank_in.n);
+          end
+          default: begin
+            // Otherwise, unknown register. Instruction should have
+            // been flagged as invalid during initial decode.
+            xa_dp_alu_1_pre.w = '0;
+          end
+        endcase
       end // case: 4'b1???
       4'b01??: begin
-	// Inject link address.
-	xa_dp_alu_1_pre.w = qs_pkg::w_t'(xa_pc_r) + 'b1;
+        // Inject link address.
+        xa_dp_alu_1_pre.w = qs_pkg::w_t'(xa_pc_r) + 'b1;
       end
       4'b001?: begin
-	// Inject ucode immediate field and extend as appropriate.
-	xa_dp_alu_1_pre.w = qs_pkg::w_t'(xa_ucode.imm);
+        // Inject ucode immediate field and extend as appropriate.
+        xa_dp_alu_1_pre.w = qs_pkg::w_t'(xa_ucode.imm);
       end
       4'b0001: begin
-	// Forward writeback
-	xa_dp_alu_1_pre.w = rf_wdata;
+        // Forward writeback
+        xa_dp_alu_1_pre.w = rf_wdata;
       end
       default: begin
-	// Otherwise, inject register file data.
-	xa_dp_alu_1_pre.w = rf_rdata [1];
+        // Otherwise, inject register file data.
+        xa_dp_alu_1_pre.w = rf_rdata [1];
       end
     endcase // casez ({...
 
@@ -392,40 +392,40 @@ module qs_srt (
     xa_dp_alu_1   = xa_dp_alu_1_pre ^ {qs_pkg::W + 1{xa_ucode.inv_src1}};
 
     // Compute output of arithmetic unit.
-    { xa_dp_alu_cout, xa_dp_alu_y } = 
+    { xa_dp_alu_cout, xa_dp_alu_y } =
        xa_dp_alu_0 + xa_dp_alu_1 + (xa_ucode.cin ? 'h1 : 'h0);
 
     // Architectural flags
     ar_flags_en  = xa_commit & xa_ucode.flag_en;
 
-    ar_flags_w 	 = '0;
+    ar_flags_w           = '0;
     ar_flags_w.c = xa_dp_alu_cout;
     ar_flags_w.n = xa_dp_alu_y [$left(xa_dp_alu_y)];
     ar_flags_w.z = (xa_dp_alu_y == '0);
 
     // Write to register file.
-    xa_rf_wen 	 = xa_commit & xa_ucode.dst_en;
-    xa_rf_wa 	 = xa_ucode.dst;
+    xa_rf_wen    = xa_commit & xa_ucode.dst_en;
+    xa_rf_wa     = xa_ucode.dst;
 
     // Decide value to be written back (if applicable) to the
     // architectural register file.
     //
     casez ({ // Write top of stack.
-	     xa_ucode.is_pop,
-	     // Write word from current bank.
-	     xa_ucode.is_load
-	    })
+             xa_ucode.is_pop,
+             // Write word from current bank.
+             xa_ucode.is_load
+            })
       2'b1?: begin
-	// Write current stack head.
-	xa_rf_wdata = qs_stack_head_r;
+        // Write current stack head.
+        xa_rf_wdata = qs_stack_head_r;
       end
       2'b01: begin
-	// Write data returning from currently owned bank.
-	xa_rf_wdata = bank_rdata_r;
+        // Write data returning from currently owned bank.
+        xa_rf_wdata = bank_rdata_r;
       end
       default: begin
-	// Otherwise, write ALU output.
-	xa_rf_wdata = xa_dp_alu_y.w;
+        // Otherwise, write ALU output.
+        xa_rf_wdata = xa_dp_alu_y.w;
       end
     endcase // casez ({...
 
@@ -435,28 +435,28 @@ module qs_srt (
     // instructions in the pipeline are killed.
     //
     casez ({ // Instruction commits
-	     xa_commit,
-	     //
-	     xa_ucode.is_jump, xa_cc_hit,
-	     //
-	     xa_ucode.is_ret
-	    })
+             xa_commit,
+             //
+             xa_ucode.is_jump, xa_cc_hit,
+             //
+             xa_ucode.is_ret
+            })
       4'b1_11_0: begin
-	// Conditional jump and condition has been met.
-	ca_replay_w    = 'b1;
-	ca_replay_pc_w = xa_ucode.target;
+        // Conditional jump and condition has been met.
+        ca_replay_w    = 'b1;
+        ca_replay_pc_w = xa_ucode.target;
       end
       4'b1_0?_1: begin
-	// RET instruction
-	ca_replay_w    = 'b1;
-	ca_replay_pc_w = qs_srt_pkg::pc_t'(xa_dp_alu_1);
+        // RET instruction
+        ca_replay_w    = 'b1;
+        ca_replay_pc_w = qs_srt_pkg::pc_t'(xa_dp_alu_1);
       end
       default: begin
-	ca_replay_w    = 'b0;
-	ca_replay_pc_w = '0;
+        ca_replay_w    = 'b0;
+        ca_replay_pc_w = '0;
       end
     endcase // casez ({...
-        
+
   end // block: xa_datapath_PROC
 
   // ------------------------------------------------------------------------ //
@@ -464,21 +464,21 @@ module qs_srt (
   always_comb begin : xa_stack_PROC
 
     // Issue stack command
-    ca_stack_cmd_vld_w 	    = xa_commit & (xa_ucode.is_push | xa_ucode.is_pop);
+    ca_stack_cmd_vld_w      = xa_commit & (xa_ucode.is_push | xa_ucode.is_pop);
 
     // Stack command state
-    ca_stack_cmd_en 	    = ca_stack_cmd_vld_w;
-    ca_stack_cmd_w 	    = '0;
+    ca_stack_cmd_en         = ca_stack_cmd_vld_w;
+    ca_stack_cmd_w          = '0;
     ca_stack_cmd_w.push     = xa_ucode.is_push;
     ca_stack_cmd_w.push_dat = xa_dp_alu_1.w;
 
     // Unused
-    ca_stack_cmd_w.clr 	    = 'b0;
+    ca_stack_cmd_w.clr      = 'b0;
 
-    ca_pending_pop 	    = xa_ucode.is_pop;
+    ca_pending_pop          = xa_ucode.is_pop;
 
   end // block: xa_stack_PROC
-    
+
   // ------------------------------------------------------------------------ //
   //
   `LIBV_REG_EN_RST_W(qs_pkg::bank_id_t, bank_idx, 'd0);
@@ -490,32 +490,32 @@ module qs_srt (
 
     // Sort bank index update.
     bank_idx_en  = 'b0;
-    bank_idx_w 	 = qs_pkg::bank_id_inc(bank_idx_r);
+    bank_idx_w   = qs_pkg::bank_id_inc(bank_idx_r);
 
     // Defaults:
-    bank_out 	 = bank_in;
+    bank_out     = bank_in;
     bank_out_vld = 'b0;
-    
+
     //
     casez ({// Instruction at XA commits
-	    xa_commit,
-	    // Instruction is an AWAIT
-	    xa_ucode.is_await,
-	    // Instruction is a EMIT
-	    xa_ucode.is_emit
-	    })
+            xa_commit,
+            // Instruction is an AWAIT
+            xa_ucode.is_await,
+            // Instruction is a EMIT
+            xa_ucode.is_emit
+            })
       3'b1_1?: begin
-	// AWAIT instruction commits; set bank status to SORTING
-	bank_out_vld 	= 'b1;
-	bank_out.status = qs_pkg::BANK_SORTING;
+        // AWAIT instruction commits; set bank status to SORTING
+        bank_out_vld    = 'b1;
+        bank_out.status = qs_pkg::BANK_SORTING;
       end
       3'b1_01: begin
-	// Advance bank index.
-	bank_idx_en 	= 'b1;
-	
-	// DONE instruction commits; set bank status to SORTED.
-	bank_out_vld 	= 'b1;
-	bank_out.status = qs_pkg::BANK_SORTED;
+        // Advance bank index.
+        bank_idx_en     = 'b1;
+
+        // DONE instruction commits; set bank status to SORTED.
+        bank_out_vld    = 'b1;
+        bank_out.status = qs_pkg::BANK_SORTED;
       end
       default: ;
     endcase // casez ({...
@@ -525,49 +525,49 @@ module qs_srt (
     // completed.
     //
     casez ({ // Instruction commits.
-	     xa_commit,
-	     // Instruction is a store.
-	     xa_ucode.is_store,
-	     // Instruction is a load.
-	     xa_ucode.is_load
-	    })
+             xa_commit,
+             // Instruction is a store.
+             xa_ucode.is_store,
+             // Instruction is a load.
+             xa_ucode.is_load
+            })
       3'b1_1?: begin
-	// Store
-	bank_en_w 	= 'b1;
+        // Store
+        bank_en_w       = 'b1;
 
-	bank_w 		= '0;
-	bank_w.wen 	= 'b1;
-	bank_w.addr 	= qs_pkg::addr_t'(xa_dp_alu_0);
-	bank_w.wdata 	= xa_dp_alu_1.w;
+        bank_w          = '0;
+        bank_w.wen      = 'b1;
+        bank_w.addr     = qs_pkg::addr_t'(xa_dp_alu_0);
+        bank_w.wdata    = xa_dp_alu_1.w;
 
-	ca_pending_load = 'b0;
+        ca_pending_load = 'b0;
       end
       3'b1_01: begin
-	// Load:
-	bank_en_w 	= 'b1;
+        // Load:
+        bank_en_w       = 'b1;
 
-	bank_w 		= '0;
-	bank_w.wen 	= 'b0;
-	bank_w.addr 	= qs_pkg::addr_t'(xa_dp_alu_1);
-	bank_w.wdata 	= xa_dp_alu_1.w;
+        bank_w          = '0;
+        bank_w.wen      = 'b0;
+        bank_w.addr     = qs_pkg::addr_t'(xa_dp_alu_1);
+        bank_w.wdata    = xa_dp_alu_1.w;
 
-	// Await pending load data from banks.
-	ca_pending_load = 'b1;
+        // Await pending load data from banks.
+        ca_pending_load = 'b1;
       end
       default: begin
-	// Nop
-	bank_en_w 	= 'b0;
-	bank_w 		= '0;
+        // Nop
+        bank_en_w       = 'b0;
+        bank_w          = '0;
 
-	ca_pending_load = 'b0;
+        ca_pending_load = 'b0;
       end
     endcase // casez ({...
 
-    // 
-    bank_en 	 = bank_en_w;
+    //
+    bank_en      = bank_en_w;
 
   end // block: xa_bank_PROC
-  
+
   // ------------------------------------------------------------------------ //
   //
   always_comb begin : xa_pipe_cntrl_PROC
@@ -578,54 +578,55 @@ module qs_srt (
     // Instruction in XA is stalled.
     //
     casez ({// Current instruction is an await
-	    xa_ucode.is_await
-	    })
+            xa_ucode.is_await
+            })
       1'b1: begin
-	// Await for the current nominated stall to become ready
-	xa_stall_cond = (bank_in.status != qs_pkg::BANK_READY);
+        // Await for the current nominated stall to become ready
+        xa_stall_cond = (bank_in.status != qs_pkg::BANK_READY);
       end
       default: begin
-	xa_stall_cond = 'b0;
+        xa_stall_cond = 'b0;
       end
     endcase // casez ({...
 
     // A stall occurs in the current cycle.
-    xa_stall 		    = xa_vld_r & (xa_stall_cond | ca_stall) & (~xa_kill);
+    xa_stall                =
+      xa_vld_r & (xa_stall_cond | ca_stall) & (~xa_kill);
 
     // Instruction in XA commits.
-    xa_commit 		    = xa_vld_r & (~xa_stall) & (~xa_kill);
+    xa_commit               = xa_vld_r & (~xa_stall) & (~xa_kill);
 
     // Enable latch of new XA microcode.
-    xa_enable 		    = fa_vld_r & (~xa_stall);
+    xa_enable               = fa_vld_r & (~xa_stall);
 
-    xa_pass 		    = xa_vld_r & (~xa_stall) & (~xa_kill);
-
-    //
-    xa_vld_en 		    = xa_enable | xa_kill;
-    xa_vld_w 		    = fa_vld_r & (~xa_kill);
+    xa_pass                 = xa_vld_r & (~xa_stall) & (~xa_kill);
 
     //
-    xa_pc_en 		    = xa_enable;
-    xa_pc_w 		    = fa_pc_r;
+    xa_vld_en               = xa_enable | xa_kill;
+    xa_vld_w                = fa_vld_r & (~xa_kill);
 
-    // 
-    xa_inst_en 		    = xa_enable;
+    //
+    xa_pc_en                = xa_enable;
+    xa_pc_w                 = fa_pc_r;
+
+    //
+    xa_inst_en              = xa_enable;
 
     // Compute CA stage next state.
-    ca_ucode_en 	    = ca_enable;
-    
-    ca_ucode_w 		    = '0;
+    ca_ucode_en             = ca_enable;
+
+    ca_ucode_w              = '0;
     //
-    ca_ucode_w.pc 	    = xa_pc_r;
-    ca_ucode_w.inst 	    = xa_inst_r;
+    ca_ucode_w.pc           = xa_pc_r;
+    ca_ucode_w.inst         = xa_inst_r;
     //
     ca_ucode_w.pending_load = ca_pending_load;
     ca_ucode_w.pending_pop  = ca_pending_pop;
     //
     ca_ucode_w.flags_en     = ar_flags_en;
     //
-    ca_ucode_w.rf_wen 	    = xa_rf_wen;
-    ca_ucode_w.rf_wa 	    = xa_rf_wa;
+    ca_ucode_w.rf_wen       = xa_rf_wen;
+    ca_ucode_w.rf_wa        = xa_rf_wa;
     ca_ucode_w.rf_wdata     = xa_rf_wdata;
 
   end // block: xa_pipe_cntrl_PROC
@@ -635,73 +636,73 @@ module qs_srt (
   always_comb begin : ca_pipe_cntrl_PROC
 
     casez ({// A load is currently pending
-	    ca_ucode_r.pending_load,
-	    // Load response has not yet arrived.
-	    bank_rdata_vld_r,
-	    // A pop is currently pending
-	    ca_ucode_r.pending_pop,
-	    // Pop response has not yet arrived.
-	    qs_stack_head_vld_r
-	    })
+            ca_ucode_r.pending_load,
+            // Load response has not yet arrived.
+            bank_rdata_vld_r,
+            // A pop is currently pending
+            ca_ucode_r.pending_pop,
+            // Pop response has not yet arrived.
+            qs_stack_head_vld_r
+            })
 
       4'b10_0?:
-	// Stall awaiting response from memory subsystem.
-	ca_stall_cond = 'b1;
+        // Stall awaiting response from memory subsystem.
+        ca_stall_cond = 'b1;
       4'b0?_10:
-	// Stall awaiting response from stack.
-	ca_stall_cond = 'b1;
+        // Stall awaiting response from stack.
+        ca_stall_cond = 'b1;
       default:
-	ca_stall_cond = 'b0;
+        ca_stall_cond = 'b0;
     endcase // casez ({...
 
-    ca_stall 	    = ca_vld_r & ca_stall_cond;
+    ca_stall        = ca_vld_r & ca_stall_cond;
 
-    ca_commit 	    = ca_vld_r & (~ca_stall);
-    
-    ca_enable 	    = xa_vld_r & (~ca_stall);
+    ca_commit       = ca_vld_r & (~ca_stall);
 
-    ca_vld_en 	    = ca_enable | ca_replay_r;
-    ca_vld_w 	    = xa_pass;
+    ca_enable       = xa_vld_r & (~ca_stall);
+
+    ca_vld_en       = ca_enable | ca_replay_r;
+    ca_vld_w        = xa_pass;
 
     ca_replay_en    = ca_enable;
     ca_replay_pc_en = ca_enable;
 
 
     casez ({ // Stage is valid
-	     ca_vld_r,
-	     // A load is in flight
-	     ca_ucode_r.pending_load,
-	     // Loaded data has arrived.
-	     bank_rdata_vld_r,
-	     // A pop is in flight
-	     ca_ucode_r.pending_pop,
-	     // Pop data has arrived.
-	     qs_stack_head_vld_r
-	    })
+             ca_vld_r,
+             // A load is in flight
+             ca_ucode_r.pending_load,
+             // Loaded data has arrived.
+             bank_rdata_vld_r,
+             // A pop is in flight
+             ca_ucode_r.pending_pop,
+             // Pop data has arrived.
+             qs_stack_head_vld_r
+            })
       5'b1_11_??: begin
-	rf_wen 	 = 'b1;
-	rf_wa 	 = ca_ucode_r.rf_wa;
-	rf_wdata = bank_rdata_r;
+        rf_wen   = 'b1;
+        rf_wa    = ca_ucode_r.rf_wa;
+        rf_wdata = bank_rdata_r;
       end
       5'b1_0?_11: begin
-	rf_wen 	 = 'b1;
-	rf_wa 	 = ca_ucode_r.rf_wa;
-	rf_wdata = qs_stack_head_r;
+        rf_wen   = 'b1;
+        rf_wa    = ca_ucode_r.rf_wa;
+        rf_wdata = qs_stack_head_r;
       end
       5'b1_0?_0?: begin
-	rf_wen 	 = ca_ucode_r.rf_wen;
-	rf_wa 	 = ca_ucode_r.rf_wa;
-	rf_wdata = ca_ucode_r.rf_wdata;
+        rf_wen   = ca_ucode_r.rf_wen;
+        rf_wa    = ca_ucode_r.rf_wa;
+        rf_wdata = ca_ucode_r.rf_wdata;
       end
       default: begin
-	rf_wen 	 = 'b0;
-	rf_wa 	 = '0;
-	rf_wdata = '0;
+        rf_wen   = 'b0;
+        rf_wa    = '0;
+        rf_wdata = '0;
       end
     endcase // casez ({...
 
   end // block: ca_pipe_cntrl_PROC
-  
+
   // ======================================================================== //
   //                                                                          //
   // Instances                                                                //
@@ -756,15 +757,15 @@ module qs_srt (
   always_comb begin : wires_PROC
 
     // Stack command interface:
-    qs_stack_cmd_vld_r 	    = ca_stack_cmd_vld_r;
+    qs_stack_cmd_vld_r      = ca_stack_cmd_vld_r;
     qs_stack_cmd_push_r     = ca_stack_cmd_r.push;
     qs_stack_cmd_push_dat_r = ca_stack_cmd_r.push_dat;
-    qs_stack_cmd_clr_r 	    = ca_stack_cmd_r.clr;
+    qs_stack_cmd_clr_r      = ca_stack_cmd_r.clr;
 
     // Bank command.
-    bank_wen_r 		    = bank_r.wen;
-    bank_addr_r 	    = bank_r.addr;
-    bank_wdata_r 	    = bank_r.wdata;
+    bank_wen_r              = bank_r.wen;
+    bank_addr_r             = bank_r.addr;
+    bank_wdata_r            = bank_r.wdata;
 
   end // block: wires_PROC
 

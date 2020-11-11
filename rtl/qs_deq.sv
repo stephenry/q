@@ -93,13 +93,13 @@ module qs_deq (
   // ======================================================================== //
 
   typedef struct packed {
-    logic 	 busy;
+    logic        busy;
     logic [1:0]  state;
   } fsm_encoding_t;
   
   typedef enum   logic [2:0] {  FSM_IDLE     = 3'b000,
                                 FSM_UNLOAD   = 3'b101,
-				FSM_WAIT_EOP = 3'b110
+                                FSM_WAIT_EOP = 3'b110
                                 } fsm_t;
   //
   `LIBV_REG_EN(fsm_encoding_t, fsm);
@@ -129,85 +129,85 @@ module qs_deq (
   always_comb begin : fsm_PROC
 
     // Defaults:
-    fsm_en 	 = 'b0;
-    fsm_w 	 = fsm_r;
+    fsm_en       = 'b0;
+    fsm_w        = fsm_r;
 
     bank_out_vld = 'b0;
-    bank_out 	 = bank_in;
+    bank_out     = bank_in;
 
     bank_idx_en  = 'b0;
-    bank_idx_w 	 = qs_pkg::bank_id_inc(bank_idx_r);
+    bank_idx_w           = qs_pkg::bank_id_inc(bank_idx_r);
 
-    rd_addr_en 	 = 'b0;
-    rd_addr_w 	 = rd_addr_r + 'b1;
+    rd_addr_en           = 'b0;
+    rd_addr_w    = rd_addr_r + 'b1;
 
     // Bank defaults:
-    rd_en_w 	 = 'b0;
-    rd_addr_en 	 = 'b0;
+    rd_en_w      = 'b0;
+    rd_addr_en           = 'b0;
     
     case (fsm_r)
 
       FSM_IDLE: begin
 
-	case (bank_in.status)
+        case (bank_in.status)
 
-	  qs_pkg::BANK_SORTED: begin
-	    // Update bank status.
-	    bank_out_vld    = 'b1;
-	    bank_out.status = qs_pkg::BANK_UNLOADING;
+          qs_pkg::BANK_SORTED: begin
+            // Update bank status.
+            bank_out_vld    = 'b1;
+            bank_out.status = qs_pkg::BANK_UNLOADING;
 
-	    // Reset index counter.
-	    rd_en_w 	    = 'b1;
-	    
-	    rd_addr_en 	    = 'b1;
-	    rd_addr_w 	    = '0;
+            // Reset index counter.
+            rd_en_w         = 'b1;
+            
+            rd_addr_en              = 'b1;
+            rd_addr_w       = '0;
 
-	    // Transition to 
-	    fsm_en 	    = 'b1;
-	    fsm_w 	    = FSM_UNLOAD;
-	  end
+            // Transition to 
+            fsm_en          = 'b1;
+            fsm_w           = FSM_UNLOAD;
+          end
 
-	  default:
-	    // Otherwise, continue to wait completion of the current
-	    // bank.
-	    ;
+          default:
+            // Otherwise, continue to wait completion of the current
+            // bank.
+            ;
 
-	endcase // case (dequeue_bank)
+        endcase // case (dequeue_bank)
 
       end
 
       FSM_UNLOAD: begin
-	// Load bank
-	bank_out_vld = 'b1;
-	if (bank_in.n == rd_addr_r) begin
-	  fsm_en 	  = 'b1;
-	  fsm_w 	  = FSM_WAIT_EOP;
-	end else begin
-	  // Still reading.
-	  
-	  // Emit read commit
-	  rd_en_w      = 'b1;
-	  rd_addr_en   = 'b1;
-	end
+        // Load bank
+        bank_out_vld = 'b1;
+        if (bank_in.n == rd_addr_r) begin
+          fsm_en          = 'b1;
+          fsm_w           = FSM_WAIT_EOP;
+        end else begin
+          // Still reading.
+          
+          // Emit read commit
+          rd_en_w      = 'b1;
+          rd_addr_en   = 'b1;
+        end
 
       end // case: FSM_UNLOAD
 
       FSM_WAIT_EOP: begin
-	if (out_vld_r & out_eop_r) begin
-	  // Is final word, update status and return to IDLE.
-	  bank_out_vld 	  = 'b1;
-	  bank_out.status = qs_pkg::BANK_READY;
+        if (out_vld_r & out_eop_r) begin
+          // Is final word, update status and return to IDLE.
+          bank_out_vld            = 'b1;
+          bank_out.status = qs_pkg::BANK_READY;
 
-	  // Unload operation has completed, await for the final EOP
-	  // to be emitted until transitioning back to the IDLE sate.
-	  fsm_en 	  = 'b1;
-	  fsm_w 	  = FSM_IDLE;
-	end
+          // Unload operation has completed, await for the final EOP
+          // to be emitted until transitioning back to the IDLE sate.
+          fsm_en          = 'b1;
+          fsm_w           = FSM_IDLE;
+        end
       end
 
       default:
-	// Otherwise, invalid state
-	;
+        // Otherwise, invalid state
+        ;
 
     endcase // case (fsm_r)
 
@@ -234,19 +234,19 @@ module qs_deq (
 
       FSM_IDLE: begin
 
-	// On tradition out of IDLE state, initialize read pointer.
-	deq_ptr_en = fsm_en;
-	deq_ptr_w  = '0;
+        // On tradition out of IDLE state, initialize read pointer.
+        deq_ptr_en = fsm_en;
+        deq_ptr_w  = '0;
       end
 
       default: begin
-	if (rd_data_vld_r) begin
-	  // Emit returning data.
-	  out_vld_w  = 'b1;
-	  out_en     = 'b1;
+        if (rd_data_vld_r) begin
+          // Emit returning data.
+          out_vld_w  = 'b1;
+          out_en     = 'b1;
 
-	  deq_ptr_en = 'b1;
-	end
+          deq_ptr_en = 'b1;
+        end
       end
 
     endcase // block: out_PROC

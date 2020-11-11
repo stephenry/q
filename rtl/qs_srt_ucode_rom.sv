@@ -150,14 +150,14 @@ module qs_srt_ucode_rom (
   //   __qs_end    : POP R4           ;
   //               : POP R3           ;
   //               : POP R2           ;
-  //               : POP BLINK        ; 
+  //               : POP BLINK        ;
   //               : RET              ; PC <- BLINK
   //
   //  PROC START:
   //   __start     : AWAIT            ; wait until queue_ready == 1
   //
   //               : MOVI R0, 0       ; R0 <- "Initial LO"
-  //               : MOVS R1, N       ; R1 <- "Initial HI (N)" 
+  //               : MOVS R1, N       ; R1 <- "Initial HI (N)"
   //               : CALL __qs        ; call quicksort(A, lo, hi);
   //               : EMIT             ;
   //               : J __main         ; goto __main
@@ -186,7 +186,7 @@ module qs_srt_ucode_rom (
     // more efficiently realized as a ROM. Perhaps an FPGA synthesis
     // tool can automatically infer a ROM from this table, otherwise, the
     // microcode would need to be hand assembled and loaded as a HEX-file.
-    
+
     case (ra)
       // ------------------------------------------------------------------- //
       // Exception table
@@ -230,7 +230,7 @@ module qs_srt_ucode_rom (
 
       // ------------------------------------------------------------------- //
       // Quicksort sub-routine.
-      
+
       SYM_QUICKSORT      : rout = push(BLINK);
       SYM_QUICKSORT +   1: rout = push(R2);
       SYM_QUICKSORT +   2: rout = push(R3);
@@ -283,12 +283,12 @@ module qs_srt_ucode_rom (
 
       // ------------------------------------------------------------------- //
       // Error handler.
-      
+
       // Error label (jump to self for all enternity).
       SYM_ERR            : rout = j(SYM_ERR);
             
       default:             rout = j(SYM_ERR);
-      
+
     endcase // case (pa)
 
   end // block: quicksort_prog_PROC

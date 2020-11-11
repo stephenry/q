@@ -80,7 +80,7 @@ package qs_pkg;
     // Current bank status:
     bank_status_t             status;
   } bank_state_t;
-    
+
 endpackage // qs_pkg
 
 `endif //  `ifndef QS_RTL_QS_PKG_VH

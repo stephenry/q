@@ -46,23 +46,23 @@ module qs_srt_ucode_decoder (
   // ------------------------------------------------------------------------ //
   //
   logic                                 decode_sel;
-  
+
   always_comb begin : decode_PROC
 
     // Defaults:
-    ucode 	  = '0;
+    ucode         = '0;
 
-    decode_sel 	  = SEL_field(inst);
+    decode_sel    = SEL_field(inst);
 
     // COMMON
-    ucode.imm 	  = I_field(inst);
-    ucode.dst 	  = R_field(inst);
-    ucode.src0 	  = S_field(inst);
-    ucode.src1 	  = U_field(inst);
+    ucode.imm     = I_field(inst);
+    ucode.dst     = R_field(inst);
+    ucode.src0    = S_field(inst);
+    ucode.src1    = U_field(inst);
     ucode.special = SPECIAL_field(inst);
-    ucode.cc 	  = CC_field(inst);
+    ucode.cc      = CC_field(inst);
     ucode.target  = A_field(inst);
-    
+
     case (inst.opcode)
       NOP: begin
       end
@@ -139,11 +139,11 @@ module qs_srt_ucode_decoder (
           end
           default: begin
             // CALL
-	    ucode.is_jump = 'b1;
+            ucode.is_jump = 'b1;
             ucode.is_call = 'b1;
 
-	    ucode.dst_en  = 'b1;
-	    ucode.dst 	  = BLINK;
+            ucode.dst_en  = 'b1;
+            ucode.dst     = BLINK;
           end
         endcase // case (inst.u.cret.is_call)
       end

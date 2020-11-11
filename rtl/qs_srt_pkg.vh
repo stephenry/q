@@ -34,7 +34,7 @@ package qs_srt_pkg;
   typedef logic [7:0] pc_t;
 
   // Machine reset vector.
-  localparam pc_t RESET_VECTOR 	    = '0;
+  localparam pc_t RESET_VECTOR              = '0;
 
   // Condition codes
   typedef enum logic [1:0] { UNCOND = 2'b00,
@@ -58,7 +58,7 @@ package qs_srt_pkg;
                              R5    = 3'b101,
                              R6    = 3'b110,
                              BLINK = 3'b111
-			     } reg_t;
+                             } reg_t;
 
   typedef enum logic [2:0] { REG_N   = 3'b000
                              } reg_special_t;
@@ -162,7 +162,7 @@ package qs_srt_pkg;
     logic            is_jump;
     logic            is_push;
     logic            is_pop;
-    
+
     //
     logic            dst_en;
     reg_t            dst;
@@ -201,7 +201,7 @@ package qs_srt_pkg;
     //
     cc_t             cc;
     field_A_t        target;
-    
+
   } ucode_t;
 
   function automatic logic [2:0] R_field(inst_t inst);
@@ -279,9 +279,9 @@ package qs_srt_pkg;
 
   // Return instruction
   function automatic inst_t ret; begin
-    ret 	      = '0;
+    ret                       = '0;
     //
-    ret.opcode 	      = CRET;
+    ret.opcode                = CRET;
     ret.u.cret.is_ret = 'b1;
   end endfunction
 
@@ -334,7 +334,7 @@ package qs_srt_pkg;
 
   // Add instruction (immediate); reg[dst] = reg[src0] + imm
   function automatic inst_t addi(reg_t dst, reg_t src0, imm_t imm,
-		 bit dst_en = 'b1); begin
+                 bit dst_en = 'b1); begin
     addi = '0;
     //
     addi.opcode          = ARITH;
@@ -347,7 +347,7 @@ package qs_srt_pkg;
 
   // Subtract instruction (immediate); reg[dst] = reg[src0] - imm
   function automatic inst_t subi(reg_t dst, reg_t src0, imm_t imm,
-		 bit dst_en = 'b1); begin
+                 bit dst_en = 'b1); begin
     subi = '0;
     //
     subi.opcode          = ARITH;
@@ -361,7 +361,7 @@ package qs_srt_pkg;
 
   // Subtract instructon: reg[dst] <- reg[src0] - reg[src1]
   function automatic inst_t sub(reg_t dst, reg_t src0, reg_t src1,
-		bit dst_en = 'b1); begin
+                bit dst_en = 'b1); begin
     sub = '0;
     //
     sub.opcode          = ARITH;
