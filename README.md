@@ -126,9 +126,9 @@ cmake .
   be enqueued and dequeued from the sorter while it is active. In this
   case, the advantage of such a scheme is perhaps minimal as the
   overall duration of the sort operation vastly exceeds the time taken
-  to load and deload the unsorted and sorted states. Its presence adds
-  some additional complexity when synchronizing with the controller,
-  which is the objective of this exercise.
+  to load and unload the respective unsorted and sorted states. Its
+  presence adds some additional complexity when synchronizing with the
+  controller, which is the objective of this exercise.
 * Aside from the complexity of the quicksort algorithm itself when
   implemented in hardware. One must also consider the overhead
   associated with the stack memory which is necessary to maintain the
