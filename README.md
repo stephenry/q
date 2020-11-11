@@ -51,6 +51,7 @@ cmake ..
 cmake --build .
 # Run regression using the CTEST driver (takes minutes)
 ctest .
+```
 
 ## Configuration
 
@@ -94,10 +95,10 @@ cmake .
   is rarely performed in hardware. When performed, it is typically
   used for the purpose of loading balancing the allocation of shared
   resources and is carried out using a parallel sorting network. Such
-  sort networks utlitise a series of comparions and swaps in order
+  sort networks utlitise a series of comparions and swaps in
   parallel. Traditional sort algorithm, such as quicksort, are
   atypical in computer hardware because of their recursive nature and
-  the non-trivial complexity in its implementation. 
+  because of the non-trivial complexity in its implementation.
 * Sorting can also be carried out in hardware in O(N) using the
   insertion sort algorithm. In this approach, an associatively
   addressed shift register is used to compute, in parallel, the
@@ -120,12 +121,13 @@ cmake .
   of three pipeline stages and implements a small RISC-like assembly
   language, with specialized instructions to handle synchronization
   between memory banks.
-* A DSP-like multibanked arrange is implement to allow data to be
-  enqueued and dequeued from the sorted while the sort algorithm is
-  taking place. In this case, the advantage of such a scheme is
-  perhaps minimal as the overall duration of the sort operation vastly
-  exceeds the time taken to load and deload the unsorted and sorted
-  states.
+* A DSP-like multibanked arrangement is implemented to allow data to
+  be enqueued and dequeued from the sorter while it is active. In this
+  case, the advantage of such a scheme is perhaps minimal as the
+  overall duration of the sort operation vastly exceeds the time taken
+  to load and deload the unsorted and sorted states. Its presence adds
+  some additional complexity when synchronizing with the controller,
+  which is the objective of this exercise.
 * Aside from the complexity of the quicksort algorithm itself when
   implemented in hardware. One must also consider the overhead
   associated with the stack memory which is necessary to maintain the
@@ -136,4 +138,8 @@ cmake .
   by the stack capacity, which grows substantially in relation. This
   difficulty too renders the algorithmic approach somewhat inpractical
   in a serious system.
+* An alternative approach would have to used other inplace approaches
+  such as Insertion Sort or Bubble Sort, as these do not require
+  recursion. In anycase, these approaches too remain very uncommon in
+  a hardware setting and therefore have not been explored.
 
