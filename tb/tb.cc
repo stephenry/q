@@ -108,9 +108,8 @@ void VSignals::get(UCWriteback& wrbk) const {
   wrbk.wa = vsupport::get(uc_rf_wa_);
   wrbk.wdata = vsupport::get(uc_rf_wdata_);
   wrbk.flags_en = vsupport::get_as_bool(uc_flags_en_);
-  wrbk.c = vsupport::get_as_bool(uc_flags_c_);
-  wrbk.n = vsupport::get_as_bool(uc_flags_n_);
-  wrbk.z = vsupport::get_as_bool(uc_flags_z_);
+  wrbk.eq = vsupport::get_as_bool(uc_flags_eq_);
+  wrbk.lt = vsupport::get_as_bool(uc_flags_lt_);
 }
 
 // Obtain current simulation cycle.
@@ -251,6 +250,13 @@ class Instruction {
           }
         }
       } break;
+      case 0xD: {
+        // CMP
+        s += "cmp ";
+        s += reg(s_field());
+        s += ", ";
+        s += reg(u_field());
+      } break;
       case 0xF: {
         // Await/Emit
         s += sel0() ? "emit" : "await";
@@ -351,9 +357,8 @@ void Model::Arch::reset() {
   // Clear stack.
   stack.clear();
   // Clear architectural flags
-  z = false;
-  c = false;
-  n = false;
+  eq = false;
+  lt = false;
 }
 
 void Model::step() {
@@ -380,9 +385,8 @@ void Model::step() {
     offset = ss.tellp();
     ss << std::string(70 - offset, ' ')
        << "\t["
-       << (ucwrbk.c ? "c" : " ")
-       << (ucwrbk.n ? "n" : " ")
-       << (ucwrbk.z ? "z" : " ")
+       << (ucwrbk.eq ? " eq" : " ")
+       << (ucwrbk.lt ? " lt" : " ")
        << "]\n";
     std::cout << ss.str();
 #endif
@@ -410,15 +414,15 @@ void Model::step() {
           } break;
           case 1: {
             // EQ condition
-            is_taken =   arch_.z;
+            is_taken =   arch_.eq;
           } break;
           case 2: {
             // GT condition
-            is_taken = (!arch_.z) && (!arch_.n);
+            is_taken = (!arch_.lt) && (!arch_.eq);
           } break;
           case 3: {
             // LE condition
-            is_taken =   arch_.z  ||   arch_.n;
+            is_taken =   arch_.lt;
           } break;
         }
         // Update program counter.
@@ -558,29 +562,9 @@ void Model::step() {
         if (!inst.sel0()) {
           // Add
           wdata_expected = lhs_expected + rhs_expected;
-
-          // Update flags;
-          arch_.z = (wdata_expected == 0);
-          arch_.c = false;
-          arch_.n = (wdata_expected < 0);
-
-          EXPECT_EQ(ucwrbk.z, arch_.z);
-          // EXPECT_EQ(ucwrbk.c, arch_.c);
-          EXPECT_EQ(ucwrbk.n, arch_.n);
         } else {
           // Sub
           wdata_expected = lhs_expected - rhs_expected;
-
-          // Update flags;
-          arch_.z = (wdata_expected == 0);
-          arch_.c = false;
-          arch_.n = (rhs_expected > lhs_expected);
-
-          EXPECT_EQ(ucwrbk.z, arch_.z);
-          // EXPECT_EQ(ucwrbk.c, arch_.c);
-          EXPECT_EQ(ucwrbk.n, arch_.n)
-              << "Flag miscompare: lhs = " << hex(lhs_expected)
-              << " rhs = " << hex(rhs_expected);
         }
         if (expect_writeback) {
           // Validate writeback data
@@ -618,6 +602,28 @@ void Model::step() {
           arch_.pc = arch_.rf_read(7);
         }
 
+      } break;
+      case 0xD: {
+        // CMP compare
+
+        // Do not expect writeback
+        EXPECT_FALSE(ucwrbk.wen);
+
+        const vluint8_t ra0 = inst.s_field();
+        const vluint8_t ra1 = inst.u_field();
+
+        const vlsint32_t rdata0 = arch_.rf_read(ra0);
+        const vlsint32_t rdata1 = arch_.rf_read(ra1);
+
+        const bool eq = (rdata0 == rdata1);
+        EXPECT_EQ(eq, ucwrbk.eq);
+        const bool lt = (rdata0  < rdata1);
+        EXPECT_EQ(lt, ucwrbk.lt);
+
+        // Update architectural state.
+        arch_.eq = eq;
+        arch_.lt = lt;
+        arch_.pc++;
       } break;
       case 0xF: {
         // Await/Emit

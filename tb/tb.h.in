@@ -56,7 +56,7 @@ constexpr std::size_t OPT_W = ${OPT_W};
 
 constexpr std::size_t OPT_BANKS_N = ${OPT_BANKS_N};
 
-using word_type = vluint32_t;
+using word_type = vlsint32_t;
 
 std::ostream& operator<<(std::ostream& os, const std::vector<word_type>& dp);
 
@@ -88,9 +88,8 @@ struct VSignals {
     vluint32_t wdata;
 
     bool flags_en;
-    bool c;
-    bool n;
-    bool z;
+    bool eq;
+    bool lt;
   };
   
   template<typename U>
@@ -115,9 +114,8 @@ struct VSignals {
     vs.uc_rf_wen_ = std::addressof(u->uc_rf_wen);
     vs.uc_rf_wa_ = std::addressof(u->uc_rf_wa);
     vs.uc_rf_wdata_ = std::addressof(u->uc_rf_wdata);
-    vs.uc_flags_c_ = std::addressof(u->uc_flags_c);
-    vs.uc_flags_n_ = std::addressof(u->uc_flags_n);
-    vs.uc_flags_z_ = std::addressof(u->uc_flags_z);
+    vs.uc_flags_eq_ = std::addressof(u->uc_flags_eq);
+    vs.uc_flags_lt_ = std::addressof(u->uc_flags_lt);
     // Testbench monitors:
     vs.tb_cycle_ = std::addressof(u->tb_cycle);
     // Clk/Rst:
@@ -178,9 +176,8 @@ struct VSignals {
   vluint8_t* uc_rf_wa_;
   vluint32_t* uc_rf_wdata_;
   vluint8_t* uc_flags_en_;
-  vluint8_t* uc_flags_c_;
-  vluint8_t* uc_flags_n_;
-  vluint8_t* uc_flags_z_;
+  vluint8_t* uc_flags_eq_;
+  vluint8_t* uc_flags_lt_;
 
   // Testbench monitor
   vluint64_t* tb_cycle_;
@@ -224,8 +221,8 @@ class Model {
     // Special registers
     vluint32_t N;
 
-    // Architectural flags
-    bool z, c, n;
+    // Comparison flags.
+    bool lt, eq;
 
     // Pop value from the top of the stack.
     vluint32_t stack_pop();

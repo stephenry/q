@@ -35,7 +35,7 @@ std::vector<word_type> generate_stimulus(std::size_t n) {
   // Generate random packet.
   std::vector<word_type> stimulus;
   for (std::size_t i = 0; i < n; i++) {
-    stimulus.push_back(Random::uniform<word_type>(1 << 30));
+    stimulus.push_back(Random::uniform<word_type>());
   }
   return stimulus;
 }

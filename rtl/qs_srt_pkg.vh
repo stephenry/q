@@ -64,14 +64,15 @@ package qs_srt_pkg;
                              } reg_special_t;
 
   // Instruction oprands:
-  typedef enum logic [3:0] { NOP    = 4'b0000,
-                             JCC    = 4'b0001,
-                             PP     = 4'b0010,
-                             MEM    = 4'b0100,
-                             MOV    = 4'b0110,
-                             ARITH  = 4'b0111,
-                             CRET   = 4'b1100,
-                             CNTRL  = 4'b1111
+  typedef enum logic [3:0] { NOP   = 4'b0000,
+                             JCC   = 4'b0001,
+                             PP    = 4'b0010,
+                             MEM   = 4'b0100,
+                             MOV   = 4'b0110,
+                             ARITH = 4'b0111,
+                             CRET  = 4'b1100,
+                             CMP   = 4'b1101,
+                             CNTRL = 4'b1111
                             } opcode_t;
 
   // Packet instruction encoding
@@ -393,6 +394,14 @@ package qs_srt_pkg;
 
   function automatic inst_t nop; begin
     nop = '0;
+  end endfunction
+
+  function automatic inst_t cmp(reg_t src0, reg_t src1); begin
+    cmp                = '0;
+
+    cmp.opcode         = CMP;
+    cmp.u.arith.src0   = src0;
+    cmp.u.arith.u.src1 = src1;
   end endfunction
 
 endpackage // qs_srt_pkg

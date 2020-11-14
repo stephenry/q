@@ -194,12 +194,10 @@ module qs_srt (
   `LIBV_REG_EN(ca_stack_t, ca_stack_cmd);
 
   typedef struct packed {
-    // Carry bit
-    logic        c;
-    // Negative bit
-    logic        n;
-    // Zero bit
-    logic        z;
+    // Less than (lhs < rhs)
+    logic        lt;
+    // Is equal (lhs == rhs)
+    logic        eq;
   } ar_flags_t;
 
   `LIBV_REG_EN(ar_flags_t, ar_flags);
@@ -374,15 +372,15 @@ module qs_srt (
     case (xa_ucode.cc)
       qs_srt_pkg::EQ: begin
         // Architectural flags compare equal.
-        xa_cc_hit =   ar_flags_r.z;
+        xa_cc_hit =   ar_flags_r.eq;
       end
       qs_srt_pkg::GT: begin
         // Architectural flags compare greater-than or equal.
-        xa_cc_hit = (~ar_flags_r.z) & (~ar_flags_r.n);
+        xa_cc_hit = ~(ar_flags_r.eq || ar_flags_r.lt);
       end
       qs_srt_pkg::LE: begin
         // Architectural flags compare less-than or equal.
-        xa_cc_hit =   ar_flags_r.z  |   ar_flags_r.n;
+        xa_cc_hit =   ar_flags_r.lt;
       end
       default: begin
         // Otherwise, CC is not considered for the current instruction.
@@ -391,16 +389,15 @@ module qs_srt (
     endcase // case (xa_ucode)
 
     // Architectural flags
-    ar_flags_en  = xa_commit & xa_ucode.flag_en;
+    ar_flags_en   = xa_commit & xa_ucode.flag_en;
 
-    ar_flags_w           = '0;
-    ar_flags_w.c = xa_dp_alu_cout;
-    ar_flags_w.n = xa_dp_alu_y [$left(xa_dp_alu_y)];
-    ar_flags_w.z = (xa_dp_alu_y == '0);
+    ar_flags_w    = '0;
+    ar_flags_w.lt = ($signed(xa_dp_alu_0) < $signed(xa_dp_alu_1));
+    ar_flags_w.eq = (xa_dp_alu_0 == xa_dp_alu_1);
 
     // Write to register file.
-    xa_rf_wen    = xa_commit & xa_ucode.dst_en;
-    xa_rf_wa     = xa_ucode.dst;
+    xa_rf_wen     = xa_commit & xa_ucode.dst_en;
+    xa_rf_wa      = xa_ucode.dst;
 
     // Decide value to be written back (if applicable) to the
     // architectural register file.

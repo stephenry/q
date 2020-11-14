@@ -62,9 +62,8 @@ module tb_qs (
   , output qs_pkg::w_t                            uc_rf_wdata
   // Flags:
   , output logic                                  uc_flags_en
-  , output logic                                  uc_flags_c
-  , output logic                                  uc_flags_n
-  , output logic                                  uc_flags_z
+  , output logic                                  uc_flags_eq
+  , output logic                                  uc_flags_lt
 
   // ======================================================================== //
   // TB support
@@ -119,9 +118,8 @@ module tb_qs (
 
     // Probe to check flags.
     uc_flags_en    = u_qs.u_qs_srt.ca_ucode_r.flags_en;
-    uc_flags_c     = u_qs.u_qs_srt.ar_flags_r.c;
-    uc_flags_n     = u_qs.u_qs_srt.ar_flags_r.n;
-    uc_flags_z     = u_qs.u_qs_srt.ar_flags_r.z;
+    uc_flags_eq    = u_qs.u_qs_srt.ar_flags_r.eq;
+    uc_flags_lt    = u_qs.u_qs_srt.ar_flags_r.lt;
 
   end // block: uc_probes_PROC
 

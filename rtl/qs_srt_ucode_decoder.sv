@@ -146,6 +146,15 @@ module qs_srt_ucode_decoder (
             ucode.dst     = BLINK;
           end
         endcase // case (inst.u.cret.is_call)
+      end // case: CRET
+      CMP: begin
+        // Is compare instruction; set flags.
+        ucode.flag_en = 'b1;
+        //
+        ucode.src0_en = 'b1;
+        ucode.src0    = inst.u.arith.src0;
+        ucode.src1_en = 'b1;
+        ucode.src1    = inst.u.arith.u.src1;
       end
       CNTRL: begin
         if (decode_sel)

@@ -205,10 +205,10 @@ module qs_srt_ucode_rom (
       SYM_PARTITION +   5: rout = ld(R2, R1);
       SYM_PARTITION +   6: rout = mov(R3, R0);
       SYM_PARTITION +   7: rout = mov(R4, R0);
-      SYM_PARTITION +   8: rout = sub(R0, R1, R4, .dst_en('b0));
+      SYM_PARTITION +   8: rout = cmp(R1, R4);
       SYM_PARTITION +   9: rout = j(SYM_PARTITION + 19, .cc(EQ));
       SYM_PARTITION +  10: rout = ld(R5, R4);
-      SYM_PARTITION +  11: rout = sub(R0, R5, R2, .dst_en('b0));
+      SYM_PARTITION +  11: rout = cmp(R5, R2);
       SYM_PARTITION +  12: rout = j(SYM_PARTITION + 17, .cc(GT));
       SYM_PARTITION +  13: rout = ld(R6, R3);
       SYM_PARTITION +  14: rout = st(R3, R5);
@@ -237,13 +237,7 @@ module qs_srt_ucode_rom (
       SYM_QUICKSORT +   3: rout = push(R4);
       SYM_QUICKSORT +   4: rout = mov(R2, R0);
       SYM_QUICKSORT +   5: rout = mov(R4, R1);
-
-      // Gotcha; the quicksort algorithm expects the indices (R0, R1)
-      // to be signed quantities whereas the comparison logic always
-      // assumes unsigned. In the boundary case where pivot = 0,
-      // quicksort should immediate exit when (0; lo) is not < (-1;
-      // hi).
-      SYM_QUICKSORT +   6: rout = sub(R0, R1, R0, .dst_en('b0));
+      SYM_QUICKSORT +   6: rout = cmp(R1, R0);
       SYM_QUICKSORT +   7: rout = j(SYM_QUICKSORT + 16, LE);
       SYM_QUICKSORT +   8: rout = call(SYM_PARTITION);
       SYM_QUICKSORT +   9: rout = mov(R3, R0);
