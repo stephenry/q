@@ -797,7 +797,7 @@ void TB::drive_stimulus(const std::vector<word_type>& stimulus) {
   bool done;
 
   VSignals::VIn in;
-  for (std::size_t i = 0; i < stimulus.size(); i) {
+  for (std::size_t i = 0; i < stimulus.size();) {
     if (true || vs_.in_rdy_r()) {
 
       // Drive interface

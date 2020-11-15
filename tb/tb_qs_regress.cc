@@ -42,7 +42,8 @@ TEST(Regress, SortMany) {
   // Construct testbench environment.
   tb::TB tb{opts};
   for (std::size_t i = 0; i < 10000; i++) {
-    tb.push_back(tb::test::generate_stimulus());
+    const std::size_t n = tb::Random::uniform<std::size_t>(tb::OPT_N, 1);
+    tb.push_back(tb::test::generate_stimulus(n));
   }
 
   tb.run();

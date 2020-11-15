@@ -71,7 +71,8 @@ module qs_srt_stack #(parameter int N = 16, parameter int W = 32) (
   typedef logic [$clog2(N)-1:0]         addr_t;
 
   function automatic logic is_last_entry(addr_t addr); begin
-    is_last_entry = (addr_t'(N - 1) == addr);
+    localparam int L  = N - 1;
+    is_last_entry     = (addr_t'(L) == addr);
   end endfunction
 
 
