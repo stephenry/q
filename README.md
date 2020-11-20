@@ -1,3 +1,5 @@
+![Badge](https://github.com/stephenry/qs/workflows/cmake/badge.svg)
+
 # Introduction
 
 A hardware implementation of the Quicksort algorithm.
