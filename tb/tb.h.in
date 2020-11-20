@@ -114,6 +114,7 @@ struct VSignals {
     vs.uc_rf_wen_ = std::addressof(u->uc_rf_wen);
     vs.uc_rf_wa_ = std::addressof(u->uc_rf_wa);
     vs.uc_rf_wdata_ = std::addressof(u->uc_rf_wdata);
+    vs.uc_flags_en_ = std::addressof(u->uc_flags_en);
     vs.uc_flags_eq_ = std::addressof(u->uc_flags_eq);
     vs.uc_flags_lt_ = std::addressof(u->uc_flags_lt);
     // Testbench monitors:
