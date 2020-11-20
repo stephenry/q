@@ -143,4 +143,3 @@ cmake .
   such as Insertion Sort or Bubble Sort, as these do not require
   recursion. In anycase, these approaches too remain very uncommon in
   a hardware setting and therefore have not been explored.
-
