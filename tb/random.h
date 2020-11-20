@@ -81,7 +81,7 @@ struct Random {
   
   
  private:
-  static inline std::mt19937 mt_{1};
+  static inline std::mt19937 mt_;
 };
 
 } // namespace tb

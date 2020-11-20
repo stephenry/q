@@ -34,10 +34,10 @@ include(${CMAKE_SOURCE_DIR}/cmake/qs.cmake)
 set(CMAKE_CXX_STANDARD 17)
 
 # Enable waveform dump (VCD)
-option(OPT_VCD_ENABLE "Enable VCD waveform dumping." ON)
+option(OPT_VCD_ENABLE "Enable VCD waveform dumping." OFF)
 
 # Enable logging to tracefile.
-option(OPT_TRACE_ENABLE "Enable log tracing." ON)
+option(OPT_TRACE_ENABLE "Enable log tracing." OFF)
 
 # Enable verbose logging.
 option(OPT_VERBOSE "Verbose logging." OFF)
@@ -66,4 +66,3 @@ add_subdirectory(rtl)
 
 enable_testing()
 add_subdirectory(tb)
-
