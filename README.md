@@ -1,6 +1,6 @@
 # Introduction
 
-[Badge](https://github.com/stephenry/qs/workflows/Continuous%20Integration/badge.svg)
+![CI Badge](https://github.com/stephenry/qs/workflows/Continuous%20Integration/badge.svg)
 
 A hardware implementation of the Quicksort algorithm.
 
