@@ -26,6 +26,7 @@
 //========================================================================== //
 
 `include "qs_pkg.vh"
+`include "libv_pkg.vh"
 
 module qs_banks (
 
@@ -114,7 +115,7 @@ module qs_banks (
   always_comb begin : bank_state_PROC
 
     for (int i = 0; i < qs_pkg::BANKS_N; i++) begin
-      // 
+      //
       bank_state_enq_sel [i] =
         enq_bank_in_vld & (qs_pkg::bank_id_t'(i) == enq_bank_idx_r);
 
@@ -128,10 +129,10 @@ module qs_banks (
 
       // Defaults:
       casez ({// Enqueue controller updates bank state
-	      bank_state_enq_sel [i],
-	      // Sort controller updates bank state
+        bank_state_enq_sel [i],
+        // Sort controller updates bank state
               bank_state_srt_sel [i],
-	      // Dequeue controller updates bank state
+        // Dequeue controller updates bank state
               bank_state_deq_sel [i]
               })
         3'b1??: begin
@@ -184,14 +185,14 @@ module qs_banks (
 
     bank_deq_rd_idx_en = 'b0;
     bank_deq_rd_idx_w  = bank_deq_rd_idx_r;
-        
+
     bank_srt_rd_vld_w  = 'b0;
 
     bank_srt_rd_idx_en = 'b0;
     bank_srt_rd_idx_w  = bank_srt_rd_idx_r;
 
     for (int i = 0; i < qs_pkg::BANKS_N; i++) begin
-      // 
+      //
       bank_enq_sel [i] =
         enq_wr_en_r & (qs_pkg::bank_id_t'(i) == enq_bank_idx_r);
 
@@ -218,24 +219,24 @@ module qs_banks (
           bank_din [i]  = enq_wr_data_r;
         end
         3'b01?: begin
-	  bank_srt_rd_vld_w  = 'b1;
-	  bank_srt_rd_idx_en = 'b1;
-	  bank_srt_rd_idx_w  = srt_bank_idx_r;
-	  
-          bank_en [i] 	     = 1'b1;
-          bank_wen [i] 	     = srt_bank_wen_r;
+          bank_srt_rd_vld_w  = 'b1;
+          bank_srt_rd_idx_en = 'b1;
+          bank_srt_rd_idx_w  = srt_bank_idx_r;
+
+          bank_en [i]        = 1'b1;
+          bank_wen [i]       = srt_bank_wen_r;
           bank_addr [i]      = srt_bank_addr_r;
-          bank_din [i] 	     = srt_bank_wdata_r;
+          bank_din [i]       = srt_bank_wdata_r;
         end
         3'b001: begin
-	  bank_deq_rd_vld_w  = 'b1;
-	  bank_deq_rd_idx_en = 'b1;
-	  bank_deq_rd_idx_w  = deq_bank_idx_r;
-	  
-          bank_en [i] 	     = 1'b1;
-          bank_wen [i] 	     = 1'b0;
+    bank_deq_rd_vld_w  = 'b1;
+    bank_deq_rd_idx_en = 'b1;
+    bank_deq_rd_idx_w  = deq_bank_idx_r;
+
+          bank_en [i]        = 1'b1;
+          bank_wen [i]         = 1'b0;
           bank_addr [i]      = deq_rd_addr_r;
-          bank_din [i] 	     = '0;
+          bank_din [i]         = '0;
         end
         default: begin
           bank_en [i]   = '0;
@@ -259,21 +260,21 @@ module qs_banks (
   always_comb begin : out_PROC
 
     srt_bank_rdata_vld_w = bank_srt_rd_vld_r;
-    srt_bank_rdata_en 	 = bank_srt_rd_vld_r;
-    srt_bank_rdata_w 	 = bank_dout [bank_srt_rd_idx_r];
+    srt_bank_rdata_en    = bank_srt_rd_vld_r;
+    srt_bank_rdata_w     = bank_dout [bank_srt_rd_idx_r];
 
     deq_rd_data_vld_w    = bank_deq_rd_vld_r;
-    deq_rd_data_en 	 = bank_deq_rd_vld_r;
-    deq_rd_data_w 	 = bank_dout [bank_deq_rd_idx_r];
+    deq_rd_data_en     = bank_deq_rd_vld_r;
+    deq_rd_data_w    = bank_dout [bank_deq_rd_idx_r];
 
   end // block: out_PROC
-  
+
   // ======================================================================== //
   //                                                                          //
   // Flops                                                                    //
   //                                                                          //
   // ======================================================================== //
-  
+
   // ------------------------------------------------------------------------ //
   //
   always_ff @(posedge clk) begin : bank_state_REG
@@ -284,7 +285,7 @@ module qs_banks (
         bank_state_r [i] <= bank_state_w [i];
     end
   end // block: bank_state_REG
-  
+
   // ======================================================================== //
   //                                                                          //
   // Instances                                                                //
@@ -294,7 +295,7 @@ module qs_banks (
   // ------------------------------------------------------------------------ //
   //
   generate for (genvar g = 0; g < qs_pkg::BANKS_N; g++) begin
-  
+
     spsram #(.W(qs_pkg::W), .N(qs_pkg::N)) u_bank (
       //
         .clk           (clk                       )

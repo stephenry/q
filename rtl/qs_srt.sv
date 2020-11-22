@@ -367,7 +367,7 @@ module qs_srt (
 
     // Consider Condition Code (CC) for current instruction.
     //
-    // NOTE: will need to update these conditions 
+    // NOTE: will need to update these conditions
     //
     case (xa_ucode.cc)
       qs_srt_pkg::EQ: begin
