@@ -25,6 +25,10 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //========================================================================== //
 
+`timescale 1ns/1ps
+
+`default_nettype none
+
 `include "libv_pkg.vh"
 
 module spsram #(parameter int W = 32,

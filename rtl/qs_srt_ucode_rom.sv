@@ -25,6 +25,10 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //========================================================================== //
 
+`timescale 1ns/1ps
+
+`default_nettype none
+
 `include "qs_srt_pkg.vh"
 
 module qs_srt_ucode_rom (

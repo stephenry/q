@@ -25,6 +25,10 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //========================================================================== //
 
+`timescale 1ns/1ps
+
+`default_nettype none
+
 `include "qs_pkg.vh"
 `include "qs_srt_pkg.vh"
 `include "libv_pkg.vh"

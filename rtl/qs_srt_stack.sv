@@ -25,6 +25,10 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //========================================================================== //
 
+`timescale 1ns/1ps
+
+`default_nettype none
+
 `include "libv_pkg.vh"
 
 module qs_srt_stack #(parameter int N = 16, parameter int W = 32) (
