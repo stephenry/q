@@ -328,6 +328,9 @@ class TB {
   // Verilated RTL instance.
   Vtb_qs* u_ = nullptr;
 
+  // Verilator Simulation context.
+  VerilatedContext* ctxt_ = nullptr;
+
   // DataPackets to be issued to the RTL.
   std::deque<std::vector<word_type> > pkts_;
 
