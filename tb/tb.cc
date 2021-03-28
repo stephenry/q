@@ -702,13 +702,12 @@ void Model::Arch::rf_write(vluint8_t a, vluint32_t d) {
 
 TB::TB(const Options& opts)
     : opts_(opts) {
-  ctxt_ = new VerilatedContext;
 #ifdef OPT_VCD_ENABLE
   if (opts.wave_enable) {
-    ctxt_->traceEverOn(true);
+    Verilated::traceEverOn(true);
   }
 #endif
-  u_ = new Vtb_qs(ctxt_, "top");
+  u_ = new Vtb_qs;
   vs_ = VSignals::bind(u_);
 #ifdef OPT_VCD_ENABLE
   if (opts.wave_enable) {
@@ -724,7 +723,6 @@ TB::TB(const Options& opts)
 
 TB::~TB() {
   delete u_;
-  delete ctxt_;
 #ifdef OPT_VCD_ENABLE
   if (wave_) {
     wave_->close();
