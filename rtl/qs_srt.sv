@@ -234,15 +234,15 @@ module qs_srt (
 
     // Compute next fetch program counter
     //
-    casez ({// Commit-stage pipeline replay
+    case  ({// Commit-stage pipeline replay
             ca_replay_r,
             // Or, fetch stage advances
             fa_adv
-            })
+            }) inside
       2'b1?:   fa_pc_w = ca_replay_pc_r;
       2'b01:   fa_pc_w = fa_pc_r + 'b1;
       default: fa_pc_w = fa_pc_r;
-    endcase // casez ({...
+    endcase // case ({...
 
   end // block: fa_pipe_cntrl_PROC
 
@@ -292,13 +292,13 @@ module qs_srt (
 
     // Compute ALU input A.
     //
-    casez ({// Instruction is zero; uninitialized.
+    case  ({// Instruction is zero; uninitialized.
             xa_ucode.src0_is_zero,
             // Inject BLINK
             xa_ucode.src0_is_blink,
             // Forward writeback
             xa_src0_forward
-            })
+            }) inside
       3'b1??: begin
         // Inject '0.
         xa_dp_alu_0 = '0;
@@ -315,13 +315,13 @@ module qs_srt (
         // Otherwise, select register-file state.
         xa_dp_alu_0 = rf_rdata [0];
       end
-    endcase // casez ({...
+    endcase // case ({...
 
     // Compute ALU input B.
     //
     xa_dp_alu_1     = '0;
 
-    casez ({// Instruction has special field.
+    case  ({// Instruction has special field.
             xa_ucode.has_special,
             // Inject BLINK
             xa_ucode.is_call,
@@ -329,7 +329,7 @@ module qs_srt (
             xa_ucode.has_imm,
             // Forward writeback
             xa_src1_forward
-            })
+            }) inside
       4'b1???: begin
         // Inject "special" register.
         case (xa_ucode.special)
@@ -360,7 +360,7 @@ module qs_srt (
         // Otherwise, inject register file data.
         xa_dp_alu_1_pre = rf_rdata [1];
       end
-    endcase // casez ({...
+    endcase // case ({...
 
     // Conditionally invert ALU input, if required.
     xa_dp_alu_1   = xa_dp_alu_1_pre ^ {qs_pkg::W{xa_ucode.inv_src1}};
@@ -406,11 +406,11 @@ module qs_srt (
     // Decide value to be written back (if applicable) to the
     // architectural register file.
     //
-    casez ({ // Write top of stack.
+    case  ({ // Write top of stack.
              xa_ucode.is_pop,
              // Write word from current bank.
              xa_ucode.is_load
-            })
+            }) inside
       2'b1?: begin
         // Write current stack head.
         xa_rf_wdata = qs_stack_head_r;
@@ -423,20 +423,20 @@ module qs_srt (
         // Otherwise, write ALU output.
         xa_rf_wdata = xa_dp_alu_y;
       end
-    endcase // casez ({...
+    endcase // case ({...
 
     // Compute replay condition which occurs on the commit of a
     // flow-control instruction (jump, ret, call). On commit, the
     // pipeline is restarted from the new program counter and old
     // instructions in the pipeline are killed.
     //
-    casez ({ // Instruction commits
+    case  ({ // Instruction commits
              xa_commit,
              //
              xa_ucode.is_jump, xa_cc_hit,
              //
              xa_ucode.is_ret
-            })
+            }) inside
       4'b1_11_0: begin
         // Conditional jump and condition has been met.
         ca_replay_w    = 'b1;
@@ -451,7 +451,7 @@ module qs_srt (
         ca_replay_w    = 'b0;
         ca_replay_pc_w = '0;
       end
-    endcase // casez ({...
+    endcase // case ({...
 
   end // block: xa_datapath_PROC
 
@@ -493,13 +493,13 @@ module qs_srt (
     bank_out_vld = 'b0;
 
     //
-    casez ({// Instruction at XA commits
+    case  ({// Instruction at XA commits
             xa_commit,
             // Instruction is an AWAIT
             xa_ucode.is_await,
             // Instruction is a EMIT
             xa_ucode.is_emit
-            })
+            }) inside
       3'b1_1?: begin
         // AWAIT instruction commits; set bank status to SORTING
         bank_out_vld    = 'b1;
@@ -514,19 +514,19 @@ module qs_srt (
         bank_out.status = qs_pkg::BANK_SORTED;
       end
       default: ;
-    endcase // casez ({...
+    endcase // case ({...
 
     // Issue transaction to memory; subsequent command is held-up back
     // a commit stage stall (pending write-back) until the command as
     // completed.
     //
-    casez ({ // Instruction commits.
+    case  ({ // Instruction commits.
              xa_commit,
              // Instruction is a store.
              xa_ucode.is_store,
              // Instruction is a load.
              xa_ucode.is_load
-            })
+            }) inside
       3'b1_1?: begin
         // Store
         bank_en_w       = 'b1;
@@ -557,7 +557,7 @@ module qs_srt (
 
         ca_pending_load = 'b0;
       end
-    endcase // casez ({...
+    endcase // case ({...
 
     //
     bank_en      = bank_en_w;
@@ -573,9 +573,9 @@ module qs_srt (
 
     // Instruction in XA is stalled.
     //
-    casez ({// Current instruction is an await
+    case  ({// Current instruction is an await
             xa_ucode.is_await
-            })
+            }) inside
       1'b1: begin
         // Await for the current nominated stall to become ready
         xa_stall_cond = (bank_in.status != qs_pkg::BANK_READY);
@@ -583,7 +583,7 @@ module qs_srt (
       default: begin
         xa_stall_cond = 'b0;
       end
-    endcase // casez ({...
+    endcase // case ({...
 
     // A stall occurs in the current cycle.
     xa_stall                =
@@ -631,7 +631,7 @@ module qs_srt (
   //
   always_comb begin : ca_pipe_cntrl_PROC
 
-    casez ({// A load is currently pending
+    case  ({// A load is currently pending
             ca_ucode_r.pending_load,
             // Load response has not yet arrived.
             bank_rdata_vld_r,
@@ -639,8 +639,7 @@ module qs_srt (
             ca_ucode_r.pending_pop,
             // Pop response has not yet arrived.
             qs_stack_head_vld_r
-            })
-
+            }) inside
       4'b10_0?:
         // Stall awaiting response from memory subsystem.
         ca_stall_cond = 'b1;
@@ -649,7 +648,7 @@ module qs_srt (
         ca_stall_cond = 'b1;
       default:
         ca_stall_cond = 'b0;
-    endcase // casez ({...
+    endcase // case ({...
 
     ca_stall        = ca_vld_r & ca_stall_cond;
 
@@ -664,7 +663,7 @@ module qs_srt (
     ca_replay_pc_en = ca_enable;
 
 
-    casez ({ // Stage is valid
+    case  ({ // Stage is valid
              ca_vld_r,
              // A load is in flight
              ca_ucode_r.pending_load,
@@ -674,7 +673,7 @@ module qs_srt (
              ca_ucode_r.pending_pop,
              // Pop data has arrived.
              qs_stack_head_vld_r
-            })
+            }) inside
       5'b1_11_??: begin
         rf_wen   = 'b1;
         rf_wa    = ca_ucode_r.rf_wa;
@@ -695,7 +694,7 @@ module qs_srt (
         rf_wa    = '0;
         rf_wdata = '0;
       end
-    endcase // casez ({...
+    endcase // case ({...
 
   end // block: ca_pipe_cntrl_PROC
 
