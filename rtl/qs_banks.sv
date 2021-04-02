@@ -233,14 +233,14 @@ module qs_banks (
           bank_din [i]       = srt_bank_wdata_r;
         end
         3'b001: begin
-	  bank_deq_rd_vld_w  = 'b1;
-	  bank_deq_rd_idx_en = 'b1;
-	  bank_deq_rd_idx_w  = deq_bank_idx_r;
+          bank_deq_rd_vld_w  = 'b1;
+          bank_deq_rd_idx_en = 'b1;
+          bank_deq_rd_idx_w  = deq_bank_idx_r;
 
-          bank_en [i] 	     = 1'b1;
-          bank_wen [i] 	     = 1'b0;
+          bank_en [i]        = 1'b1;
+          bank_wen [i]       = 1'b0;
           bank_addr [i]      = deq_rd_addr_r;
-          bank_din [i] 	     = '0;
+          bank_din [i]       = '0;
         end
         default: begin
           bank_en [i]   = '0;
@@ -264,12 +264,12 @@ module qs_banks (
   always_comb begin : out_PROC
 
     srt_bank_rdata_vld_w = bank_srt_rd_vld_r;
-    srt_bank_rdata_en 	 = bank_srt_rd_vld_r;
-    srt_bank_rdata_w 	 = bank_dout [bank_srt_rd_idx_r];
+    srt_bank_rdata_en    = bank_srt_rd_vld_r;
+    srt_bank_rdata_w     = bank_dout [bank_srt_rd_idx_r];
 
-    deq_rd_data_vld_w 	 = bank_deq_rd_vld_r;
-    deq_rd_data_en 	 = bank_deq_rd_vld_r;
-    deq_rd_data_w 	 = bank_dout [bank_deq_rd_idx_r];
+    deq_rd_data_vld_w    = bank_deq_rd_vld_r;
+    deq_rd_data_en       = bank_deq_rd_vld_r;
+    deq_rd_data_w        = bank_dout [bank_deq_rd_idx_r];
 
   end // block: out_PROC
 
