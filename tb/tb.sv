@@ -25,6 +25,8 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //========================================================================== //
 
+`include "cfg_pkg.vh"
+
 module tb (
 // -------------------------------------------------------------------------- //
 //
@@ -33,9 +35,14 @@ module tb (
 , input wire logic                                i_ingress_eop
 
 // -------------------------------------------------------------------------- //
+//
 , output wire logic                               o_egress_vld_r
 , output wire logic                               o_egress_sop_r
 , output wire logic                               o_egress_eop_r
+
+// -------------------------------------------------------------------------- //
+//
+, output wire logic                               o_busy_r
 
 // -------------------------------------------------------------------------- //
 // Testbench State
@@ -70,6 +77,8 @@ q u_q (
 , .o_egress_vld_r                      (o_egress_vld_r)
 , .o_egress_sop_r                      (o_egress_sop_r)
 , .o_egress_eop_r                      (o_egress_eop_r)
+//
+, .o_busy_r                            (o_busy_r)
 //
 , .clk                                 (clk)
 , .arst_n                              (arst_n)

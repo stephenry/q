@@ -32,8 +32,12 @@ set(ENABLE_VCD ON)
 # ---------------------------------------------------------------------------- #
 # Build sources:
 include(rtl)
+
 set(TARGET "sim")
 include(tech)
+
+set(Q_CMP_KEY_BITS 32)
+set(Q_CMP_VAL_BITS 32)
 
 # ---------------------------------------------------------------------------- #
 # Configure sources
@@ -60,7 +64,6 @@ set(VERILATOR_ARGS
 if (ENABLE_VCD)
   list(APPEND VERILATOR_ARGS --trace)
 endif ()
-
 
 set(TB_SOURCES
   "${RTL_SOURCES}"

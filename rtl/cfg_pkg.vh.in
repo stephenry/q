@@ -28,7 +28,16 @@
 `ifndef Q_RTL_CFG_PKG_VH
 `define Q_RTL_CFG_PKG_VH
 
+
 package cfg_pkg;
+
+parameter int ENGINES_N = 16;
+
+parameter int CONTEXTS_N = 32;
+
+parameter int CMP_KEY_BITS = @Q_CMP_KEY_BITS@;
+
+parameter int CMP_VAL_BITS = @Q_CMP_VAL_BITS@;
 
 endpackage : cfg_pkg
 

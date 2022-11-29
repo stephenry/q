@@ -44,10 +44,16 @@ module q (
 , output wire logic                               o_egress_eop_r
 
 // -------------------------------------------------------------------------- //
+//
+, output wire logic                               o_busy_r
+
+// -------------------------------------------------------------------------- //
 // Clk/Reset
 , input wire logic                                clk
 , input wire logic                                arst_n
 );
+
+
 /* verilator lint_on UNDRIVEN */
 /* verilator lint_on UNUSEDSIGNAL */
 endmodule : q
