@@ -25,16 +25,14 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 ##========================================================================== //
 
-cmake_minimum_required(VERSION 3.22)
-project(q)
+add_custom_command(
+    OUTPUT q_eng_ucode_rom.sv
+    COMMAND bash ${Q_TOOLS_ROOT}/qas.sh
+        --ucode ${CMAKE_CURRENT_SOURCE_DIR}/qs.s
+        --out q_eng_ucode_rom.sv
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/qs.s
+)
 
-list(APPEND CMAKE_MODULE_PATH
-    "${CMAKE_SOURCE_DIR}/cmake")
-
-include(FindVerilator)
-include(venv)
-
-set(Q_TOOLS_ROOT ${CMAKE_BINARY_DIR}/tools)
-add_subdirectory(tools)
-add_subdirectory(rtl)
-add_subdirectory(tb)
+add_custom_target(generate_ucode_rom
+    DEPENDS q_eng_ucode_rom.sv
+)

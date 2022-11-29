@@ -25,16 +25,9 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 ##========================================================================== //
 
-cmake_minimum_required(VERSION 3.22)
-project(q)
+function (generate_tool_run_script src dst)
+    set(outfile "${CMAKE_CURRENT_BINARY_DIR}/${dst}")
+    configure_file(${src} ${outfile} @ONLY)
+endfunction ()
 
-list(APPEND CMAKE_MODULE_PATH
-    "${CMAKE_SOURCE_DIR}/cmake")
-
-include(FindVerilator)
-include(venv)
-
-set(Q_TOOLS_ROOT ${CMAKE_BINARY_DIR}/tools)
-add_subdirectory(tools)
-add_subdirectory(rtl)
-add_subdirectory(tb)
+generate_tool_run_script(qas.sh.in qas.sh)

@@ -1,4 +1,5 @@
 ## ==================================================================== ##
+## ==================================================================== ##
 ## Copyright (c) 2022, Stephen Henry
 ## All rights reserved.
 ##
@@ -28,37 +29,18 @@
 ## OF THE POSSIBILITY OF SUCH DAMAGE.
 ## ==================================================================== ##
 
-if (EXISTS $ENV{VERILATOR_ROOT})
-  set(VERILATOR_ROOT $ENV{VERILATOR_ROOT})
-  set(Verilator_EXE ${VERILATOR_ROOT}/bin/verilator)
-  execute_process(COMMAND ${Verilator_EXE} --version
-    OUTPUT_VARIABLE Verilator_VER)
-  string(REGEX REPLACE "Verilator ([0-9]).([0-9]+).*" "\\1"
-    VERILATOR_VERSION_MAJOR ${Verilator_VER})
-  string(REGEX REPLACE "Verilator ([0-9]).([0-9]+).*" "\\2"
-    VERILATOR_VERSION_MINOR ${Verilator_VER})
-  set(VERILATOR_VERSION
-    ${VERILATOR_VERSION_MAJOR}.${VERILATOR_VERSION_MINOR})
-  message(STATUS "Found Verilator version: ${VERILATOR_VERSION}")
-
-  macro (verilator_build vlib)
-    add_library(${vlib} STATIC
-      "${VERILATOR_ROOT}/include/verilated.cpp"
-      "${VERILATOR_ROOT}/include/verilated_dpi.cpp"
-      "${VERILATOR_ROOT}/include/verilated_save.cpp"
-      "$<$<BOOL:${ENABLE_VCD}>:${VERILATOR_ROOT}/include/verilated_vcd_c.cpp>"
-      )
-    target_include_directories(${vlib}
-      PRIVATE
-      "${VERILATOR_ROOT}/include"
-      "${VERILATOR_ROOT}/include/vltstd"
-      )
-  endmacro ()
-else()
-  # Configuration script expects and requires that the VERILATOR_ROOT
-  # variable be set in the current environment. 
-  message(WARNING [[
-    "VERILATOR_ROOT has not been defined in the environment. "
-    "Verilator not found! Simulation is not supported"
+find_package(Python3 REQUIRED)
+if (${Python3_FOUND})
+    set(Q_VENV_ROOT ${CMAKE_BINARY_DIR}/.venv)
+    message(STATUS "Generating Virtual Environment at: ${Q_VENV_ROOT}")
+    message("${Python3_EXECUTABLE} -m venv ${Q_VENV_ROOT}")
+    message("${Q_VENV_ROOT}/bin/pip3 install -r ${CMAKE_SOURCE_DIR}/requirements.tx")
+    execute_process(COMMAND ${Python3_EXECUTABLE} -m venv  ${Q_VENV_ROOT})
+    execute_process(COMMAND ${Q_VENV_ROOT}/bin/pip3 install
+        -r ${CMAKE_SOURCE_DIR}/requirements.txt)
+    set(Q_PYTHON3 ${Q_VENV_ROOT}/bin/python3)
+else ()
+    message(FATAL [[
+        "Python3 not found; RTL compilation not supported."
     ]])
 endif ()

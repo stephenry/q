@@ -1,5 +1,5 @@
 ##========================================================================== //
-## Copyright (c) 2020, Stephen Henry
+## Copyright (c) 2022, Stephen Henry
 ## All rights reserved.
 ##
 ## Redistribution and use in source and binary forms, with or without
@@ -25,16 +25,12 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 ##========================================================================== //
 
-cmake_minimum_required(VERSION 3.22)
-project(q)
+import argparse
+import sys
+from lark import Lark
 
-list(APPEND CMAKE_MODULE_PATH
-    "${CMAKE_SOURCE_DIR}/cmake")
+a = argparse.ArgumentParser()
+a.add_argument('-u', '--ucode', type=argparse.FileType('r'), default=sys.stdin)
+a.add_argument('-o', '--out', type=argparse.FileType('w'), default=sys.stdout)
 
-include(FindVerilator)
-include(venv)
-
-set(Q_TOOLS_ROOT ${CMAKE_BINARY_DIR}/tools)
-add_subdirectory(tools)
-add_subdirectory(rtl)
-add_subdirectory(tb)
+parser = Lark.open('asm_grammar.lark', rel_to=__file__)

@@ -1,5 +1,6 @@
+#!/bin/bash
 ##========================================================================== //
-## Copyright (c) 2020, Stephen Henry
+## Copyright (c) 2022, Stephen Henry
 ## All rights reserved.
 ##
 ## Redistribution and use in source and binary forms, with or without
@@ -23,18 +24,9 @@
 ## CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 ## POSSIBILITY OF SUCH DAMAGE.
-##========================================================================== //
+##==========================================================================
 
-cmake_minimum_required(VERSION 3.22)
-project(q)
+export PYTHONPATH="@CMAKE_SOURCE_DIR@/tools:${PYTHONPATH}"
 
-list(APPEND CMAKE_MODULE_PATH
-    "${CMAKE_SOURCE_DIR}/cmake")
-
-include(FindVerilator)
-include(venv)
-
-set(Q_TOOLS_ROOT ${CMAKE_BINARY_DIR}/tools)
-add_subdirectory(tools)
-add_subdirectory(rtl)
-add_subdirectory(tb)
+shift
+exec @Q_PYTHON3@ -m qas $@

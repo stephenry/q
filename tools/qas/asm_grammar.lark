@@ -1,0 +1,21 @@
+start: (symbol | instruction)*
+
+symbol: STRING ":"
+
+instruction: opcode oprands*
+
+opcode: "push"
+
+oprands: register | immediate
+
+register: "R"
+
+immediate: common.INT
+
+
+
+%import common.WS
+%import common.INT
+%ignore WS
+// Comments
+%ignore /;.*$/

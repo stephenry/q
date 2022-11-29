@@ -25,16 +25,4 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 ##========================================================================== //
 
-cmake_minimum_required(VERSION 3.22)
-project(q)
-
-list(APPEND CMAKE_MODULE_PATH
-    "${CMAKE_SOURCE_DIR}/cmake")
-
-include(FindVerilator)
-include(venv)
-
-set(Q_TOOLS_ROOT ${CMAKE_BINARY_DIR}/tools)
-add_subdirectory(tools)
-add_subdirectory(rtl)
-add_subdirectory(tb)
+add_subdirectory(ucode)

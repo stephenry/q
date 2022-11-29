@@ -11,6 +11,8 @@ RUN apt-get update \
       libfl-dev \
       gdb \
       cmake \
+      python3-pip \
+      python3-venv \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 

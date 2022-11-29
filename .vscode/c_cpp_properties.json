@@ -1,0 +1,17 @@
+{
+    "configurations": [
+        {
+            "name": "Development",
+            "cppStandard": "c++17",
+            "compileCommands": "${command:cmake.buildDirectory}/compile_commands.json",
+            "includePath": [
+                "${env:VERILATOR_ROOT}/include",
+                "${command:cmake.buildDirectory}/tb",
+                "${command:cmake.buildDirectory}/tb/Vobj"
+            ],
+            "compilerPath": "/usr/bin/g++",
+            "configurationProvider": "ms-vscode.cmake-tools"
+        }
+    ],
+    "version": 4
+}

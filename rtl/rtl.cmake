@@ -25,16 +25,8 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 ##========================================================================== //
 
-cmake_minimum_required(VERSION 3.22)
-project(q)
+set(RTL_ROOT "${CMAKE_SOURCE_DIR}/rtl")
 
-list(APPEND CMAKE_MODULE_PATH
-    "${CMAKE_SOURCE_DIR}/cmake")
-
-include(FindVerilator)
-include(venv)
-
-set(Q_TOOLS_ROOT ${CMAKE_BINARY_DIR}/tools)
-add_subdirectory(tools)
-add_subdirectory(rtl)
-add_subdirectory(tb)
+set(RTL_SOURCES
+    "${RTL_ROOT}/ucode/q_eng_ucode_rom.sv"
+    "${RTL_ROOT}/ucode/q_eng_ucode_dec.sv")
