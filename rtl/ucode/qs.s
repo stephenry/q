@@ -26,70 +26,85 @@
 ;;========================================================================== ;;
 
 reset:
-    j __start                   ; reset vector, jump to main subroutine.
+    j main                     ; reset vector, jump to main subroutine.
+
 partition:
-    push R2                     ;
-    push R3                     ;
-    push R4                     ;
-    push R5                     ;
-    push R6                     ;
-    ld R2, [R1]                 ; pivot <- A[hi];
-    mov R3, R0                  ; i <- lo
-    mov R4, R0                  ; j <- lo   
+    push r2                     ;
+    push r3                     ;
+    push r4                     ;
+    push r5                     ;
+    push r6                     ;
+    ld r2, [r1]                 ; pivot <- A[hi];
+    mov r3, r0                  ; i <- lo
+    mov r4, r0                  ; j <- lo   
 __loop_start:
-    sub 0, R1, R4               ;
-    JEQ __end                   ; if (j == hi) goto __end
-    ld R5, [R4]                 ; R5 <- A[j]
-    sub.f 0, R5, R2             ;
+    sub 0, r1, r4               ;
+    jeq __end                   ; if (j == hi) goto __end
+    ld r5, [r4]                 ; r5 <- A[j]
+    sub.f 0, r5, r2             ;
     jgt __end_loop              ; if ((A[j] - pivot) > 0) goto __end_of_loop
-    ld R6, [R3]                 ; swap A[i] with A[j]
-    st [R3], R5                 ;
-    st [R4], R6                 ;
-    addi R3, R3, 1              ; i <- i + 1
+    ld r6, [r3]                 ; swap A[i] with A[j]
+    st [r3], r5                 ;
+    st [r4], r6                 ;
+    add r3, r3, 1               ; i <- i + 1
 __end_loop:
-    addi R4, R4, 1              ; j <- j + 1
+    add r4, r4, 1               ; j <- j + 1
     j __loop_start              ;
 __end:
-    ld R0, [R3]                 ;
-    ld R1, [R4]                 ;
-    st [R3], R1                 ;
-    st [R4], R0                 ;
-    mov R0, R3                  ; ret <- pivot
-    pop R6                      ;
-    pop R5                      ;
-    pop R4                      ;
-    pop R3                      ;
-    pop R2                      ;
+    ld r0, [r3]                 ;
+    ld r1, [r4]                 ;
+    st [r3], r1                 ;
+    st [r4], r0                 ;
+    mov r0, r3                  ; ret <- pivot
+    pop r6                      ;
+    pop r5                      ;
+    pop r4                      ;
+    pop r3                      ;
+    pop r2                      ;
     ret                         ;
+
 quicksort:
-    push BLINK                  ;
-    push R2                     ;
-    push R3                     ;
-    push R4                     ;
-    mov R2, R0                  ; R2 <- LO
-    mov R4, R1                  ; R4 <- HI
-    sub.f 0, R1, R0             ;
-    jle __quicksort_end         ; if ((hi - lo) < 0) goto __end;
-    call PARTITION              ; R0 <- partition(lo, hi);
-    mov R3, R0                  ; R3 <- PIVOT
-    mov R0, R2                  ;
-    subi R1, R3, 1              ;
-    call QUICKSORT              ; quicksort(lo, p - 1);
-    addi R0, R3, 1              ;
-    mov R1, R4                  ;
-    call QUICKSORT              ; quicksort(p + 1, hi);
+    push blink                  ;
+    push r2                     ;
+    push r3                     ;
+    push r4                     ;
+    mov r2, r0                  ; r2 <- LO
+    mov r4, r1                  ; r4 <- HI
+    sub.f 0, r1, r0             ;
+    jle __quicksort_end         ; if ((hi - lo) < 0) goto __quicksort_end;
+    call partition              ; r0 <- partition(lo, hi);
+    mov r3, r0                  ; r3 <- PIVOT
+    mov r0, r2                  ;
+    sub r1, r3, 1               ;
+    call quicksort              ; quicksort(lo, p - 1);
+    add r0, r3, 1               ;
+    mov r1, r4                  ;
+    call quicksort              ; quicksort(p + 1, hi);
 __quicksort_end:
-    pop R4                      ;
-    pop R3                      ;
-    pop R2                      ;
-    pop BLINK                   ;
+    pop r4                      ;
+    pop r3                      ;
+    pop r2                      ;
+    pop blink                   ;
     ret                         ; PC <- BLINK
-__start:
+
+main:
+    mov r0, 0                   ; Initialize machine state on reset
+    mov r1, 0
+    mov r2, 0
+    mov r3, 0
+    mov r4, 0
+    mov r5, 0
+    mov r6, 0
+    mov blink, 0
+__wait_for_next_job:
     await                       ; wait until queue_ready == 1
-    movi R0, 0                  ; R0 <- "Initial LO"
-    movs R1, N                  ; R1 <- "Initial HI (N)"
-    call __qs                   ; call quicksort(A, lo, hi);
+    mov r0, 0                   ; r0 <- "Initial LO"
+    movs r1, N                  ; r1 <- "Initial HI (N)"
+    call quicksort              ; call quicksort(A, lo, hi);
     emit                        ;
-    J __main                    ; goto __main
+    j __wait_for_next_job       ; goto main
+
+error:
+    j error                     ; TODO(shenry): figure out error behaviour.
 
 ;; end

@@ -27,10 +27,12 @@
 
 add_custom_command(
     OUTPUT q_eng_ucode_rom.sv
-    COMMAND bash ${Q_TOOLS_ROOT}/qas.sh
-        --ucode ${CMAKE_CURRENT_SOURCE_DIR}/qs.s
-        --out q_eng_ucode_rom.sv
+    COMMAND sh ${Q_TOOLS_ROOT}/qas.sh
+        -s ${CMAKE_CURRENT_SOURCE_DIR}/qs.s
+        -o q_eng_ucode_rom.sv
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/qs.s
+    DEPENDS ${CMAKE_SOURCE_DIR}/tools/qas/asm_grammar.lark
+    DEPENDS ${CMAKE_SOURCE_DIR}/tools/qas/__main__.py
 )
 
 add_custom_target(generate_ucode_rom

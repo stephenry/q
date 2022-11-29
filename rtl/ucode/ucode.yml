@@ -1,0 +1,181 @@
+name: inst
+size: 16
+fields:
+  - name: cc
+    msb: 9
+    lsb: 8
+  - name: A
+    msb: 7
+    lsb: 0
+  - name: r
+    msb: 10
+    lsb: 8
+  - name: s
+    msb: 6
+    lsb: 4
+  - name: i
+    msb: 2
+    lsb: 0
+  - name: u
+    msb: 2
+    lsb: 0
+instructions:
+  - mnemonic: nop
+    mask: 0000_????_????_????
+    fields:
+    ucode:
+  - mnemonic: j
+    mask: 0001_????_????_????
+    fields:
+      - cc
+      - A
+    ucode:
+      - is_jump
+  - mnemonic: push
+    mask: 0010_0???_????_????
+    fields:
+      - u
+    ucode:
+      - valid
+      - is_push
+      - src1_en
+      - src0_is_zero
+  - mnemonic: pop
+    mask: 0010_1???_????_????
+    fields:
+      - r
+    ucode:
+      - valid
+      - is_pop
+      - dst_en
+  - mnemonic: ld
+    mask: 0100_0???_????_????
+    fields:
+      - r
+      - u
+    ucode:
+      - valid
+      - is_store
+  - mnemonic: st
+    mask: 0100_1???_????_????
+    fields:
+      - s
+      - u
+    ucode:
+      - valid
+      - is_store
+  - mnemonic: mov
+    mask: 0110_0???_????_0???
+    fields:
+      - r
+      - u
+    ucode:
+      - valid  
+  - mnemonic: movi
+    mask: 0110_0???_????_1???
+    fields:
+      - r
+      - i
+    ucode:
+      - valid
+      - has_imm 
+  - mnemonic: movs
+    mask: 0100_1???_????_????
+    fields:
+      - r
+      - S
+    ucode:
+      - valid     
+  - mnemonic: add
+    mask: 0111_1???_????_0???
+    fields:
+      - r
+      - s
+      - u
+    ucode:
+      - valid 
+  - mnemonic: addi
+    mask: 0111_0???_????_1???
+      - r
+      - s
+      - i
+    ucode:
+      - valid
+      - has_imm 
+  - mnemonic: sub
+    mask: 0111_1???_????_0???
+    fields:
+      - r
+      - s
+      - u
+    ucode:
+      - valid    
+  - mnemonic: subi
+    mask: 0111_1???_????_1???
+    fields:
+      - r
+      - s
+      - i
+    ucode:
+      - valid
+      - has_imm
+  - mnemonic: call
+    mask: 1100_0???_????_????
+    fields:
+      - A
+    ucode:
+      - valid
+      - is_call
+  - mnemonic: ret
+    mask: 1100_1???_????_????
+    fields:
+    ucode:
+      - valid
+      - is_ret
+  - mnemonic: wait
+    mask: 1111_0???_????_????
+    fields:
+    ucode:
+      - valid
+      - is_await
+  - mnemonic: emit
+    mask: 1111_1???_????_????
+    fields:
+    ucode:
+      - valid
+      - is_emit
+decoded:
+  - name: ucode
+  - ucode:
+      - name: valid
+        bits: 1
+      - name: is_emit
+        bits: 1
+      - name: is_await
+        bits: 1
+      - name: is_call
+        bits: 1
+      - name: is_ret
+        bits: 1
+      - name: is_load
+        bits: 1
+      - name: is_store
+        bits: 1
+      - name: is_jump
+        bits: 1
+      - name: is_push
+        bits: 1
+      - name: is_pop
+        bits: 1
+      - name: dst_en
+        bits: 1
+      - name: src0_is_zero
+        bits: 1
+      - name: has_imm
+        bits: 1
+      - name: has_special
+        bits: 1
+      - name: inv_src1
+        bits: 1
+      - name: flag_en
+        bits: 1

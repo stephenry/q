@@ -1,21 +1,61 @@
-start: (symbol | instruction)*
+start: (instruction | label)*
 
-symbol: STRING ":"
+instruction: inst_jump
+    | inst_call
+    | inst_push
+    | inst_pop
+    | inst_load
+    | inst_store
+    | inst_mov
+    | inst_movs
+    | inst_sub
+    | inst_add
+    | inst_ret
+    | inst_await
+    | inst_emit
 
-instruction: opcode oprands*
 
-opcode: "push"
+opcode_jump: /j(eq|gt|le)?/ -> opcode_jump
+inst_jump: opcode_jump link -> emit_jump
 
-oprands: register | immediate
+inst_call: "call" link -> emit_call
 
-register: "R"
+inst_push: "push" reg -> emit_push
 
-immediate: common.INT
+inst_pop: "pop" reg -> emit_pop
 
+inst_load: "ld" reg "," ireg -> emit_ld
 
+inst_store: "st" ireg "," reg -> emit_st
+
+inst_mov: "mov" reg "," (reg | imm) -> emit_mov
+
+inst_movs: "movs" reg "," regs -> emit_movs
+
+inst_sub: "sub" (reg | imm) "," reg "," (reg | imm)
+    | "sub.f" (reg | imm) "," reg "," (reg | imm)
+
+inst_add: "add" reg "," reg "," imm 
+
+inst_ret: "ret" -> emit_ret
+
+inst_await: "await" -> emit_await
+
+inst_emit: "emit" -> emit_emit
+
+imm: INTEGER -> emit_imm
+reg: /r[0-9]+/ -> emit_reg
+    | "blink" -> emit_blink
+ireg: "[" reg "]" -> emit_ireg
+regs: "N" -> emit_special
+
+oprand: (imm | reg | ireg)
+oprands: oprand ("," oprand)*
+
+link: /[_a-z]+/ -> link
+label: link ":" -> label
 
 %import common.WS
-%import common.INT
+%import common.INT -> INTEGER
 %ignore WS
-// Comments
-%ignore /;.*$/
+%ignore ";" /.*\n?/

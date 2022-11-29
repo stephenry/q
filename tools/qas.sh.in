@@ -27,6 +27,4 @@
 ##==========================================================================
 
 export PYTHONPATH="@CMAKE_SOURCE_DIR@/tools:${PYTHONPATH}"
-
-shift
 exec @Q_PYTHON3@ -m qas $@
