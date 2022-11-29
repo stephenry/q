@@ -1,5 +1,5 @@
 ##========================================================================== //
-## Copyright (c) 2020, Stephen Henry
+## Copyright (c) 2022, Stephen Henry
 ## All rights reserved.
 ##
 ## Redistribution and use in source and binary forms, with or without
@@ -25,10 +25,4 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 ##========================================================================== //
 
-function (generate_tool_run_script src dst)
-    set(outfile "${CMAKE_CURRENT_BINARY_DIR}/${dst}")
-    configure_file(${src} ${outfile} @ONLY)
-endfunction ()
-
-generate_tool_run_script(qas.sh.in qas.sh)
-generate_tool_run_script(ucc.sh.in ucc.sh)
+print("Hello, World!")

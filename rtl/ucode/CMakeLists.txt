@@ -32,9 +32,16 @@ add_custom_command(
         -o q_eng_ucode_rom.sv
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/qs.s
     DEPENDS ${CMAKE_SOURCE_DIR}/tools/qas/asm_grammar.lark
-    DEPENDS ${CMAKE_SOURCE_DIR}/tools/qas/__main__.py
-)
+    DEPENDS ${CMAKE_SOURCE_DIR}/tools/qas/__main__.py)
 
 add_custom_target(generate_ucode_rom
-    DEPENDS q_eng_ucode_rom.sv
-)
+    DEPENDS q_eng_ucode_rom.sv)
+
+add_custom_command(
+    OUTPUT q_eng_ucode_dec.sv
+    COMMAND sh ${Q_TOOLS_ROOT}/ucc.sh
+        -u ${CMAKE_CURRENT_SOURCE_DIR}/ucode.yml
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/ucode.yml)
+
+add_custom_target(generate_ucode_dec
+    DEPENDS q_eng_ucode_dec.sv)

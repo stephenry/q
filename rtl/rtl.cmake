@@ -28,5 +28,20 @@
 set(RTL_ROOT "${CMAKE_SOURCE_DIR}/rtl")
 
 set(RTL_SOURCES
-    "${RTL_ROOT}/ucode/q_eng_ucode_rom.sv"
-    "${RTL_ROOT}/ucode/q_eng_ucode_dec.sv")
+    "${RTL_ROOT}/common/mask.sv"
+    "${RTL_ROOT}/common/lzd.sv"
+    "${RTL_ROOT}/common/pri.sv"
+    "${RTL_ROOT}/common/cla.sv"
+    "${RTL_ROOT}/common/cmp.sv"
+    "${RTL_ROOT}/common/dec.sv"
+    "${RTL_ROOT}/common/mux.sv"
+#    "${RTL_ROOT}/ucode/q_eng_ucode_rom.sv"
+#    "${RTL_ROOT}/ucode/q_eng_ucode_dec.sv"
+    "${RTL_ROOT}/q.sv")
+
+set(RTL_GENERATED_SOURCES
+    "${RTL_ROOT}/cfg_pkg.vh.in")
+
+set(RTL_INCLUDE_PATHS
+    "${RTL_ROOT}/common"
+    "${RTL_ROOT}")

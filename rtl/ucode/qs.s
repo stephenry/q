@@ -26,7 +26,7 @@
 ;;========================================================================== ;;
 
 reset:
-    j main                     ; reset vector, jump to main subroutine.
+    j main                      ; reset vector, jump to main subroutine.
 
 partition:
     push r2                     ;
