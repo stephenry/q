@@ -32,3 +32,19 @@ ENV VERILATOR_ROOT="/tools/verilator-${VERILATOR_VER}"
 
 # Required for the linter.
 ENV PATH="${VERILATOR_ROOT}/bin:$PATH"
+
+ARG ESPRESSO_VER=2.4
+WORKDIR /tools
+RUN wget https://github.com/chipsalliance/espresso/archive/refs/tags/v${ESPRESSO_VER}.tar.gz \
+  && tar -xvf v${ESPRESSO_VER}.tar.gz \
+  && cd espresso-${ESPRESSO_VER} \
+  && mkdir build \
+  && cd build \
+  && cmake .. -DCMAKE_INSTALL_PREFIX=/tools/espresso-${ESPRESSO_VER} \
+  && make \
+  && make install \
+  && cd /tools \
+  && rm -rf v${ESPRESSO_VER}.tar.gz
+
+ENV ESPRESSO_ROOT="/tools/espresso-${ESPRESSO_VER}"
+ENV PATH="${ESPRESSO_ROOT}/bin:$PATH"
