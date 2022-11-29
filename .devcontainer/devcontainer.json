@@ -1,5 +1,29 @@
 {
-  "image": "mcr.microsoft.com/devcontainers/universal:2",
-  "features": {
-  }
+	"name": "Verilator Dev.",
+	"build": {
+		"dockerfile": "Dockerfile"
+	},
+	"features": {
+		"ghcr.io/devcontainers/features/docker-from-docker:1": {}
+	},
+	"customizations": {
+		"vscode": {
+			"settings": {
+				"cmake.buildDirectory":"${workspaceFolder}/build",
+				"cmake.sourceDirectory":"${workspaceFolder}",
+				"verilog.linting.linter":"verilator",
+				"verilog.linting.verilator.arguments": "-Wall -I${command:cmake.buildDirectory}/rtl/common -I${common:cmake.buildDirectory}/lib -I${common:cmake.buildDirectory}/tb/sva"		
+			},
+			"extensions": [
+				"twxs.cmake",
+				"ms-vscode.cpptools",
+				"dracula-theme.theme-dracula",
+				"mshr-h.veriloghdl",
+				"ms-vscode.cmake-tools",
+				"ms-vscode.cpptools-extension-pack",
+				"ms-vscode.cpptools-themes",
+				"ms-azuretools.vscode-docker"
+			]
+		}
+	}
 }
