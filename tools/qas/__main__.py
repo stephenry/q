@@ -27,18 +27,35 @@
 
 import argparse
 import sys
+import os
 from lark import Lark, Transformer
+from qlib.verilog import Module, Package
 
 a = argparse.ArgumentParser()
 a.add_argument('-s', type=argparse.FileType('r'), default=sys.stdin)
 a.add_argument('-o', type=argparse.FileType('w'), default=sys.stdout)
+a.add_argument('-p', '--pkg', type=argparse.FileType('w'))
 args = a.parse_args()
 
 parser = Lark.open('asm_grammar.lark', rel_to=__file__)
 
-print(__file__)
 
-sys.exit(1)
+(modulename, suffix) = os.path.splitext(os.path.basename(args.o.name))
+m = Module(modulename);
+m.add_port('input', 'pc', 16)
+m.add_port('output', 'inst', 16)
+args.o.write(str(m))
+
+if args.pkg:
+    # Generate package
+    p = Package(args.pkg.name)
+    p.add_typedef_logic('rom_pc_t', 16);
+    print(p)
+    args.pkg.write(str(p))
+
+
+sys.exit(0)
+
 
 class Program:
 

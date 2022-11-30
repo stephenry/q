@@ -32,14 +32,6 @@
 
 package q_pkg;
 
-
-typedef struct packed {
-  logic [31:0]               k;
-  logic [31:0]               v;
-} user_t;
-
-localparam int USER_W = $bits(user_t);
-
 endpackage : q_pkg
 
 `endif

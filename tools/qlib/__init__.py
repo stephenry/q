@@ -1,5 +1,5 @@
 ##========================================================================== //
-## Copyright (c) 2020, Stephen Henry
+## Copyright (c) 2022, Stephen Henry
 ## All rights reserved.
 ##
 ## Redistribution and use in source and binary forms, with or without
@@ -24,24 +24,3 @@
 ## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 ## POSSIBILITY OF SUCH DAMAGE.
 ##========================================================================== //
-
-add_custom_command(
-    OUTPUT q_eng_ucode_rom.sv
-    COMMAND sh ${Q_TOOLS_ROOT}/qas.sh
-        -s ${CMAKE_CURRENT_SOURCE_DIR}/qs.s
-        -o q_eng_ucode_rom.sv
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/qs.s
-    DEPENDS ${CMAKE_SOURCE_DIR}/tools/qas/asm_grammar.lark
-    DEPENDS ${CMAKE_SOURCE_DIR}/tools/qas/__main__.py)
-
-add_custom_target(generate_ucode_rom
-    DEPENDS q_eng_ucode_rom.sv)
-
-add_custom_command(
-    OUTPUT q_eng_ucode_dec.sv
-    COMMAND sh ${Q_TOOLS_ROOT}/ucc.sh
-        -u ${CMAKE_CURRENT_SOURCE_DIR}/ucode.yml
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/ucode.yml)
-
-add_custom_target(generate_ucode_dec
-    DEPENDS q_eng_ucode_dec.sv)

@@ -36,8 +36,12 @@ include(rtl)
 set(TARGET "sim")
 include(tech)
 
+# Model/Design configuration.
+set(Q_ENGINES_N 16)
+set(Q_CONTEXTS_N 32)
 set(Q_CMP_KEY_BITS 32)
 set(Q_CMP_VAL_BITS 32)
+set(Q_CMP_MAX_N 1024)
 
 # ---------------------------------------------------------------------------- #
 # Configure sources
@@ -56,7 +60,7 @@ verilator_build(vlib)
 
 set(VERILATOR_ARGS
   "-cc"
-  "-Wall"
+##  "-Wall"
   "--Mdir Vobj"
   "--build"
   "--top tb"
@@ -89,6 +93,7 @@ file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/vc.f "${FILELIST}")
 add_custom_target(verilate
   COMMAND ${Verilator_EXE} -f ${CMAKE_CURRENT_BINARY_DIR}/vc.f
   COMMENT "Verilating...")
+add_dependencies(verilate generate_ucode_rom generate_ucode_dec)
 
 set(VERILATOR_A "${CMAKE_CURRENT_BINARY_DIR}/Vobj/Vtb__ALL.a")
 

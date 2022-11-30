@@ -25,29 +25,14 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //========================================================================== //
 
-`ifndef Q_RTL_CFG_PKG_VH
-`define Q_RTL_CFG_PKG_VH
+`ifndef Q_TECH_COMMON_UNMACROS_VH
+`define Q_TECH_COMMON_UNMACROS_VH
 
+`undef Q_ICG
+`undef Q_DFF
+`undef Q_DFFE
+`undef Q_DFFR
 
-package cfg_pkg;
-
-parameter int ENGINES_N = @Q_ENGINES_N@;
-
-parameter int CONTEXTS_N = @Q_CONTEXTS_N@;
-
-parameter int CMP_KEY_BITS = @Q_CMP_KEY_BITS@;
-
-parameter int CMP_VAL_BITS = @Q_CMP_VAL_BITS@;
-
-parameter int CMP_MAX_N = @Q_CMP_MAX_N@;
-
-typedef enum bit {
-    UCODE_HOR  = 1'b0,
-    UCODE_VER  = 1'b1
-} ucode_format_t;
-
-parameter ucode_format_t UCODE_TYPE = UCODE_VER;
-
-endpackage : cfg_pkg
+`undef Q_TECH_COMMON_MACROS_VH
 
 `endif

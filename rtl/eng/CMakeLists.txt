@@ -1,5 +1,5 @@
 ##========================================================================== //
-## Copyright (c) 2022, Stephen Henry
+## Copyright (c) 2020, Stephen Henry
 ## All rights reserved.
 ##
 ## Redistribution and use in source and binary forms, with or without
@@ -25,16 +25,27 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 ##========================================================================== //
 
-set(TECH_ROOT "${CMAKE_SOURCE_DIR}/tech")
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/eng_pipe_xa_rom.sv
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/eng_pipe_xa_rom_pkg.vh
+    COMMAND sh ${Q_TOOLS_ROOT}/qas.sh
+        -s ${CMAKE_CURRENT_SOURCE_DIR}/qs.s
+        -o ${CMAKE_CURRENT_BINARY_DIR}/eng_pipe_xa_rom.sv
+        --pkg ${CMAKE_CURRENT_BINARY_DIR}/eng_pipe_xa_rom_pkg.vh
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/qs.s
+    DEPENDS ${CMAKE_SOURCE_DIR}/tools/qlib/verilog.py
+    DEPENDS ${CMAKE_SOURCE_DIR}/tools/qas/asm_grammar.lark
+    DEPENDS ${CMAKE_SOURCE_DIR}/tools/qas/__main__.py)
 
+add_custom_target(generate_ucode_rom
+    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/eng_pipe_xa_rom.sv)
 
-set(TECH_SOURCES
-  "${TECH_ROOT}/${TARGET}/icg.sv"
-  "${TECH_ROOT}/${TARGET}/dff.sv"
-  "${TECH_ROOT}/${TARGET}/dffen.sv"
-  "${TECH_ROOT}/${TARGET}/dffr.sv"
-  )
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/eng_pipe_xa_dec.sv
+    COMMAND sh ${Q_TOOLS_ROOT}/ucc.sh
+        -u ${CMAKE_CURRENT_SOURCE_DIR}/ucode.yml
+        -o ${CMAKE_CURRENT_BINARY_DIR}/eng_pipe_xa_dec.sv
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/ucode.yml)
 
-set(TECH_INCLUDE_PATHS
-  "${TECH_ROOT}"
-  )
+add_custom_target(generate_ucode_dec
+    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/eng_pipe_xa_dec.sv)

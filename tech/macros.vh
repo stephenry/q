@@ -25,25 +25,29 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //========================================================================== //
 
-`ifndef Q_RTL_COMMON_MACROS_VH
-`define Q_RTL_COMMON_MACROS_VH
+`ifndef Q_TECH_COMMON_MACROS_VH
+`define Q_TECH_COMMON_MACROS_VH
 
-`define Q_DFF(__type, __name) \
+`define Q_ICG(__gated_clk, __clk, __en) \
+  icg u_``__gate_clk``_icg (\
+    .o_clk_gated(__gated_clk), .i_clk(__clk), .en(__en), .i_dft_en(1'b0))
+
+`define Q_DFF(__type, __name, __clk) \
     __type __name``_r; \
     __type __name``_w; \
     dff #(.W($bits(__type))) u_``__name``_reg ( \
-      .d(__name``_w), .q(__name``_r), .clk)
+      .d(__name``_w), .q(__name``_r), .clk(__clk))
 
-`define Q_DFFE(__type, __name, __en) \
+`define Q_DFFE(__type, __name, __en, __clk) \
     __type __name``_r; \
     __type __name``_w; \
     dffen #(.W($bits(__type))) u_``__name``_reg ( \
-      .d(__name``_w), .q(__name``_r), .en(__en), .clk)
+      .d(__name``_w), .q(__name``_r), .en(__en), .clk(__clk))
 
-`define Q_DFFR(__type, __name, __init) \
+`define Q_DFFR(__type, __name, __init, __clk) \
     __type __name``_r; \
     __type __name``_w; \
     dffr #(.W($bits(__type)), .INIT(__init)) u_``__name``_reg ( \
-      .d(__name``_w), .q(__name``_r), .arst_n, .clk)
+      .d(__name``_w), .q(__name``_r), .arst_n, .clk(__clk))
 
 `endif

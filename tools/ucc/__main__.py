@@ -25,4 +25,19 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 ##========================================================================== //
 
-print("Hello, World!")
+import argparse
+import sys
+import os
+from qlib.verilog import Module
+
+a = argparse.ArgumentParser()
+a.add_argument('-u', type=argparse.FileType('r'), default=sys.stdin)
+a.add_argument('-o', type=argparse.FileType('w'), default=sys.stdout)
+args = a.parse_args()
+
+(modulename, suffix) = os.path.splitext(os.path.basename(args.o.name))
+m = Module(modulename);
+args.o.write(str(m))
+
+
+sys.exit(0)

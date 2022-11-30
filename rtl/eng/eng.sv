@@ -29,27 +29,11 @@
 
 `include "q_pkg.vh"
 `include "cfg_pkg.vh"
-/* verilator lint_off UNUSEDSIGNAL */
-/* verilator lint_off UNDRIVEN */
-module q (
-// -------------------------------------------------------------------------- //
-//
-  input wire logic                                i_ingress_vld
-, input wire logic                                i_ingress_sop
-, input wire logic                                i_ingress_eop
 
-// -------------------------------------------------------------------------- //
-, output wire logic                               o_egress_vld_r
-, output wire logic                               o_egress_sop_r
-, output wire logic                               o_egress_eop_r
-
-// -------------------------------------------------------------------------- //
-//
-, output wire logic                               o_busy_r
-
+module eng (
 // -------------------------------------------------------------------------- //
 // Clk/Reset
-, input wire logic                                clk
+  input wire logic                                clk
 , input wire logic                                arst_n
 );
 
@@ -61,11 +45,9 @@ module q (
 
 // -------------------------------------------------------------------------- //
 //
-q_engs u_q_engs (
+eng_pipe u_eng_pipe (
   .clk                       (clk)
 , .arst_n                    (arst_n)
 );
 
-/* verilator lint_on UNDRIVEN */
-/* verilator lint_on UNUSEDSIGNAL */
-endmodule : q
+endmodule : eng

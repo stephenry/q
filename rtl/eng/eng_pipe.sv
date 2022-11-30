@@ -25,13 +25,41 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //========================================================================== //
 
-`ifndef Q_RTL_COMMON_UNMACROS_VH
-`define Q_RTL_COMMON_UNMACROS_VH
+`include "common_defs.vh"
 
-`undef Q_DFF
-`undef Q_DFFE
-`undef Q_DFFR
+`include "q_pkg.vh"
+`include "cfg_pkg.vh"
+`include "eng/eng_pipe_xa_rom_pkg.vh"
 
-`undef Q_RTL_COMMON_MACROS_VH
+module eng_pipe (
+// -------------------------------------------------------------------------- //
+// Clk/Reset
+  input wire logic                                clk
+, input wire logic                                arst_n
+);
 
-`endif
+// -------------------------------------------------------------------------- //
+//
+eng_pipe_fa u_eng_pipe_fa (
+  .clk                       (clk)
+, .arst_n                    (arst_n)
+);
+
+// -------------------------------------------------------------------------- //
+//
+eng_pipe_xa u_eng_pipe_xa (
+//
+  .i_fa_pc_r                 ()
+//
+, .clk                       (clk)
+, .arst_n                    (arst_n)
+);
+
+// -------------------------------------------------------------------------- //
+//
+eng_pipe_ca u_eng_pipe_ca (
+  .clk                       (clk)
+, .arst_n                    (arst_n)
+);
+
+endmodule : eng_pipe

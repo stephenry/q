@@ -27,45 +27,20 @@
 
 `include "common_defs.vh"
 
-`include "q_pkg.vh"
-`include "cfg_pkg.vh"
-/* verilator lint_off UNUSEDSIGNAL */
-/* verilator lint_off UNDRIVEN */
-module q (
+module icg (
 // -------------------------------------------------------------------------- //
+// Register Interface
+  input wire logic                     i_clk
+, input wire logic                     i_en 
+, input wire logic                     i_dft_en
 //
-  input wire logic                                i_ingress_vld
-, input wire logic                                i_ingress_sop
-, input wire logic                                i_ingress_eop
+, output wire logic                    o_clk_gated
 
 // -------------------------------------------------------------------------- //
-, output wire logic                               o_egress_vld_r
-, output wire logic                               o_egress_sop_r
-, output wire logic                               o_egress_eop_r
-
-// -------------------------------------------------------------------------- //
-//
-, output wire logic                               o_busy_r
-
-// -------------------------------------------------------------------------- //
-// Clk/Reset
-, input wire logic                                clk
-, input wire logic                                arst_n
+// Clk
+, input                               clk
 );
 
-// ========================================================================== //
-//                                                                            //
-//  Instances                                                                 //
-//                                                                            //
-// ========================================================================== //
+assign o_clk_gated = i_clk;
 
-// -------------------------------------------------------------------------- //
-//
-q_engs u_q_engs (
-  .clk                       (clk)
-, .arst_n                    (arst_n)
-);
-
-/* verilator lint_on UNDRIVEN */
-/* verilator lint_on UNUSEDSIGNAL */
-endmodule : q
+endmodule : icg

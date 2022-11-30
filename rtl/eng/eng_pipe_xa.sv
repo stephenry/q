@@ -29,23 +29,12 @@
 
 `include "q_pkg.vh"
 `include "cfg_pkg.vh"
-/* verilator lint_off UNUSEDSIGNAL */
-/* verilator lint_off UNDRIVEN */
-module q (
+`include "eng/eng_pipe_xa_rom_pkg.vh"
+
+module eng_pipe_xa (
 // -------------------------------------------------------------------------- //
 //
-  input wire logic                                i_ingress_vld
-, input wire logic                                i_ingress_sop
-, input wire logic                                i_ingress_eop
-
-// -------------------------------------------------------------------------- //
-, output wire logic                               o_egress_vld_r
-, output wire logic                               o_egress_sop_r
-, output wire logic                               o_egress_eop_r
-
-// -------------------------------------------------------------------------- //
-//
-, output wire logic                               o_busy_r
+  input eng_pipe_xa_rom_pkg::rom_pc_t             i_fa_pc_r
 
 // -------------------------------------------------------------------------- //
 // Clk/Reset
@@ -61,11 +50,30 @@ module q (
 
 // -------------------------------------------------------------------------- //
 //
-q_engs u_q_engs (
-  .clk                       (clk)
-, .arst_n                    (arst_n)
+case (cfg_pkg::UCODE_TYPE)
+cfg_pkg::UCODE_HOR: begin : ucode_hor_GEN
+
+eng_pipe_xa_rom u_eng_pipe_xa_rom (
+//
+  .i_pc                      (i_fa_pc_r)
+//
+, .o_inst                    ()
 );
 
-/* verilator lint_on UNDRIVEN */
-/* verilator lint_on UNUSEDSIGNAL */
-endmodule : q
+end : ucode_hor_GEN
+cfg_pkg::UCODE_VER: begin : ucode_ver_GEN
+
+eng_pipe_xa_rom u_eng_pipe_xa_rom (
+//
+  .i_pc                      ()
+//
+, .o_inst                    ()
+);
+
+eng_pipe_xa_dec u_eng_pipe_xa_dec (
+);
+
+end : ucode_ver_GEN
+endcase
+
+endmodule : eng_pipe_xa

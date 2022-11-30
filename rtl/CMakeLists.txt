@@ -25,4 +25,4 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 ##========================================================================== //
 
-add_subdirectory(ucode)
+add_subdirectory(eng)
