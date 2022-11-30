@@ -29,6 +29,7 @@ set(SRC_ROOT "${CMAKE_SOURCE_DIR}/rtl")
 set(BIN_ROOT "${CMAKE_BINARY_DIR}/rtl")
 
 set(RTL_SOURCES
+    "${SRC_ROOT}/common/rf.sv"
     "${SRC_ROOT}/common/mask.sv"
     "${SRC_ROOT}/common/lzd.sv"
     "${SRC_ROOT}/common/pri.sv"

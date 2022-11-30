@@ -29,18 +29,18 @@
 
 module icg (
 // -------------------------------------------------------------------------- //
-// Register Interface
+// Clock control
   input wire logic                     i_clk
 , input wire logic                     i_en 
 , input wire logic                     i_dft_en
-//
-, output wire logic                    o_clk_gated
 
 // -------------------------------------------------------------------------- //
-// Clk
-, input                               clk
+// Gated clock
+, output wire logic                    o_clk_gated
 );
 
+// TOOD(stephenry): Establish Verilator's capability in this area
+// before enabling.
 assign o_clk_gated = i_clk;
 
 endmodule : icg
