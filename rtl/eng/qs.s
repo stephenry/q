@@ -29,7 +29,7 @@
 reset:
     j __start                   ; reset vector, jump to main subroutine.
 
-    .org 128
+    .org 16
 partition:
     push r2                     ;
     push r3                     ;
@@ -65,7 +65,7 @@ __end:
     pop r2                      ;
     ret                         ;
 
-    .org 256
+    .org 128
 quicksort:
     push blink                  ;
     push r2                     ;
@@ -90,7 +90,7 @@ __quicksort_end:
     pop blink                   ;
     ret                         ; PC <- BLINK
 
-    .org 512
+    .org 256
 __start:
     mov r0, 0                   ; Initialize machine state on reset
     mov r1, 0
@@ -109,6 +109,7 @@ __wait_for_next_job:
     emit                        ;
     j __wait_for_next_job       ; goto main
 
+    .org 512
 error:
     j error                     ; TODO(shenry): figure out error behaviour.
 
