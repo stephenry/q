@@ -27,4 +27,6 @@
 ##==========================================================================
 
 export PYTHONPATH="@CMAKE_SOURCE_DIR@/tools:${PYTHONPATH}"
+export PYTHONPATH="@CMAKE_BINARY_DIR@/tools:${PYTHONPATH}"
+
 exec @Q_PYTHON3@ -m ucc $@

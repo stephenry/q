@@ -30,5 +30,6 @@ function (generate_tool_run_script src dst)
     configure_file(${src} ${outfile} @ONLY)
 endfunction ()
 
+configure_file(cfg.py.in cfg.py)
 generate_tool_run_script(qas.sh.in qas.sh)
 generate_tool_run_script(ucc.sh.in ucc.sh)

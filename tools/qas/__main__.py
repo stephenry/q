@@ -28,8 +28,10 @@
 import argparse
 import sys
 import os
-from lark import Lark, Transformer
+from lark import Lark, Transformer, Visitor
 from qlib.verilog import Module, Package
+import cfg
+from .instructions import *
 
 a = argparse.ArgumentParser()
 a.add_argument('-s', type=argparse.FileType('r'), default=sys.stdin)
@@ -50,11 +52,8 @@ if args.pkg:
     # Generate package
     p = Package(args.pkg.name)
     p.add_typedef_logic('rom_pc_t', 16);
-    print(p)
     args.pkg.write(str(p))
 
-
-sys.exit(0)
 
 
 class Program:
@@ -67,14 +66,21 @@ class Program:
         self.labels = {}
         self.instructions = []
         self.pc = 0
+
     def add_label(self, l):
         self.labels[l] = self.pc
-    def add_instruction(self, i):
-        self.instructions.append(i)
+
+    def set_pc(self, pc):
+        print('set pc', pc)
+        self.pc = pc
+
+    def add_instruction(self, i : Instruction):
+        self.instructions.append((self.pc, i))
         self.pc += 1
+
     def print(self):
-        for i, inst in enumerate(self.instructions):
-            print(f'{i} {inst}')
+        for pc, inst in self.instructions:
+            print(f'{pc} {inst}')
     def compile(self):
         self.validate()
 
@@ -87,135 +93,63 @@ class Program:
             except Exception as e:
                 print(inst, " ", e.msg)
 
-class Oprand:
-    def __init__(self, s):
-        self.s = s
-    def __str__(self):
-        return f'{self.s}'
-
-class Jump: 
-    def __init__(self, label, cc=None):
-        self.label = label
-        self.cc = cc
-    def __str__(self):
-        return f'j{self.cc} {self.label}'
-
-class Call:
-    def __init__(self, label):
-        self.label = label
-    def __str__(self):
-        return f'call {self.label}'
-
-class Push:
-    def __init__(self, reg):
-        self.reg = reg
-    def __str__(self):
-        return f'push {self.reg}'
-
-class Pop:
-    def __init__(self, reg):
-        self.reg = reg
-    def __str__(self):
-        return f'pop {self.reg}'
-
-class Ld:
-    def __init__(self, lhs, rhs):
-        self.lhs = lhs
-        self.rhs = rhs
-    def __str__(self):
-        return f'ld {self.lhs}, [{self.rhs}]'
-
-class St:
-    def __init__(self, lhs, rhs):
-        self.lhs = lhs
-        self.rhs = rhs
-    def __str__(self):
-        return f'st [{self.lhs}], {self.rhs}'
-
-class Mov:
-    def __init__(self, lhs, rhs):
-        self.lhs = lhs
-        self.rhs = rhs
-    def __str__(self):
-        return f'mov {self.lhs}, {self.rhs}'
-
-class Movs:
-    def __init__(self, lhs, rhs):
-        self.lhs = lhs
-        self.rhs = rhs
-    def __str__(self):
-        return f'movs {self.lhs}, {self.rhs}'
-
-class Ret:
-    def __str__(self):
-        return f'ret'
-
-class Await:
-    def __str__(self):
-        return f'await'
-
-class Emit:
-    def __str__(self):
-        return f'emit'
-
-class MyTransformer(Transformer):
-    def __init__(self, p):
+class AssemblerVisitor(Visitor):
+    def __init__(self, p : Program):
         self.p = p
-    def link(self, items):
-        return items[0].value
-    def label(self, items):
-        self.p.add_label(items[0])
-    def emit_imm(self, items):
-        return Oprand(items[0])
-    def emit_reg(self, items):
-        return Oprand(items[0])
-    def emit_blink(self, items):
-        return Oprand('blink')
-    def emit_ireg(self, items):
-        return Oprand(items[0])
-    def emit_special(self, items):
-        return Oprand('N')
-    def opcode_jump(self, items):
-        return (items[0][0], items[0][1:])
-    def emit_jump(self, items):
-        label = items[1]
-        cc = items[0][1]
+    def org(self, t):
+        (pos,) = t.children
+        self.p.set_pc(int(pos))
+    def label(self, t):
+        (label,) = t.children
+        self.p.add_label(label)
+    def jump(self, t):
+        (insn, label) = t.children
+        cc = None 
+        if (len(insn) > 1): cc = insn[1:]
         self.p.add_instruction(Jump(label, cc))
-    def emit_call(self, items):
-        label = items[0]
-        self.p.add_instruction(Call(label))
-    def emit_push(self, items):
-        self.p.add_instruction(Push(items[0]))
-    def emit_pop(self, items):
-        self.p.add_instruction(Pop(items[0]))
-    def emit_ld(self, items):
-        (lhs, rhs) = items
-        self.p.add_instruction(Ld(lhs, rhs))
-    def emit_st(self, items):
-        (lhs, rhs) = items
-        self.p.add_instruction(St(lhs, rhs))
-    def emit_mov(self, items):
-        (lhs, rhs) = items
-        self.p.add_instruction(Mov(lhs, rhs))
-    def emit_movs(self, items):
-        (lhs, rhs) = items
-        self.p.add_instruction(Movs(lhs, rhs))
-    def emit_ret(self, items):
-        self.p.add_instruction(Ret())
-    def emit_await(self, items):
-        self.p.add_instruction(Await())
-    def emit_emit(self, items):
+    def push(self, t):
+        (dst,) = t.children
+        self.p.add_instruction(Push(dst))
+    def pop(self, t):
+        (dst,) = t.children
+        self.p.add_instruction(Pop(dst))
+    def ld(self, t):
+        (dst, src) = t.children
+        self.p.add_instruction(Ld(dst, src))
+    def st(self, t):
+        (dst, src) = t.children
+        self.p.add_instruction(St(dst, src))
+    def mov(self, t):
+        (dst, src) = t.children
+        self.p.add_instruction(Mov(dst, src))
+    def movs(self, t):
+        (dst, src) = t.children
+        self.p.add_instruction(Mov(dst,src))
+    def sub(self, t):
+        (dst, lhs, rhs) = t.children
+        self.p.add_instruction(Sub(dst, lhs, rhs))
+    def add(self, t):
+        (dst, lhs, rhs) = t.children
+        self.p.add_instruction(Add(dst, lhs, rhs))
+    def emit(self, t):
         self.p.add_instruction(Emit())
+    def wait(self, t):
+        self.p.add_instruction(Wait())
+    def ret(self, t):
+        self.p.add_instruction(Ret())
+    def call(self, t):
+        (label,) = t.children
+        self.p.add_instruction(Call(label))
+    def cmp(self, t):
+        (rhs, lhs) = t.children
+        self.p.add_instruction(Cmp(rhs, lhs))
 
-tree = parser.parse(args.ucode.read())
+tree = parser.parse(args.s.read())
 
 p = Program()
-t = MyTransformer(p)
-t.transform(tree)
+v = AssemblerVisitor(p)
+v.visit(tree)
 
-p.compile()
-
-print(p.print())
-
+p.print()
 
 print("Parsing complete")

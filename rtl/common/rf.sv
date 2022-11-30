@@ -94,6 +94,9 @@ for (genvar n = 0; n < N; n++) begin : write_sel_word_GEN
 
 for (genvar wr = 0; wr < WR_N; wr++) begin : write_sel_port_GEN
 
+
+// TODO(stephenry): indice swapping probably redundant here if different
+// indexing is used [offset + i * stride] = [n + i * N];
 assign wr_port_sel [n][wr] = rd_ra_d [wr][n];
 
 end : write_sel_port_GEN

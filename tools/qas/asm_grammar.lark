@@ -1,59 +1,45 @@
-start: (instruction | label)*
+start: (directive | instruction | label)*
 
-instruction: inst_jump
-    | inst_call
-    | inst_push
-    | inst_pop
-    | inst_load
-    | inst_store
-    | inst_mov
-    | inst_movs
-    | inst_sub
-    | inst_add
-    | inst_ret
-    | inst_await
-    | inst_emit
+// ------------------------------------------------------------------------- //
+//
+//
+//
+//
+directive: ".org" INTEGER -> org
 
+// ------------------------------------------------------------------------- //
+//
+//
+//
+//
 
-opcode_jump: /j(eq|gt|le)?/ -> opcode_jump
-inst_jump: opcode_jump link -> emit_jump
+?link: /[_a-z]+/
 
-inst_call: "call" link -> emit_call
-
-inst_push: "push" reg -> emit_push
-
-inst_pop: "pop" reg -> emit_pop
-
-inst_load: "ld" reg "," ireg -> emit_ld
-
-inst_store: "st" ireg "," reg -> emit_st
-
-inst_mov: "mov" reg "," (reg | imm) -> emit_mov
-
-inst_movs: "movs" reg "," regs -> emit_movs
-
-inst_sub: "sub" (reg | imm) "," reg "," (reg | imm)
-    | "sub.f" (reg | imm) "," reg "," (reg | imm)
-
-inst_add: "add" reg "," reg "," imm 
-
-inst_ret: "ret" -> emit_ret
-
-inst_await: "await" -> emit_await
-
-inst_emit: "emit" -> emit_emit
-
-imm: INTEGER -> emit_imm
-reg: /r[0-9]+/ -> emit_reg
-    | "blink" -> emit_blink
-ireg: "[" reg "]" -> emit_ireg
-regs: "N" -> emit_special
-
-oprand: (imm | reg | ireg)
-oprands: oprand ("," oprand)*
-
-link: /[_a-z]+/ -> link
 label: link ":" -> label
+
+instruction: /j(eq|gt|le)?/ link -> jump
+           | "push" reg -> push
+           | "pop" reg -> pop
+           | "ld" reg "," "[" reg "]" -> ld
+           | "st" "[" reg "]" "," reg -> st
+           | "mov" reg "," (reg | INTEGER) -> mov
+           | "movs" (reg | sreg) "," (reg | sreg) -> movs
+           | "sub" reg "," reg "," (reg | INTEGER) -> sub
+           | "add" reg "," reg "," (reg | INTEGER) -> add
+           | "emit" -> emit
+           | "wait" -> wait
+           | "ret" -> ret
+           | "call" link -> call
+           | "cmp" reg "," reg -> cmp
+
+?reg: /r[0-9]+/
+    | /x[0-9]+/
+    | BLINK
+
+?sreg: NREG
+
+BLINK: "blink"
+NREG: "N" 
 
 %import common.WS
 %import common.INT -> INTEGER

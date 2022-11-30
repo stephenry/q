@@ -25,9 +25,11 @@
 ;; POSSIBILITY OF SUCH DAMAGE.
 ;;========================================================================== ;;
 
+    .org 0
 reset:
-    j main                      ; reset vector, jump to main subroutine.
+    j __start                   ; reset vector, jump to main subroutine.
 
+    .org 128
 partition:
     push r2                     ;
     push r3                     ;
@@ -38,10 +40,10 @@ partition:
     mov r3, r0                  ; i <- lo
     mov r4, r0                  ; j <- lo   
 __loop_start:
-    sub 0, r1, r4               ;
+    cmp r1, r4                  ;
     jeq __end                   ; if (j == hi) goto __end
     ld r5, [r4]                 ; r5 <- A[j]
-    sub.f 0, r5, r2             ;
+    cmp r5, r2                  ;
     jgt __end_loop              ; if ((A[j] - pivot) > 0) goto __end_of_loop
     ld r6, [r3]                 ; swap A[i] with A[j]
     st [r3], r5                 ;
@@ -63,6 +65,7 @@ __end:
     pop r2                      ;
     ret                         ;
 
+    .org 256
 quicksort:
     push blink                  ;
     push r2                     ;
@@ -70,7 +73,7 @@ quicksort:
     push r4                     ;
     mov r2, r0                  ; r2 <- LO
     mov r4, r1                  ; r4 <- HI
-    sub.f 0, r1, r0             ;
+    cmp r1, r0                  ;
     jle __quicksort_end         ; if ((hi - lo) < 0) goto __quicksort_end;
     call partition              ; r0 <- partition(lo, hi);
     mov r3, r0                  ; r3 <- PIVOT
@@ -87,7 +90,8 @@ __quicksort_end:
     pop blink                   ;
     ret                         ; PC <- BLINK
 
-main:
+    .org 512
+__start:
     mov r0, 0                   ; Initialize machine state on reset
     mov r1, 0
     mov r2, 0
@@ -96,8 +100,9 @@ main:
     mov r5, 0
     mov r6, 0
     mov blink, 0
+main:
 __wait_for_next_job:
-    await                       ; wait until queue_ready == 1
+    wait                        ; wait until queue_ready == 1
     mov r0, 0                   ; r0 <- "Initial LO"
     movs r1, N                  ; r1 <- "Initial HI (N)"
     call quicksort              ; call quicksort(A, lo, hi);
