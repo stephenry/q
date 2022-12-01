@@ -32,6 +32,7 @@ class Jump(Instruction):
     def __init__(self, label, cc=None):
         self.label = label
         self.cc = cc
+
     def __str__(self):
         if self.cc:
             return f'j{self.cc} {self.label}'
@@ -106,7 +107,7 @@ class Ret(Instruction):
 
 class Wait(Instruction):
     def __str__(self):
-        return f'await'
+        return f'wait'
 
 class Emit(Instruction):
     def __str__(self):

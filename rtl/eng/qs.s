@@ -112,5 +112,3 @@ __wait_for_next_job:
     .org 512
 error:
     j error                     ; TODO(shenry): figure out error behaviour.
-
-;; end

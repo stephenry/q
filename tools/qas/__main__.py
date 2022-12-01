@@ -39,7 +39,84 @@ a.add_argument('-o', type=argparse.FileType('w'), default=sys.stdout)
 a.add_argument('-p', '--pkg', type=argparse.FileType('w'))
 args = a.parse_args()
 
-parser = Lark.open('asm_grammar.lark', rel_to=__file__)
+
+class AssemblyTransformer(Transformer):
+    def __init__(self):
+        self.pc = 0
+        self.labels = {}
+        self.insts = []
+
+    def print(self):
+        for inst in self.insts:
+            print(*inst)
+
+    def directive(self, args):
+        (op, *arg) = args
+        if op == '.org':
+            self.pc = int(arg[0])
+        else:
+            pass
+
+    def label(self, args):
+        (label,) = args
+        self._add_label(label)
+
+    def inst_operand(self, args):
+        constructors = {
+            'push': Push,
+            'pop': Pop,
+            'ld': Ld,
+            'st': St,
+            'mov': Mov,
+            'add': Add,
+            'sub': Sub,
+            'cmp': Cmp
+        }
+        (opcode, oprands) = args
+        if opcode in constructors:
+            self._add_inst(constructors[opcode](*oprands.children))
+
+    def inst_to_link(self, args):
+        (opcode, label) = args
+        if opcode.startswith('j'):
+            def cc():
+                if len(opcode) == 1:
+                    return None
+                return opcode[1:]
+            self._add_inst(Jump(label, cc()))
+        elif opcode == 'call':
+            self._add_inst(Call(label))
+        else:
+            pass
+
+    def inst_no_operand(self, opcode):
+        inst_constructor = {
+            'ret': Ret,
+            'wait': Wait,
+            'emit': Emit
+        }
+        (opcode,) = opcode
+        if opcode in inst_constructor:
+            self._add_inst(inst_constructor[opcode]())
+
+    def _add_inst(self, inst : Instruction):
+        self.insts.append((self.pc, inst))
+        self.pc += 1
+
+    def _add_label(self, label):
+        self.labels[label[:-1]] = self.pc
+
+import os
+from pathlib import Path
+
+at = AssemblyTransformer()
+with open(Path(__file__).parent.absolute() / 'grammar.lark', 'r') as f:
+    asparser = Lark(f.read(), parser='lalr', transformer=at)
+t = asparser.parse(args.s.read())
+at.print()
+#print(t.pretty())
+
+sys.exit(0)
 
 
 (modulename, suffix) = os.path.splitext(os.path.basename(args.o.name))
@@ -71,7 +148,6 @@ class Program:
         self.labels[l] = self.pc
 
     def set_pc(self, pc):
-        print('set pc', pc)
         self.pc = pc
 
     def add_instruction(self, i : Instruction):

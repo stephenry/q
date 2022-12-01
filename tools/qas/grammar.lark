@@ -1,0 +1,82 @@
+start: (statement)*
+
+statement: directive
+         | inst
+         | label
+
+directive: DORG INT
+
+
+DORG: ".org"
+
+label: /[_a-z]+:/
+
+LINK: /[_a-z]+/
+
+inst: inst_to_link
+    | inst_operand
+    | inst_no_operand
+
+inst_to_link: inst_to_link_opcode LINK
+
+?inst_to_link_opcode: J | CALL
+
+inst_operand: inst_operands oprand_list
+
+inst_no_operand: RET
+               | WAIT
+               | EMIT
+
+?inst_operands: PUSH 
+              | POP
+              | LD
+              | ST
+              | MOV
+              | ADD
+              | SUB
+              | CMP
+
+J: /j(eq|le|gt)?/
+PUSH: "push"
+POP: "pop"
+LD: "ld"
+ST: "st"
+MOV: /movs?/
+CMP: "cmp"
+ADD: "add"
+SUB: "sub"
+RET: "ret"
+WAIT: "wait"
+EMIT: "emit"
+CALL: "call"
+
+oprand_list: operand (", " operand)*
+
+?operand: REG
+        | "[" REG "]"
+        | ralias
+        | rspecial
+        | INT
+
+
+REG: /(r|x)[0-9]+/
+
+?ralias: BLINK
+BLINK: "blink"
+
+?rspecial: N
+N: "N"
+
+
+
+COMMENT: ";" /[^\n]*/
+%ignore COMMENT
+
+NL:"\n"
+%ignore NL
+
+// imports WORD from library
+%import common.WS
+%import common.INT
+%import common.NL
+%ignore WS
