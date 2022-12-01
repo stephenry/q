@@ -62,19 +62,11 @@ class AssemblyTransformer(Transformer):
         self._add_label(label)
 
     def inst_operand(self, args):
-        constructors = {
-            'push': Push,
-            'pop': Pop,
-            'ld': Ld,
-            'st': St,
-            'mov': Mov,
-            'add': Add,
-            'sub': Sub,
-            'cmp': Cmp
-        }
         (opcode, oprands) = args
-        if opcode in constructors:
-            self._add_inst(constructors[opcode](*oprands.children))
+        if opcode in ireg:
+            self._add_inst(ireg[opcode](*oprands.children))
+        else:
+            pass
 
     def inst_to_link(self, args):
         (opcode, label) = args
@@ -90,14 +82,9 @@ class AssemblyTransformer(Transformer):
             pass
 
     def inst_no_operand(self, opcode):
-        inst_constructor = {
-            'ret': Ret,
-            'wait': Wait,
-            'emit': Emit
-        }
         (opcode,) = opcode
-        if opcode in inst_constructor:
-            self._add_inst(inst_constructor[opcode]())
+        if opcode in ireg:
+            self._add_inst(ireg[opcode]())
 
     def _add_inst(self, inst : Instruction):
         self.insts.append((self.pc, inst))

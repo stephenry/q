@@ -25,67 +25,88 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 ##========================================================================== //
 
+ireg = {}
+
+def register(cls):
+    ireg[cls.MNEMONIC] = cls
+    return cls
+
 class Instruction:
     pass
 
+@register
 class Jump(Instruction): 
+    MNEMONIC = 'j'
     def __init__(self, label, cc=None):
         self.label = label
         self.cc = cc
-
     def __str__(self):
-        if self.cc:
-            return f'j{self.cc} {self.label}'
-        else:
-            return f'j {self.label}'
+        cc = self.cc and self.cc or ""
+        return f'j{cc} {self.label}'
 
+@register
 class Call(Instruction):
+    MNEMONIC = 'call'
     def __init__(self, label):
         self.label = label
     def __str__(self):
         return f'call {self.label}'
 
+@register
 class Push(Instruction):
+    MNEMONIC = 'push'
     def __init__(self, reg):
         self.reg = reg
     def __str__(self):
         return f'push {self.reg}'
 
+@register
 class Pop(Instruction):
+    MNEMONIC = 'pop'
     def __init__(self, reg):
         self.reg = reg
     def __str__(self):
         return f'pop {self.reg}'
 
+@register
 class Ld(Instruction):
+    MNEMONIC = 'ld'
     def __init__(self, dst, src):
         self.dst = dst
         self.src = src
     def __str__(self):
         return f'ld {self.dst}, [{self.src}]'
 
+@register
 class St(Instruction):
+    MNEMONIC = 'st'
     def __init__(self, dst, src):
         self.dst = dst
         self.src = src
     def __str__(self):
         return f'st [{self.dst}], {self.src}'
 
+@register
 class Mov(Instruction):
+    MNEMONIC = 'mov'
     def __init__(self, dst, src):
         self.dst = dst
         self.src = src
     def __str__(self):
         return f'mov {self.dst}, {self.src}'
 
+@register
 class Movs(Instruction):
+    MNEMONIC = 'movs'
     def __init__(self, dst, src):
         self.dst = dst
         self.src = src
     def __str__(self):
         return f'movs {self.dst}, {self.src}'
 
+@register
 class Sub(Instruction):
+    MNEMONIC = 'sub'
     def __init__(self, dst, lhs, rhs):
         self.dst = dst
         self.lhs = lhs
@@ -93,7 +114,9 @@ class Sub(Instruction):
     def __str__(self):
         return f'sub {self.dst}, {self.lhs}, {self.rhs}'
 
+@register
 class Add(Instruction):
+    MNEMONIC = 'add'
     def __init__(self, dst, lhs, rhs):
         self.dst = dst
         self.lhs = lhs
@@ -101,25 +124,35 @@ class Add(Instruction):
     def __str__(self):
         return f'add {self.dst}, {self.lhs}, {self.rhs}'
 
+@register
 class Ret(Instruction):
+    MNEMONIC = 'ret'
     def __str__(self):
         return f'ret'
 
+@register
 class Wait(Instruction):
+    MNEMONIC = 'wait'
     def __str__(self):
         return f'wait'
 
+@register
 class Emit(Instruction):
+    MNEMONIC = 'emit'
     def __str__(self):
         return f'emit'
 
+@register
 class Call(Instruction):
+    MNEMONIC = 'call'
     def __init__(self, label):
         self.label = label
     def __str__(self):
         return f'call {self.label}'
 
+@register
 class Cmp(Instruction):
+    MNEMONIC = 'cmp'
     def __init__(self, lhs, rhs):
         self.lhs = lhs
         self.rhs = rhs
