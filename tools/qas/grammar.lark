@@ -69,7 +69,7 @@ N: "N"
 
 
 
-COMMENT: ";" /[^\n]*/
+COMMENT: "//" /[^\n]*/
 %ignore COMMENT
 
 NL:"\n"

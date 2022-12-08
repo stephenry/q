@@ -26,48 +26,73 @@
 //========================================================================== //
 
 `include "common_defs.vh"
+`include "macros.vh"
 
-module dec #(
-  // Decoder bits
-  parameter int W
+module queue_cntrl #(
+  // Total number of entries; (constrained to be a power-of-2)
+  parameter int            N
+
+, parameter int            ADDR_W = $clog2(N)
 ) (
 // -------------------------------------------------------------------------- //
-// Encoded input
-  input wire logic [$clog2(W) - 1:0]              i_x
+// Dequeue
+  input wire logic                                   i_push
+// Enqueue
+, input wire logic                                   i_pop
+
+, output wire logic                                  o_wr_en
+, output wire logic [ADDR_W - 1:0]                   o_wr_addr
+
+, output wire logic                                  o_rd_en
+, output wire logic [ADDR_W - 1:0]                   o_rd_addr
 
 // -------------------------------------------------------------------------- //
-// Decoded output
-, output wire logic [W - 1:0]                     o_y
+// Status:
+, output wire logic                                  o_full_w
+, output wire logic                                  o_empty_w
+
+// -------------------------------------------------------------------------- //
+//
+, input wire logic                                   clk
+, input wire logic                                   arst_n
 );
 
-// ========================================================================== //
-//                                                                            //
-//  Wires                                                                     //
-//                                                                            //
-// ========================================================================== //
-
-logic [W - 1:0]                         y;
+`Q_DFFENR(logic [ADDR_W:0], rd_addr, 'b0);
+`Q_DFFENR(logic [ADDR_W:0], wr_addr, 'b0);
 
 // ========================================================================== //
 //                                                                            //
-//  Combinatorial Logic                                                       //
+// Logic                                                                      //
 //                                                                            //
 // ========================================================================== //
 
 // -------------------------------------------------------------------------- //
 //
-for (genvar i = 0; i < W; i++) begin
+assign wr_addr_w = i_push ? (wr_addr_r + 'b1) : wr_addr_r;
 
-assign y [i] = (i_x == i[$clog2(W) - 1:0]);
+assign rd_addr_w = i_pop ? (rd_addr_r + 'b1) : rd_addr_r;
 
-end
+// -------------------------------------------------------------------------- //
+//
+assign o_full_w = (rd_addr_r [ADDR_W] ^ wr_addr_r [ADDR_W]) &
+                  (rd_addr_r [ADDR_W - 1:0] == wr_addr_r [ADDR_W - 1:0]);
+
+// -------------------------------------------------------------------------- //
+//
+assign o_empty_w = (rd_addr_r == wr_addr_r);
 
 // ========================================================================== //
 //                                                                            //
-//  Outputs                                                                   //
+// Outputs                                                                    //
 //                                                                            //
 // ========================================================================== //
 
-assign o_y = y;
+assign o_wr_en = i_push;
+assign o_rd_en = i_pop;
 
-endmodule : dec
+assign o_wr_addr = wr_addr_r;
+assign o_rd_addr = rd_addr_r;
+
+endmodule : queue_cntrl
+
+`include "unmacros.vh"

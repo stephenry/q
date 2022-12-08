@@ -25,21 +25,13 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //========================================================================== //
 
-`include "common_defs.vh"
+`ifndef Q_RTL_COMMON_UNMACROS_VH
+`define Q_RTL_COMMON_UNMACROS_VH
 
-module dff #(parameter int W = 1) (
-// -------------------------------------------------------------------------- //
-// Register Interface
-  input [W - 1:0]                     d
-//
-, output logic [W - 1:0]              q
+`undef Q_DFF
+`undef Q_DFFE
+`undef Q_DFFR
 
-// -------------------------------------------------------------------------- //
-// Clk
-, input                               clk
-);
+`undef Q_RTL_COMMON_MACROS_VH
 
-always_ff @(posedge clk)
-  q <= d;
-
-endmodule : dff
+`endif

@@ -26,48 +26,96 @@
 //========================================================================== //
 
 `include "common_defs.vh"
+`include "macros.vh"
 
-module dec #(
-  // Decoder bits
-  parameter int W
+module rr #(
+// Arbiter width
+  parameter int              W
 ) (
 // -------------------------------------------------------------------------- //
-// Encoded input
-  input wire logic [$clog2(W) - 1:0]              i_x
+//
+  input wire logic [W - 1:0]                         i_req
+, input wire logic                                   i_ack
+, output wire logic [W - 1:0]                        o_gnt
 
 // -------------------------------------------------------------------------- //
-// Decoded output
-, output wire logic [W - 1:0]                     o_y
+//
+, input wire logic                                   clk
+, input wire logic                                   arst_n
 );
 
-// ========================================================================== //
-//                                                                            //
-//  Wires                                                                     //
-//                                                                            //
-// ========================================================================== //
+localparam int PTR_W = $clog2(W);
 
-logic [W - 1:0]                         y;
+`Q_DFFENR(logic [PTR_W - 1:0], ptr, 'b0);
+logic [W - 1:0] ptr_dec;
+logic [W - 1:0] mask_lsb;
+logic [W - 1:0] req_masked_lsb;
+logic [W - 1:0] mask_msb;
+logic [W - 1:0] req_masked_msb;
+logic [W - 1:0] sel_lsb;
+logic [W - 1:0] sel_msb;
+logic [W - 1:0] gnt_nxt;
+logic [W - 1:0] gnt_nxt_enc;
 
 // ========================================================================== //
 //                                                                            //
-//  Combinatorial Logic                                                       //
+// Logic                                                                      //
 //                                                                            //
 // ========================================================================== //
 
 // -------------------------------------------------------------------------- //
 //
-for (genvar i = 0; i < W; i++) begin
+assign ptr_w = i_ack ? gnt_nxt_enc : ptr_r;
 
-assign y [i] = (i_x == i[$clog2(W) - 1:0]);
+// -------------------------------------------------------------------------- //
+//
+dec #(.W) u_ptr_dec (.i_x(ptr_r), .o_y(ptr_dec));
 
-end
+// -------------------------------------------------------------------------- //
+// Compute LSB-oriented selection bitmap
+mask #(.W, .TOWARDS_LSB(1'b1)) u_left_lsb (
+, .i_x(ptr_dec), .o_y(mask_lsb)
+);
+
+assign req_masked_lsb = i_req & mask_lsb;
+
+pri #(.W, .FROM_LSB(1'b1)) u_sel_lsb_pri (
+, .i_x(req_masked_lsb), .o_y(sel_lsb)
+);
+
+// -------------------------------------------------------------------------- //
+// Compute MSB-oriented selection bitmap
+mask #(.W, .TOWARDS_LSB(1'b0), .INCLUSIVE(1'b1)) u_left_msb (
+, .i_x(ptr_dec), .o_y(mask_msb)
+);
+
+assign req_masked_msb = i_req & mask_msb;
+
+pri #(.W, .FROM_LSB(1'b1)) u_sel_msb_pri (
+, .i_x(req_masked_msb), .o_y(sel_msb)
+);
+
+// -------------------------------------------------------------------------- //
+// Form decoded GNT signal; if MSB oriented vector is non-zero, otherwise
+// select LSB oriented vector to consider any other remaining requestors.
+assign gnt = (sel_msb != '0) ? sel_msb : sel_lsb;
+
+// Advance search point based upon current grant.
+assign gnt_nxt = { gnt [W - 2:0], gnt [W - 1] };
+
+// Encode grant next to form next search pointer.
+enc #(.W) u_gnt_enc (.i_x(gnt_nxt), .o_y(gnt_nxt_enc));
 
 // ========================================================================== //
 //                                                                            //
-//  Outputs                                                                   //
+// Outputs                                                                    //
 //                                                                            //
 // ========================================================================== //
 
-assign o_y = y;
+// -------------------------------------------------------------------------- //
+//
+assign o_gnt = gnt;
 
-endmodule : dec
+endmodule : rr
+
+`include "unmacros.vh"

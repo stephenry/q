@@ -27,19 +27,29 @@
 
 `include "common_defs.vh"
 
-module dff #(parameter int W = 1) (
+module dffren #(
+  // Register width
+  parameter int W = 1
+  // Initial reset value
+, parameter logic [W - 1:0] INIT = 'b0
+) (
 // -------------------------------------------------------------------------- //
 // Register Interface
   input [W - 1:0]                     d
+, input                               en
 //
 , output logic [W - 1:0]              q
 
 // -------------------------------------------------------------------------- //
 // Clk
+, input                               arst_n
 , input                               clk
 );
 
-always_ff @(posedge clk)
-  q <= d;
+always_ff @(posedge clk or negedge arst_n)
+  if (~arst_n)
+    q <= INIT;
+  else if (en)
+    q <= d;
 
-endmodule : dff
+endmodule : dffren

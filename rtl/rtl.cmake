@@ -29,17 +29,21 @@ set(SRC_ROOT "${CMAKE_SOURCE_DIR}/rtl")
 set(BIN_ROOT "${CMAKE_BINARY_DIR}/rtl")
 
 set(RTL_SOURCES
+    "${SRC_ROOT}/common/stack_cntrl.sv"
+    "${SRC_ROOT}/common/queue_cntrl.sv"
     "${SRC_ROOT}/common/rf.sv"
+    "${SRC_ROOT}/common/rr.sv"
     "${SRC_ROOT}/common/mask.sv"
     "${SRC_ROOT}/common/lzd.sv"
     "${SRC_ROOT}/common/pri.sv"
     "${SRC_ROOT}/common/cla.sv"
     "${SRC_ROOT}/common/cmp.sv"
     "${SRC_ROOT}/common/dec.sv"
+    "${SRC_ROOT}/common/enc.sv"
     "${SRC_ROOT}/common/mux.sv"
     "${SRC_ROOT}/eng/eng_pipe_ca.sv"
-    "${BIN_ROOT}/eng/eng_pipe_xa_rom.sv"
-    "${BIN_ROOT}/eng/eng_pipe_xa_dec.sv"
+    "${BIN_ROOT}/eng/ucode/eng_pipe_xa_rom.sv"
+    "${BIN_ROOT}/eng/ucode/eng_pipe_xa_dec.sv"
     "${SRC_ROOT}/eng/eng_pipe_xa.sv"   
     "${SRC_ROOT}/eng/eng_pipe_fa.sv"
     "${SRC_ROOT}/eng/eng_pipe.sv"

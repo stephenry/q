@@ -26,48 +26,88 @@
 //========================================================================== //
 
 `include "common_defs.vh"
+`include "macros.vh"
 
-module dec #(
-  // Decoder bits
-  parameter int W
+module stack_cntrl #(
+// Stack entries
+  parameter int              N
+
+, parameter int              ADDR_W = $clog2(N);  
 ) (
 // -------------------------------------------------------------------------- //
-// Encoded input
-  input wire logic [$clog2(W) - 1:0]              i_x
+// Control
+  input wire logic                                   i_push
+, input wire logic                                   i_pop
+
+, output wire logic                                  o_mem_wen
+, output wire logic                                  o_mem_ren
+, output wire logic [ADDR_W - 1:0]                   o_mem_addr
 
 // -------------------------------------------------------------------------- //
-// Decoded output
-, output wire logic [W - 1:0]                     o_y
-);
-
-// ========================================================================== //
-//                                                                            //
-//  Wires                                                                     //
-//                                                                            //
-// ========================================================================== //
-
-logic [W - 1:0]                         y;
-
-// ========================================================================== //
-//                                                                            //
-//  Combinatorial Logic                                                       //
-//                                                                            //
-// ========================================================================== //
+// Status:
+, output wire logic                                  o_full_w
+, output wire logic                                  o_empty_w
 
 // -------------------------------------------------------------------------- //
 //
-for (genvar i = 0; i < W; i++) begin
+, input wire logic                                   clk
+, input wire logic                                   arst_n
+);
 
-assign y [i] = (i_x == i[$clog2(W) - 1:0]);
+localparam int FIRST_ENTRY = 0;
+localparam int LAST_ENTRY = N - 1;
 
-end
+`Q_DFFENR(logic, empty, 1'b1);
+`Q_DFFENR(logic, full, 1'b0);
+`Q_DRRREN(logic [ADDR_W - 1:0], ptr, 'b0);
+logic                        state_upt;
 
 // ========================================================================== //
 //                                                                            //
-//  Outputs                                                                   //
+// Logic                                                                      //
 //                                                                            //
 // ========================================================================== //
 
-assign o_y = y;
+// -------------------------------------------------------------------------- //
+// Advance internal controller state on push or pop operation.
+//
+assign state_upt = (i_push | i_pop);
 
-endmodule : dec
+// -------------------------------------------------------------------------- //
+// Empty cleared on push on empty (1); set on pop from zeroth entry (2).
+//
+assign empty_en = state_upt;
+assign empty_w = (empty_r & (~i_push))                                // (1)
+               | (i_pop & (rd_addr_r == FIRST_ENTRY[ADDR_W - 1:0]));  // (2)
+
+// -------------------------------------------------------------------------- //
+// Full cleared on pop from full state (1); set on push to N'th (final)
+// entry (2).
+//
+assign full_en = state_upt;
+assign full_w = (full_r & (~i_pop))                                  // (1)
+              | (i_push & (wr_ptr_r == FINAL_ENTRY[ADDR_W - 1:0]));  // (2)
+
+// -------------------------------------------------------------------------- //
+//
+assign ptr_en = state_upt;
+assign ptr_w = (i_push & ~full_w) ? (ptr_r + 'b1) :
+               (i_pop & ~empty_w) ? (ptr_r - 'b1) : 
+               ptr_r;
+
+// ========================================================================== //
+//                                                                            //
+// Outputs                                                                    //
+//                                                                            //
+// ========================================================================== //
+
+assign o_mem_wen = i_push;
+assign o_mem_ren = i_pop;
+assign o_mem_addr = ptr_r;
+
+assign o_empty_w = empty_w;
+assign o_full_w = full_w;
+
+endmodule : stack_cntrl
+
+`include "unmacros.vh"

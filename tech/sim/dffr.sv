@@ -29,7 +29,7 @@
 
 module dffr #(
   // Register width
-  parameter int W
+  parameter int W = 1
 
   // Initial reset value
 , parameter logic [W - 1:0] INIT = '0

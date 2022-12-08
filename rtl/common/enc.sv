@@ -27,19 +27,47 @@
 
 `include "common_defs.vh"
 
-module dff #(parameter int W = 1) (
+module enc #(
+  // Width of encoded input
+  parameter int W
+) (
 // -------------------------------------------------------------------------- //
-// Register Interface
-  input [W - 1:0]                     d
-//
-, output logic [W - 1:0]              q
+// Decoded input
+  input wire logic [W - 1:0]                     i_x
 
 // -------------------------------------------------------------------------- //
-// Clk
-, input                               clk
+// Encoded output
+, output wire logic [$clog2(W) - 1:0]            o_y
 );
 
-always_ff @(posedge clk)
-  q <= d;
+// ========================================================================== //
+//                                                                            //
+//  Wires                                                                     //
+//                                                                            //
+// ========================================================================== //
 
-endmodule : dff
+logic [W - 1:0][$clog2(W) - 1:0]       idx;
+logic [$clog2(W) - 1:0]                y;
+
+// -------------------------------------------------------------------------- //
+// Form encoder structure by deriving a vector of indices (denoting the
+// relative position in the bitvector). Using the mux. primitive, select
+// the appropriate index as necessary. 
+//
+for (genvar i = 0; i < W; i++) begin : idx_GEN
+
+assign idx [i] = i[$clog2(W) - 1:0];
+
+end : idx_GEN
+
+mux #(.N(W), .W($clog2(W))) u_idx_mux (.i_x(idx), .i_sel(i_x), .o_y(y));
+
+// ========================================================================== //
+//                                                                            //
+//  Outputs                                                                   //
+//                                                                            //
+// ========================================================================== //
+
+assign o_y = y;
+
+endmodule : enc

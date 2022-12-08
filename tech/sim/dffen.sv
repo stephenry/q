@@ -27,7 +27,7 @@
 
 `include "common_defs.vh"
 
-module dffen #(parameter int W) (
+module dffen #(parameter int W = 1) (
 // -------------------------------------------------------------------------- //
 // Register Interface
   input [W - 1:0]                     d
