@@ -45,7 +45,7 @@ module stk (
 
 // -------------------------------------------------------------------------- //
 // Clk/Reset
-  input wire logic                                clk
+, input wire logic                                clk
 , input wire logic                                arst_n
 );
 
