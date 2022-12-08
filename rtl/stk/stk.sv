@@ -29,33 +29,23 @@
 
 `include "q_pkg.vh"
 `include "cfg_pkg.vh"
-/* verilator lint_off UNUSEDSIGNAL */
-/* verilator lint_off UNDRIVEN */
-module q (
-// -------------------------------------------------------------------------- //
-// Master Interface
-  input wire logic                                i_mst_rsp_vld
-, input wire logic                                i_mst_rsp_sop
-, input wire logic                                i_mst_rsp_eop
-, input wire logic [127:0]                        i_mst_rsp_dat
+`include "stk_pkg.vh"
 
-, output wire logic                               o_mst_cmd_vld
-, output wire logic                               o_mst_cmd_sop
-, output wire logic                               o_mst_cmd_eop
-, output wire logic [127:0]                       o_mst_cmd_dat
-
+module stk (
 // -------------------------------------------------------------------------- //
-// Slave Interface
-, input wire logic                                i_slv_cmd_vld
-, input wire logic                                i_slv_cmd_rnw
-, input wire logic [63:0]                         i_slv_cmd_dat
 //
-, output wire logic                               o_slv_rsp_vld
-, output wire logic [63:0]                        o_slv_rsp_dat
+  input wire logic                                i_cmd_vld
+, input wire std_pkg::opcode_t                    i_cmd_opcode
+, input wire logic [2:0]                          i_cmd_id
+, input wire logic [127:0]                        i_cmd_dat
+//
+, output wire logic                               o_rsp_vld
+, output wire logic [2:0]                         o_rsp_id
+, output wire logic [127:0]                       o_rsp_dat
 
 // -------------------------------------------------------------------------- //
 // Clk/Reset
-, input wire logic                                clk
+  input wire logic                                clk
 , input wire logic                                arst_n
 );
 
@@ -65,27 +55,5 @@ module q (
 //                                                                            //
 // ========================================================================== //
 
-// -------------------------------------------------------------------------- //
-//
-stk u_stk (
-  .clk                       (clk)
-, .arst_n                    (arst_n)
-);
 
-// -------------------------------------------------------------------------- //
-//
-eng u_eng (
-  .clk                       (clk)
-, .arst_n                    (arst_n)
-);
-
-// -------------------------------------------------------------------------- //
-//
-dc u_dc (
-  .clk                       (clk)
-, .arst_n                    (arst_n)
-);
-
-/* verilator lint_on UNDRIVEN */
-/* verilator lint_on UNUSEDSIGNAL */
-endmodule : q
+endmodule : stk
