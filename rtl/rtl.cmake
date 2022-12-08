@@ -49,7 +49,6 @@ set(RTL_SOURCES
     "${SRC_ROOT}/eng/eng_pipe.
     "${SRC_ROOT}/dc/dc.sv"
     "${SRC_ROOT}/stk/stk.sv"
-    "${SRC_ROOT}/q_engs.sv"
     "${SRC_ROOT}/q.sv")
 
 set(RTL_GENERATED_SOURCES
