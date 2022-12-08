@@ -94,7 +94,6 @@ for (genvar n = 0; n < N; n++) begin : write_sel_word_GEN
 
 for (genvar wr = 0; wr < WR_N; wr++) begin : write_sel_port_GEN
 
-
 // TODO(stephenry): indice swapping probably redundant here if different
 // indexing is used [offset + i * stride] = [n + i * N];
 assign wr_port_sel [n][wr] = rd_ra_d [wr][n];
@@ -107,8 +106,9 @@ end : write_sel_word_GEN
 //
 for (genvar n = 0; n < N; n++) begin : write_GEN
 
-mux #(.N(WR_N), .W) u_mux (.
-    i_x(i_wr_data), .i_sel(wr_port_sel [n]), .o_y(flop_w [n]));
+mux #(.N(WR_N), .W) u_mux (
+  .i_x(i_wr_data), .i_sel(wr_port_sel [n]), .o_y(flop_w [n])
+);
 
 assign flop_en [j] = (wr_port_sel [n] != '0);
 
@@ -127,11 +127,13 @@ for (genvar n = 0; n < N; n++) begin : flop_GEN
 // ICG for word 'N'
 // TODO(stephenry): swap out dffen for dff when icg is enabled.
 icg u_wordn_icg (
-    .o_clk_gated(flop_clk [n]), .i_clk(clk), .i_en(flop_en [n]), .i_dft_en(1'b0));
+  .o_clk_gated(flop_clk [n]), .i_clk(clk), .i_en(flop_en [n]), .i_dft_en(1'b0)
+);
 
 // RF state word 'N'
 dffen #(.W) u_wordn_dffen (
-    .d(flop_w[n]), .en(flop_en[n]), .q(flop_r[n]), .clk(flop_clk [n]));
+  .d(flop_w[n]), .en(flop_en[n]), .q(flop_r[n]), .clk(flop_clk [n])
+);
 
 end : flop_GEN
 
@@ -149,7 +151,9 @@ for (genvar rd = 0; rd < RD_PORTS_N; rd++) begin : read_GEN
 dec #(.N) u_rd_dec (.o_y(rd_sel [rd]), .i_x(i_rd_ra [rd]));
 
 // Read word-select mux.
-mux #(.N, .W) u_rd_mux (.i_x(flop_r), .i_sel(rd_sel [rd]), .o_y(rd_data [rd]));
+mux #(.N, .W) u_rd_mux (
+  .i_x(flop_r), .i_sel(rd_sel [rd]), .o_y(rd_data [rd])
+);
 
 end : read_GEN
 
