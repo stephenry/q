@@ -59,7 +59,7 @@ localparam int LAST_ENTRY = N - 1;
 
 `Q_DFFENR(logic, empty, 1'b1);
 `Q_DFFENR(logic, full, 1'b0);
-`Q_DRRREN(logic [ADDR_W - 1:0], ptr, 'b0);
+`Q_DFFREN(logic [ADDR_W - 1:0], ptr, 'b0);
 logic                        state_upt;
 
 // ========================================================================== //
