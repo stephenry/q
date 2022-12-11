@@ -74,12 +74,12 @@ assign rd_addr_w = i_pop ? (rd_addr_r + 'b1) : rd_addr_r;
 
 // -------------------------------------------------------------------------- //
 //
-assign o_full_w = (rd_addr_r [ADDR_W] ^ wr_addr_r [ADDR_W]) &
-                  (rd_addr_r [ADDR_W - 1:0] == wr_addr_r [ADDR_W - 1:0]);
+assign o_full_w = (rd_addr_w [ADDR_W] ^ wr_addr_w [ADDR_W]) &
+                  (rd_addr_w [ADDR_W - 1:0] == wr_addr_w [ADDR_W - 1:0]);
 
 // -------------------------------------------------------------------------- //
 //
-assign o_empty_w = (rd_addr_r == wr_addr_r);
+assign o_empty_w = (rd_addr_w == wr_addr_w);
 
 // ========================================================================== //
 //                                                                            //
