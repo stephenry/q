@@ -46,7 +46,7 @@ set(RTL_SOURCES
     "${BIN_ROOT}/eng/ucode/eng_pipe_xa_dec.sv"
     "${SRC_ROOT}/eng/eng_pipe_xa.sv"   
     "${SRC_ROOT}/eng/eng_pipe_fa.sv"
-    "${SRC_ROOT}/eng/eng_pipe.
+    "${SRC_ROOT}/eng/eng_pipe.sv"
     "${SRC_ROOT}/dc/dc.sv"
     "${SRC_ROOT}/stk/stk.sv"
     "${SRC_ROOT}/q.sv")
