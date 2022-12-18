@@ -77,7 +77,7 @@ logic [cfg_pkg::ENGS_N - 1:0]           cmd_vld;
 logic [cfg_pkg::ENGS_N - 1:0]           cmd_is_push;
 logic [cfg_pkg::ENGS_N - 1:0]           cmd_is_pop;
 logic [cfg_pkg::ENGS_N - 1:0]           cmd_is_inv;
-logic                                   cmd_ack;
+logic [cfg_pkg::ENGS_N - 1:0]           cmd_ack;
 
 // Enqueue logic:
 //
@@ -93,7 +93,7 @@ logic [127:0]                           qpush_push_dat_dat;
 logic                                   qpush_pop;
 qpush_t                                 qpush_push_dat;
 qpush_t                                 qpush_pop_dat;
-logic [stk_pkg::ENGID_W - 1:0]          qpush_pop_dat_engid_d;
+logic [cfg_pkg::ENGS_N - 1:0]           qpush_pop_dat_engid_d;
 `Q_DFF(logic, qpush_full, clk);
 `Q_DFF(logic, qpush_empty, clk);
 
@@ -105,7 +105,7 @@ logic                                   qpop_pop;
 stk_pkg::engid_t                        qpop_pop_dat;
 `Q_DFF(logic, qpop_full, clk);
 `Q_DFF(logic, qpop_empty, clk);
-logic [stk_pkg::ENGID_W - 1:0]          qpop_pop_dat_engid_d;
+logic [cfg_pkg::ENGS_N - 1:0]          qpop_pop_dat_engid_d;
 
 // "Invalidation" Command Queue:
 //
@@ -116,8 +116,8 @@ stk_pkg::engid_t                        qinv_push_dat;
 
 // "Active" Set:
 //
-logic                                   active_set;
-logic                                   active_clr;
+logic [cfg_pkg::ENGS_N - 1:0]           active_set;
+logic [cfg_pkg::ENGS_N - 1:0]           active_clr;
 `Q_DFFR(logic [cfg_pkg::ENGS_N - 1:0], active, '0, clk);
 
 // Dequeue logic:
@@ -129,7 +129,7 @@ logic                                   deq_ack;
 // Output logic:
 logic                                   lk_vld;
 stk_pkg::engid_t                        lk_engid;
-logic [stk_pkg::ENGID_W - 1:0]          lk_engid_d;
+logic [cfg_pkg::ENGS_N - 1:0]           lk_engid_d;
 stk_pkg::opcode_t                       lk_opcode;
 logic                                   lk_dat_vld;
 logic [127:0]                           lk_dat;
@@ -167,11 +167,11 @@ enc #(.W(cfg_pkg::ENGS_N)) u_rr_enq_gnt_enc (
 
 assign enq_ack = (qpush_push | qpop_push | qinv_push);
 
-assign cmd_ack = (enq_gnt & {cfg_pkg::ENGS_N{enq_ack}});
+assign cmd_ack = (enq_gnt_d & {cfg_pkg::ENGS_N{enq_ack}});
 
 // -------------------------------------------------------------------------- //
 //
-assign qpush_push = (enq_gnt & cmd_is_push) != '0;
+assign qpush_push = (enq_gnt_d & cmd_is_push) != '0;
 
 mux #(.N(cfg_pkg::ENGS_N), .W(128)) u_enq_mux (
   .i_x(i_cmd_dat), .i_sel(enq_gnt_d), .o_y(qpush_push_dat_dat)
@@ -194,13 +194,13 @@ queue_rf #(.N(2), .W(QPUSH_W)) u_qpush (
 , .arst_n                     (arst_n)
 );
 
-dec #(.W(stk_pkg::ENGID_W)) u_dec_qpush_engid (
+dec #(.W(cfg_pkg::ENGS_N)) u_dec_qpush_engid (
   .i_x(qpush_pop_dat.id), .o_y(qpush_pop_dat_engid_d)
 );
 
 // -------------------------------------------------------------------------- //
 //
-assign qpop_push = (enq_gnt & cmd_is_pop) != '0;
+assign qpop_push = (enq_gnt_d & cmd_is_pop) != '0;
 assign qpop_push_dat = enq_gnt;
 
 queue_rf #(.N(2), .W(stk_pkg::ENGID_W)) u_qpop (
@@ -218,13 +218,13 @@ queue_rf #(.N(2), .W(stk_pkg::ENGID_W)) u_qpop (
 , .arst_n                     (arst_n)
 );
 
-dec #(.W(stk_pkg::ENGID_W)) u_dec_qpop_engid (
+dec #(.W(cfg_pkg::ENGS_N)) u_dec_qpop_engid (
   .i_x(qpop_pop_dat), .o_y(qpop_pop_dat_engid_d)
 );
 
 // -------------------------------------------------------------------------- //
 //
-assign qinv_push = (enq_gnt & cmd_is_inv) != '0;
+assign qinv_push = (enq_gnt_d & cmd_is_inv) != '0;
 assign qinv_push_dat = enq_gnt;
 
 queue_rf #(.N(2), .W(stk_pkg::ENGID_W)) u_qinv (
@@ -255,7 +255,7 @@ stk_pipe_ad_inv u_stk_pipe_ad_inv (
 // -------------------------------------------------------------------------- //
 //
 
-dec #(.W(stk_pkg::ENGID_W)) u_dec (.i_x(lk_engid), .o_y(lk_engid_d));
+dec #(.W(cfg_pkg::ENGS_N)) u_dec (.i_x(lk_engid), .o_y(lk_engid_d));
 
 assign active_set = (lk_engid_d & {cfg_pkg::ENGS_N{lk_vld}});
 assign active_clr = i_rsp_vld;
@@ -265,10 +265,10 @@ assign active_w = (~active_clr) & (active_r | active_set);
 //
 
 assign deq_req_d [0] =
-  (~i_al_empty_r) & (~qpush_empty_r) & (active_r & qpush_pop_dat_engid_d == '0);
+  (~i_al_empty_r) & (~qpush_empty_r) & ((active_r & qpush_pop_dat_engid_d) == '0);
 
 assign deq_req_d [1] =
-  (~qpop_empty_r) & (active_r & qpop_pop_dat_engid_d == '0);
+  (~qpop_empty_r) & ((active_r & qpop_pop_dat_engid_d) == '0);
 
 assign deq_req_d [2] =
   1'b0; // TODO

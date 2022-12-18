@@ -34,7 +34,7 @@ module stk_pipe_al_init (
 // Memory Interfacex
   output wire logic                               o_init_wen_r
 , output wire stk_pkg::line_id_t                  o_init_waddr_r
-, output wire logic [127:0]                       o_init_wdata_r
+, output wire stk_pkg::line_id_t                  o_init_wdata_r
 
 // -------------------------------------------------------------------------- //
 // Control/Status
@@ -158,7 +158,7 @@ assign o_busy_r = busy_r;
 
 assign o_init_wen_r = init_wen_r;
 assign o_init_waddr_r = init_waddr_r;
-assign o_init_wdata_r = '0;
+assign o_init_wdata_r = init_waddr_r;
 
 endmodule : stk_pipe_al_init
 

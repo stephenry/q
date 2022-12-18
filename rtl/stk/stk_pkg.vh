@@ -28,6 +28,8 @@
 `ifndef Q_RTL_STK_STK_PKG_VH
 `define Q_RTL_STK_STK_PKG_VH
 
+`include "cfg_pkg.vh"
+
 package stk_pkg;
 
 localparam int OPCODE_W = 2;
@@ -38,7 +40,7 @@ typedef enum logic [OPCODE_W - 1:0] {
 , OPCODE_INV  = OPCODE_W'('b11)
 } opcode_t;
 
-localparam ENGID_W = 3;
+localparam ENGID_W = $clog2(cfg_pkg::ENGS_N);
 typedef logic [ENGID_W - 1:0] engid_t;
 
 

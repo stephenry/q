@@ -37,11 +37,11 @@ module stk_pipe (
                                                   i_cmd_opcode
 , input wire logic [cfg_pkg::ENGS_N - 1:0][127:0] i_cmd_dat
 //
-, output wire logic                               o_cmd_ack
+, output wire logic [cfg_pkg::ENGS_N - 1:0]       o_cmd_ack
 
 // -------------------------------------------------------------------------- //
 //
-, output wire logic                               o_rsp_vld
+, output wire logic [cfg_pkg::ENGS_N - 1:0]       o_rsp_vld
 
 // -------------------------------------------------------------------------- //
 // Clk/Reset

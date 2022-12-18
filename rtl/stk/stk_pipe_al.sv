@@ -150,8 +150,9 @@ rr #(.W(stk_pkg::BANKS_N)) u_rr (
 
 for (genvar bnk = 0; bnk < stk_pkg::BANKS_N; bnk++) begin : stack_logical_GEN
 
-assign stk_bnk_push = init_wen_r                                      // (1)
-                    | (i_dealloc_vld & dealloc_ptr_bnk_id_d [bnk]);   // (2)
+assign stk_bnk_push [bnk] =
+    init_wen_r                                              // (1)
+  | (i_dealloc_vld & dealloc_ptr_bnk_id_d [bnk]);           // (2)
 
 assign stk_bnk_pop = stk_bnk_popsel_gnt_d;
 
@@ -231,13 +232,13 @@ dec #(.W(stk_pkg::BANKS_N)) u_lk_mem_sel (
   .i_x(lk_bank_id_r), .o_y(lk_bank_id_d)
 );
 
-mux #(.N(stk_pkg::BANKS_N), .W(stk_pkg::PTR_W)) u_lk_mem_mux (
-  .i_x (mem_dout), .i_sel (lk_bank_id_d), .o_y (lk_mem_w)
+mux #(.N(stk_pkg::BANKS_N), .W(stk_pkg::BANK_LINE_OFFSET_W)) u_lk_mem_mux (
+  .i_x (mem_dout), .i_sel (lk_bank_id_d), .o_y (lk_mem_w) // TODO: FIX
 );
 
 assign lk_ptr_w =
-    ({stk_pkg::PTR_W{ lk_bypass_ptr_r}} & lk_bypass_ptr_r)
-  | ({stk_pkg::PTR_W{~lk_bypass_ptr_r}} & lk_mem_w);
+    ({stk_pkg::PTR_W{ lk_bypass_r}} & lk_bypass_ptr_r)
+  | ({stk_pkg::PTR_W{~lk_bypass_r}} & lk_mem_w);
 
 // ========================================================================== //
 //                                                                            //

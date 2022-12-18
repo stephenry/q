@@ -39,7 +39,7 @@ module stk (
 //
 , output wire logic [cfg_pkg::ENGS_N - 1:0]       o_cmd_ack
 //
-, output wire logic                               o_rsp_vld
+, output wire logic [cfg_pkg::ENGS_N - 1:0]       o_rsp_vld
 , output wire logic [127:0]                       o_rsp_dat
 
 // -------------------------------------------------------------------------- //
