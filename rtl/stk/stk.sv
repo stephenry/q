@@ -29,23 +29,13 @@
 
 `include "q_pkg.vh"
 `include "cfg_pkg.vh"
-`include "stk_pkg.vh"
+`include "stk/stk_pkg.vh"
 
 module stk (
-// -------------------------------------------------------------------------- //
-//
-  input wire logic                                i_cmd_vld
-, input wire std_pkg::opcode_t                    i_cmd_opcode
-, input wire logic [2:0]                          i_cmd_id
-, input wire logic [127:0]                        i_cmd_dat
-//
-, output wire logic                               o_rsp_vld
-, output wire logic [2:0]                         o_rsp_id
-, output wire logic [127:0]                       o_rsp_dat
 
 // -------------------------------------------------------------------------- //
 // Clk/Reset
-, input wire logic                                clk
+  input wire logic                                clk
 , input wire logic                                arst_n
 );
 

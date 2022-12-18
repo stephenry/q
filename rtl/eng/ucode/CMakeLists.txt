@@ -25,18 +25,3 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 ## ========================================================================= //
 
-add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/eng_pipe_xa_rom.sv
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/eng_pipe_xa_rom_pkg.vh
-    COMMAND sh ${Q_TOOLS_ROOT}/qas.sh
-        -s ${CMAKE_CURRENT_SOURCE_DIR}/qs.s
-        -o ${CMAKE_CURRENT_BINARY_DIR}/eng_pipe_xa_rom.sv
-        --pkg ${CMAKE_CURRENT_BINARY_DIR}/eng_pipe_xa_rom_pkg.vh
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/qs.s
-    DEPENDS ${CMAKE_SOURCE_DIR}/tools/qlib/verilog.py
-    DEPENDS ${CMAKE_SOURCE_DIR}/tools/qas/asm_grammar.lark
-    DEPENDS ${CMAKE_SOURCE_DIR}/tools/qas/__main__.py)
-
-add_custom_target(generate_ucode_rom
-    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/eng_pipe_xa_rom.sv)
-

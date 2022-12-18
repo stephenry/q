@@ -57,8 +57,8 @@ module queue_cntrl #(
 , input wire logic                                   arst_n
 );
 
-`Q_DFFENR(logic [ADDR_W:0], rd_addr, 'b0);
-`Q_DFFENR(logic [ADDR_W:0], wr_addr, 'b0);
+`Q_DFFRE(logic [ADDR_W:0], rd_addr, 'b0, clk);
+`Q_DFFRE(logic [ADDR_W:0], wr_addr, 'b0, clk);
 
 // ========================================================================== //
 //                                                                            //

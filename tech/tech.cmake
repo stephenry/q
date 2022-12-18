@@ -31,8 +31,9 @@ set(TECH_ROOT "${CMAKE_SOURCE_DIR}/tech")
 set(TECH_SOURCES
   "${TECH_ROOT}/${TARGET}/icg.sv"
   "${TECH_ROOT}/${TARGET}/dff.sv"
-  "${TECH_ROOT}/${TARGET}/dffen.sv"
+  "${TECH_ROOT}/${TARGET}/dffe.sv"
   "${TECH_ROOT}/${TARGET}/dffr.sv"
+  "${TECH_ROOT}/${TARGET}/dffre.sv"
   )
 
 set(TECH_INCLUDE_PATHS

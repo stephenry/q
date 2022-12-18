@@ -32,7 +32,7 @@ module stack_cntrl #(
 // Stack entries
   parameter int              N
 
-, parameter int              ADDR_W = $clog2(N);  
+, parameter int              ADDR_W = $clog2(N)
 ) (
 // -------------------------------------------------------------------------- //
 // Control
@@ -57,9 +57,9 @@ module stack_cntrl #(
 localparam int FIRST_ENTRY = 0;
 localparam int LAST_ENTRY = N - 1;
 
-`Q_DFFENR(logic, empty, 1'b1);
-`Q_DFFENR(logic, full, 1'b0);
-`Q_DFFREN(logic [ADDR_W - 1:0], ptr, 'b0);
+`Q_DFFRE(logic, empty, 1'b1, clk);
+`Q_DFFRE(logic, full, 1'b0, clk);
+`Q_DFFRE(logic [ADDR_W - 1:0], ptr, 'b0, clk);
 logic                        state_upt;
 
 // ========================================================================== //
@@ -86,13 +86,13 @@ assign empty_w = (empty_r & (~i_push))                                // (1)
 //
 assign full_en = state_upt;
 assign full_w = (full_r & (~i_pop))                                  // (1)
-              | (i_push & (wr_ptr_r == FINAL_ENTRY[ADDR_W - 1:0]));  // (2)
+              | (i_push & (wr_ptr_r == LAST_ENTRY[ADDR_W - 1:0]));   // (2)
 
 // -------------------------------------------------------------------------- //
 //
 assign ptr_en = state_upt;
 assign ptr_w = (i_push & ~full_w) ? (ptr_r + 'b1) :
-               (i_pop & ~empty_w) ? (ptr_r - 'b1) : 
+               (i_pop & ~empty_w) ? (ptr_r - 'b1) :
                ptr_r;
 
 // ========================================================================== //

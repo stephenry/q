@@ -30,7 +30,7 @@
 
 package stk_pkg;
 
-typedef logic [1:0] {
+typedef enum logic [1:0] {
   OPCODE_PUSH = 2'b01
 , OPCODE_POP  = 2'b10
 } opcode_t;

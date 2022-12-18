@@ -29,7 +29,7 @@
 
 `include "q_pkg.vh"
 `include "cfg_pkg.vh"
-`include "eng/eng_pipe_xa_rom_pkg.vh"
+// `include "eng/eng_pipe_xa_rom_pkg.vh"
 
 module eng_pipe (
 // -------------------------------------------------------------------------- //
@@ -49,9 +49,9 @@ eng_pipe_fa u_eng_pipe_fa (
 //
 eng_pipe_xa u_eng_pipe_xa (
 //
-  .i_fa_pc_r                 ()
+//  .i_fa_pc_r                 ()
 //
-, .clk                       (clk)
+  .clk                       (clk)
 , .arst_n                    (arst_n)
 );
 

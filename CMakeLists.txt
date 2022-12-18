@@ -28,6 +28,8 @@
 cmake_minimum_required(VERSION 3.22)
 project(q)
 
+set(CMAKE_CXX_STANDARD 17)
+
 list(APPEND CMAKE_MODULE_PATH
     "${CMAKE_SOURCE_DIR}/cmake"
     "${CMAKE_SOURCE_DIR}/tech"

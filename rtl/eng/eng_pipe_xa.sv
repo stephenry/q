@@ -29,16 +29,16 @@
 
 `include "q_pkg.vh"
 `include "cfg_pkg.vh"
-`include "eng/eng_pipe_xa_rom_pkg.vh"
+//`include "eng/eng_pipe_xa_rom_pkg.vh"
 
 module eng_pipe_xa (
 // -------------------------------------------------------------------------- //
 //
-  input eng_pipe_xa_rom_pkg::rom_pc_t             i_fa_pc_r
+//  input eng_pipe_xa_rom_pkg::rom_pc_t             i_fa_pc_r
 
 // -------------------------------------------------------------------------- //
 // Clk/Reset
-, input wire logic                                clk
+  input wire logic                                clk
 , input wire logic                                arst_n
 );
 
@@ -47,7 +47,7 @@ module eng_pipe_xa (
 //  Instances                                                                 //
 //                                                                            //
 // ========================================================================== //
-
+/*
 // -------------------------------------------------------------------------- //
 //
 case (cfg_pkg::UCODE_TYPE)
@@ -75,5 +75,5 @@ eng_pipe_xa_dec u_eng_pipe_xa_dec (
 
 end : ucode_ver_GEN
 endcase
-
+*/
 endmodule : eng_pipe_xa

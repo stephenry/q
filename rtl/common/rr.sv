@@ -46,7 +46,7 @@ module rr #(
 
 localparam int PTR_W = $clog2(W);
 
-`Q_DFFENR(logic [PTR_W - 1:0], ptr, 'b0);
+`Q_DFFRE(logic [PTR_W - 1:0], ptr, 'b0, clk);
 logic [W - 1:0] ptr_dec;
 logic [W - 1:0] mask_lsb;
 logic [W - 1:0] req_masked_lsb;

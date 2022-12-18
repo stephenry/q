@@ -93,7 +93,6 @@ file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/vc.f "${FILELIST}")
 add_custom_target(verilate
   COMMAND ${Verilator_EXE} -f ${CMAKE_CURRENT_BINARY_DIR}/vc.f
   COMMENT "Verilating...")
-add_dependencies(verilate generate_ucode_rom)
 
 set(VERILATOR_A "${CMAKE_CURRENT_BINARY_DIR}/Vobj/Vtb__ALL.a")
 

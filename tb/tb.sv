@@ -29,20 +29,25 @@
 
 module tb (
 // -------------------------------------------------------------------------- //
-//
-  input wire logic                                i_ingress_vld
-, input wire logic                                i_ingress_sop
-, input wire logic                                i_ingress_eop
+// Master Interface
+  input wire logic                                i_mst_rsp_vld
+, input wire logic                                i_mst_rsp_sop
+, input wire logic                                i_mst_rsp_eop
+, input wire logic [127:0]                        i_mst_rsp_dat
+
+, output wire logic                               o_mst_cmd_vld
+, output wire logic                               o_mst_cmd_sop
+, output wire logic                               o_mst_cmd_eop
+, output wire logic [127:0]                       o_mst_cmd_dat
 
 // -------------------------------------------------------------------------- //
+// Slave Interface
+, input wire logic                                i_slv_cmd_vld
+, input wire logic                                i_slv_cmd_rnw
+, input wire logic [63:0]                         i_slv_cmd_dat
 //
-, output wire logic                               o_egress_vld_r
-, output wire logic                               o_egress_sop_r
-, output wire logic                               o_egress_eop_r
-
-// -------------------------------------------------------------------------- //
-//
-, output wire logic                               o_busy_r
+, output wire logic                               o_slv_rsp_vld
+, output wire logic [63:0]                        o_slv_rsp_dat
 
 // -------------------------------------------------------------------------- //
 // Testbench State
@@ -70,15 +75,22 @@ int                                     tb_cycle;
 
 q u_q (
 //
-  .i_ingress_vld                       (i_ingress_vld)
-, .i_ingress_sop                       (i_ingress_sop)
-, .i_ingress_eop                       (i_ingress_eop)
+  .i_mst_rsp_vld                       (i_mst_rsp_vld)
+, .i_mst_rsp_sop                       (i_mst_rsp_sop)
+, .i_mst_rsp_eop                       (i_mst_rsp_eop)
+, .i_mst_rsp_dat                       (i_mst_rsp_dat)
 //
-, .o_egress_vld_r                      (o_egress_vld_r)
-, .o_egress_sop_r                      (o_egress_sop_r)
-, .o_egress_eop_r                      (o_egress_eop_r)
+, .o_mst_cmd_vld                       (o_mst_cmd_vld)
+, .o_mst_cmd_sop                       (o_mst_cmd_sop)
+, .o_mst_cmd_eop                       (o_mst_cmd_eop)
+, .o_mst_cmd_dat                       (o_mst_cmd_dat)
 //
-, .o_busy_r                            (o_busy_r)
+, .i_slv_cmd_vld                       (i_slv_cmd_vld)
+, .i_slv_cmd_rnw                       (i_slv_cmd_rnw)
+, .i_slv_cmd_dat                       (i_slv_cmd_dat)
+//
+, .o_slv_rsp_vld                       (o_slv_rsp_vld)
+, .o_slv_rsp_dat                       (o_slv_rsp_dat)
 //
 , .clk                                 (clk)
 , .arst_n                              (arst_n)

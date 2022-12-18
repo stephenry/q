@@ -29,8 +29,7 @@
 
 `include "q_pkg.vh"
 `include "cfg_pkg.vh"
-/* verilator lint_off UNUSEDSIGNAL */
-/* verilator lint_off UNDRIVEN */
+
 module q (
 // -------------------------------------------------------------------------- //
 // Master Interface
@@ -74,10 +73,10 @@ stk u_stk (
 
 // -------------------------------------------------------------------------- //
 //
-eng u_eng (
-  .clk                       (clk)
-, .arst_n                    (arst_n)
-);
+//eng u_eng (
+//  .clk                       (clk)
+//, .arst_n                    (arst_n)
+//);
 
 // -------------------------------------------------------------------------- //
 //
@@ -86,6 +85,4 @@ dc u_dc (
 , .arst_n                    (arst_n)
 );
 
-/* verilator lint_on UNDRIVEN */
-/* verilator lint_on UNUSEDSIGNAL */
 endmodule : q

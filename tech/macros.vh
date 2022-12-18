@@ -41,7 +41,7 @@
 `define Q_DFFE(__type, __name, __en, __clk) \
     __type __name``_r; \
     __type __name``_w; \
-    dffen #(.W($bits(__type))) u_``__name``_reg ( \
+    dffe #(.W($bits(__type))) u_``__name``_reg ( \
       .d(__name``_w), .q(__name``_r), .en(__en), .clk(__clk))
 
 `define Q_DFFR(__type, __name, __init, __clk) \
@@ -49,5 +49,11 @@
     __type __name``_w; \
     dffr #(.W($bits(__type)), .INIT(__init)) u_``__name``_reg ( \
       .d(__name``_w), .q(__name``_r), .arst_n, .clk(__clk))
+
+`define Q_DFFRE(__type, __name, __init, __clk) \
+    __type __name``_r; \
+    __type __name``_w; \
+    dffre #(.W($bits(__type)), .INIT(__init)) u_``__name``_reg ( \
+      .d(__name``_w), .q(__name``_r), .en(__name``_en), .arst_n, .clk(__clk))
 
 `endif

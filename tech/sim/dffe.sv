@@ -25,32 +25,23 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //========================================================================== //
 
-`ifndef Q_RTL_COMMON_MACROS_VH
-`define Q_RTL_COMMON_MACROS_VH
+`include "common_defs.vh"
 
-`define Q_DFF(__type, __name) \
-    __type __name``_r; \
-    __type __name``_w; \
-    dff #(.W($bits(__type))) u_``__name``_reg ( \
-      .d(__name``_w), .q(__name``_r), .clk)
+module dffe #(parameter int W = 1) (
+// -------------------------------------------------------------------------- //
+// Register Interface
+  input [W - 1:0]                     d
+, input                               en
+//
+, output logic [W - 1:0]              q
 
-`define Q_DFFE(__type, __name, __en) \
-    __type __name``_r; \
-    __type __name``_w; \
-    dffen #(.W($bits(__type))) u_``__name``_reg ( \
-      .d(__name``_w), .q(__name``_r), .en(__en), .clk)
+// -------------------------------------------------------------------------- //
+// Clk
+, input                               clk
+);
 
-`define Q_DFFR(__type, __name, __init) \
-    __type __name``_r; \
-    __type __name``_w; \
-    dffr #(.W($bits(__type)), .INIT(__init)) u_``__name``_reg ( \
-      .d(__name``_w), .q(__name``_r), .arst_n, .clk)
+always_ff @(posedge clk)
+  if (en)
+    q <= d;
 
-`define Q_DFFREN(__type, __name, __init) \
-    __type __name``_r; \
-    __type __name``_w; \
-    __type __name``_en; \
-    dffren #(.W($bits(__type)), .INIT(__init)) u_``__name``_reg ( \
-      .d(__name``_w), .en(__name``_en), .q(__name``_r), .arst_n, .clk)
-
-`endif
+endmodule : dffe
