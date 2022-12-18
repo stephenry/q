@@ -51,6 +51,7 @@ set(RTL_SOURCES
     "${SRC_ROOT}/stk/stk_pipe_lk.sv"
     "${SRC_ROOT}/stk/stk_pipe_ad_inv.sv"
     "${SRC_ROOT}/stk/stk_pipe_ad.sv"
+    "${SRC_ROOT}/stk/stk_pipe_wb.sv"
     "${SRC_ROOT}/stk/stk_pipe.sv"
     "${SRC_ROOT}/stk/stk.sv"
     "${SRC_ROOT}/q.sv")

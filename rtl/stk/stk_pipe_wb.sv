@@ -25,60 +25,12 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //========================================================================== //
 
-`include "common_defs.vh"
-`include "macros.vh"
-`include "stk/stk_pkg.vh"
-
-module stk_pipe_lk (
-// -------------------------------------------------------------------------- //
-//
-  input wire logic                                i_lk_vld_r
-, input wire stk_pkg::engid_t                     i_lk_engid_r
-, input wire std_pkg::opcode_t                    i_lk_opcode_r
-, input wire logic                                i_lk_dat_vld_r
-, input wire logic [127:0]                        i_lk_dat_r
-
-// -------------------------------------------------------------------------- //
-// Allocation Interface
-, input wire std_pkg::ptr_t                       i_lk_ptr_w
+module stk_pipe_wb (
 
 // -------------------------------------------------------------------------- //
 // Clk/Reset
-, input wire logic                                clk
+  input wire logic                                clk
 , input wire logic                                arst_n
 );
 
-// Stack empty flag status on a per. engine basis.
-`Q_DFFR(logic [stk_pkg::ENGS_N - 1:0], empty, 'b0, clk);
-
-// -------------------------------------------------------------------------- //
-//
-rf #(.W(stk_pkg::PTR_W), .N(stk_pkg::ENGS_N)) u_rf_head (
-//
-  .i_ra                       ()
-, .o_rdata                    ()
-//
-, .i_wen                      ()
-, .i_wa                       ()
-, .i_wdata                    ()
-//
-, .clk                        (clk)
-);
-
-// -------------------------------------------------------------------------- //
-//
-rf #(.W(stk_pkg::PTR_W), .N(stk_pkg::ENGS_N)) u_rf_tail (
-//
-  .i_ra                       ()
-, .o_rdata                    ()
-//
-, .i_wen                      ()
-, .i_wa                       ()
-, .i_wdata                    ()
-//
-, .clk                        (clk)
-);
-
-endmodule : stk_pipe_lk
-
-`include "unmacros.vh"
+endmodule : stk_pipe_wb

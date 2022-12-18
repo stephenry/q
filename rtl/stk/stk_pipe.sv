@@ -103,6 +103,10 @@ assign lk_dat_en = (lk_vld_w & lk_dat_vld_w);
 stk_pipe_lk u_stk_pipe_lk (
 //
   .i_lk_vld_r                 (lk_vld_r)
+, .i_lk_engid_r               (lk_engid_r)
+, .i_lk_opcode_r              (lk_opcode_r)
+, .i_lk_dat_vld_r             (lk_dat_vld_r)
+, .i_lk_dat_r                 (lk_dat_r)
 //
 , .i_lk_ptr                   (al_lk_ptr)
 //
@@ -124,6 +128,14 @@ stk_pipe_al u_stk_pipe_al (
 , .i_dealloc_ptr              ()
 //
 , .clk                        (clk)
+, .arst_n                     (arst_n)
+);
+
+// -------------------------------------------------------------------------- //
+//
+stk_pipe_wb u_stk_pipe_wb (
+//
+  .clk                        (clk)
 , .arst_n                     (arst_n)
 );
 
