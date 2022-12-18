@@ -262,7 +262,7 @@ assign active_w = (~active_clr) & (active_r | active_set);
 //
 
 assign deq_req_d [0] =
-  (~i_al_empty) & (~qpush_empty_r) & (active_r & qpush_pop_dat_engid_d == '0);
+  (~i_al_empty_r) & (~qpush_empty_r) & (active_r & qpush_pop_dat_engid_d == '0);
 
 assign deq_req_d [1] =
   (~qpop_empty_r) & (active_r & qpop_pop_dat_engid_d == '0);

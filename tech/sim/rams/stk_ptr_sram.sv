@@ -25,43 +25,32 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //========================================================================== //
 
-`ifndef Q_RTL_STK_STK_PKG_VH
-`define Q_RTL_STK_STK_PKG_VH
+module stk_ptr_sram (
+// -------------------------------------------------------------------------- //
+//
+  input wire logic [9:0]                             i_addr
+, input wire logic [9:0]                             i_din
+, input wire logic                                   i_ce
+, input wire logic                                   i_oe
+//
+, output wire logic [9:0]                            o_dout
 
-package stk_pkg;
+// -------------------------------------------------------------------------- //
+//
+, input wire logic                                   clk
+);
 
-localparam int OPCODE_W = 2;
-typedef enum logic [OPCODE_W - 1:0] {
-  OPCODE_NOP  = OPCODE_W('b00)
-, OPCODE_PUSH = OPCODE_W('b01)
-, OPCODE_POP  = OPCODE_W('b10)
-, OPCODE_INV  = OPCODE_W('b11)
-} opcode_t;
+// -------------------------------------------------------------------------- //
+//
+generic_sram_1rw #(.W(10), .N(1024)) mem (
+//
+  .addr                       (i_addr)
+, .din                        (i_din)
+, .ce                         (i_ce)
+, .oe                         (i_oe)
+, .dout                       (o_dout)
+//
+, .clk                        (clk)
+);
 
-logic ENGID_W = 3;
-typedef logic [ENGID_W - 1:0] engid_t;
-
-
-localparam int BANKS_N = 4;
-
-// Constant; to change, associated SRAM must be resized.
-localparam int C_BANK_LINES_N = 1024;
-
-localparam int BANK_W = $clog2(BANKS_N);
-
-typedef logic [BANK_W - 1:0] bank_id_t;
-
-localparam int BANK_LINE_OFFSET_W = $clog2(C_BANK_LINES_N);
-
-typedef logic [BANK_LINE_OFFSET_W - 1:0] line_id_t;
-
-typedef struct packed {
-  bank_id_t         bnk_id;
-  line_id_t         line_id;
-} ptr_t;
-
-localparam int PTR_W = $bits(ptr_t);
-
-endpackage // stk_pkg
-
-`endif
+endmodule : stk_ptr_sram
