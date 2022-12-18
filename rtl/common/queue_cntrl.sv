@@ -35,16 +35,16 @@ module queue_cntrl #(
 , parameter int            ADDR_W = $clog2(N)
 ) (
 // -------------------------------------------------------------------------- //
-// Dequeue
-  input wire logic                                   i_push
 // Enqueue
+  input wire logic                                   i_push
+// Dequeue
 , input wire logic                                   i_pop
 
-, output wire logic                                  o_wr_en
-, output wire logic [ADDR_W - 1:0]                   o_wr_addr
+, output wire logic                                  o_wen
+, output wire logic [ADDR_W - 1:0]                   o_wa
 
-, output wire logic                                  o_rd_en
-, output wire logic [ADDR_W - 1:0]                   o_rd_addr
+, output wire logic                                  o_ren
+, output wire logic [ADDR_W - 1:0]                   o_ra
 
 // -------------------------------------------------------------------------- //
 // Status:
@@ -57,8 +57,8 @@ module queue_cntrl #(
 , input wire logic                                   arst_n
 );
 
-`Q_DFFRE(logic [ADDR_W:0], rd_addr, 'b0, clk);
-`Q_DFFRE(logic [ADDR_W:0], wr_addr, 'b0, clk);
+`Q_DFFRE(logic [ADDR_W:0], ra, 'b0, clk);
+`Q_DFFRE(logic [ADDR_W:0], wa, 'b0, clk);
 
 // ========================================================================== //
 //                                                                            //
@@ -68,18 +68,18 @@ module queue_cntrl #(
 
 // -------------------------------------------------------------------------- //
 //
-assign wr_addr_w = i_push ? (wr_addr_r + 'b1) : wr_addr_r;
+assign wa_w = i_push ? (wa_r + 'b1) : wa_r;
 
-assign rd_addr_w = i_pop ? (rd_addr_r + 'b1) : rd_addr_r;
-
-// -------------------------------------------------------------------------- //
-//
-assign o_full_w = (rd_addr_w [ADDR_W] ^ wr_addr_w [ADDR_W]) &
-                  (rd_addr_w [ADDR_W - 1:0] == wr_addr_w [ADDR_W - 1:0]);
+assign ra_w = i_pop ? (ra_r + 'b1) : ra_r;
 
 // -------------------------------------------------------------------------- //
 //
-assign o_empty_w = (rd_addr_w == wr_addr_w);
+assign o_full_w = (ra_w [ADDR_W] ^ wa_w [ADDR_W]) &
+                  (ra_w [ADDR_W - 1:0] == wa_w [ADDR_W - 1:0]);
+
+// -------------------------------------------------------------------------- //
+//
+assign o_empty_w = (ra_w == wa_w);
 
 // ========================================================================== //
 //                                                                            //
@@ -87,11 +87,11 @@ assign o_empty_w = (rd_addr_w == wr_addr_w);
 //                                                                            //
 // ========================================================================== //
 
-assign o_wr_en = i_push;
-assign o_rd_en = i_pop;
+assign o_wen = i_push;
+assign o_ren = i_pop;
 
-assign o_wr_addr = wr_addr_r;
-assign o_rd_addr = rd_addr_r;
+assign o_wa = wa_r;
+assign o_ra = ra_r;
 
 endmodule : queue_cntrl
 

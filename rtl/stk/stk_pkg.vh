@@ -30,10 +30,19 @@
 
 package stk_pkg;
 
-typedef enum logic [1:0] {
-  OPCODE_PUSH = 2'b01
-, OPCODE_POP  = 2'b10
+localparam int OPCODE_W = 2;
+typedef enum logic [OPCODE_W - 1:0] {
+  OPCODE_NOP  = OPCODE_W('b00)
+, OPCODE_PUSH = OPCODE_W('b01)
+, OPCODE_POP  = OPCODE_W('b10)
+, OPCODE_INV  = OPCODE_W('b11)
 } opcode_t;
+
+logic ENGID_W = 3;
+typedef logic [ENGID_W - 1:0] engid_t;
+
+// TODO: figure out size.
+typedef logic [200:0] ptr_t;
 
 endpackage // stk_pkg
 

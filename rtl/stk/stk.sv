@@ -32,6 +32,15 @@
 `include "stk/stk_pkg.vh"
 
 module stk (
+// -------------------------------------------------------------------------- //
+  input wire stk_pkg::opcode_t [cfg_pkg::ENGS_N - 1:0]
+                                                  i_cmd_opcode
+, input wire logic [cfg_pkg::ENGS_N - 1:0][127:0] i_cmd_dat
+//
+, output wire logic                               o_cmd_ack
+//
+, output wire logic                               o_rsp_vld
+, output wire logic [127:0]                       o_rsp_dat
 
 // -------------------------------------------------------------------------- //
 // Clk/Reset
@@ -45,5 +54,19 @@ module stk (
 //                                                                            //
 // ========================================================================== //
 
+// -------------------------------------------------------------------------- //
+//
+stk_pipe u_stk_pipe (
+//
+  .i_cmd_vld                  (i_cmd_vld)
+, .i_cmd_push                 (i_cmd_push)
+, .i_cmd_pop                  (i_cmd_pop)
+, .i_cmd_dat                  (i_cmd_dat)
+//
+, .o_rsp_vld                  (o_rsp_vld)
+//
+, .clk                        (clk)
+, .arst_n                     (arst_n)
+);
 
 endmodule : stk

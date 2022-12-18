@@ -31,7 +31,7 @@
 
 package cfg_pkg;
 
-parameter int ENGINES_N = @Q_ENGINES_N@;
+parameter int ENGS_N = @Q_ENGINES_N@;
 
 parameter int CONTEXTS_N = @Q_CONTEXTS_N@;
 

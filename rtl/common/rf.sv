@@ -47,14 +47,15 @@ module rf #(
 
 // -------------------------------------------------------------------------- //
 // Read ports
-  input wire logic [RD_N - 1:0][$clog2(N) - 1:0]      i_rd_ra
+  input wire logic [RD_N - 1:0][$clog2(N) - 1:0]      i_ra
 //
-, output wire logic [RD_N - 1:0][W - 1:0]             o_rd_data
+, output wire logic [RD_N - 1:0][W - 1:0]             o_rdata
 
 // -------------------------------------------------------------------------- //
 // Write ports
-, input wire logic [RD_N - 1:0][$clog2(N) - 1:0]      i_wr_wa
-, input wire logic [RD_N - 1:0][W - 1:0]              i_wr_data
+, input wire logic [RD_N - 1:0]                       i_wen
+, input wire logic [RD_N - 1:0][$clog2(N) - 1:0]      i_wa
+, input wire logic [RD_N - 1:0][W - 1:0]              i_wdata
 
 // -------------------------------------------------------------------------- //
 //
@@ -67,7 +68,7 @@ logic [N - 1:0][WR_N - 1:0]            wr_port_sel;
 
 // Read port signals:
 logic [RD_N - 1:0][N - 1:0]            rd_sel;
-logic [N - 1:0][W - 1:0]               rd_data;
+logic [N - 1:0][W - 1:0]               rdata;
 
 logic [N - 1:0]                        flop_clk;
 logic [N - 1:0][W - 1:0]               flop_w;
@@ -84,7 +85,7 @@ logic [N - 1:0]                        flop_en;
 //
 for (genvar wr = 0; wr < WR_N; wr++) begin : write_dec_GEN
 
-dec #(.N(WR_N), .W) u_wr_dec (.o_y(wr_sel [wr]), .i_x(i_rd_ra [wr]));
+dec #(.N(WR_N), .W) u_wr_dec (.o_y(wr_sel [wr]), .i_x(i_wa [wr]));
 
 end : write_dec_GEN
 
@@ -94,9 +95,7 @@ for (genvar n = 0; n < N; n++) begin : write_sel_word_GEN
 
 for (genvar wr = 0; wr < WR_N; wr++) begin : write_sel_port_GEN
 
-// TODO(stephenry): indice swapping probably redundant here if different
-// indexing is used [offset + i * stride] = [n + i * N];
-assign wr_port_sel [n][wr] = rd_ra_d [wr][n];
+assign wr_port_sel [n][wr] = (i_wen [wr] & ra_d [wr][n]);
 
 end : write_sel_port_GEN
 
@@ -107,7 +106,7 @@ end : write_sel_word_GEN
 for (genvar n = 0; n < N; n++) begin : write_GEN
 
 mux #(.N(WR_N), .W) u_mux (
-  .i_x(i_wr_data), .i_sel(wr_port_sel [n]), .o_y(flop_w [n])
+  .i_x(i_wdata), .i_sel(wr_port_sel [n]), .o_y(flop_w [n])
 );
 
 assign flop_en [j] = (wr_port_sel [n] != '0);
@@ -148,11 +147,11 @@ end : flop_GEN
 for (genvar rd = 0; rd < RD_PORTS_N; rd++) begin : read_GEN
 
 // Read address decoder
-dec #(.N) u_rd_dec (.o_y(rd_sel [rd]), .i_x(i_rd_ra [rd]));
+dec #(.N) u_rd_dec (.o_y(rd_sel [rd]), .i_x(i_ra [rd]));
 
 // Read word-select mux.
 mux #(.N, .W) u_rd_mux (
-  .i_x(flop_r), .i_sel(rd_sel [rd]), .o_y(rd_data [rd])
+  .i_x(flop_r), .i_sel(rd_sel [rd]), .o_y(rdata [rd])
 );
 
 end : read_GEN
@@ -165,6 +164,6 @@ end : read_GEN
 
 // -------------------------------------------------------------------------- //
 //
-assign o_rd_data = rd_data;
+assign o_rdata = rd_data;
 
 endmodule : rf
