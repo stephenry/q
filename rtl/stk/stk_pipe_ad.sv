@@ -50,10 +50,10 @@ module stk_pipe_ad (
 
 // -------------------------------------------------------------------------- //
 // Allocation Interface:
-, input wire logic                                i_al_empty
+, input wire logic                                i_al_empty_r
 , input wire logic                                i_al_busy
 //
-, output wire logic                               o_al_alloc_req
+, output wire logic                               o_al_alloc
 
 // -------------------------------------------------------------------------- //
 // Response Interface:
@@ -69,26 +69,27 @@ typedef struct packed {
   logic [$clog2(cfg_pkg::ENGS_N) - 1:0]    id;
   logic [127:0]                            dat;
 } qpush_t;
-localparam int QUEUE_W = $bits(queue_t);
+localparam int QPUSH_W = $bits(qpush_t);
 
 // Command Logic:
 //
-logic                                   cmd_is_push;
-logic                                   cmd_is_pop;
-logic                                   cmd_is_inv;
+logic [cfg_pkg::ENGS_N - 1:0]           cmd_vld;
+logic [cfg_pkg::ENGS_N - 1:0]           cmd_is_push;
+logic [cfg_pkg::ENGS_N - 1:0]           cmd_is_pop;
+logic [cfg_pkg::ENGS_N - 1:0]           cmd_is_inv;
 logic                                   cmd_ack;
 
 // Enqueue logic:
 //
 logic [cfg_pkg::ENGS_N - 1:0]           enq_req_d;
 logic [cfg_pkg::ENGS_N - 1:0]           enq_gnt_d;
-stk_pkg::engid_t                        eng_gnt;
+stk_pkg::engid_t                        enq_gnt;
 logic                                   enq_ack;
 
 // "Push" Command Queue:
 //
 logic                                   qpush_push;
-logic [127:0]                           qpush_push_dat_dat
+logic [127:0]                           qpush_push_dat_dat;
 logic                                   qpush_pop;
 qpush_t                                 qpush_push_dat;
 qpush_t                                 qpush_pop_dat;
@@ -117,7 +118,7 @@ stk_pkg::engid_t                        qinv_push_dat;
 //
 logic                                   active_set;
 logic                                   active_clr;
-`Q_DFFR(logic [cfg_pkg::ENGS_N - 1:0], active_id, '0, clk);
+`Q_DFFR(logic [cfg_pkg::ENGS_N - 1:0], active, '0, clk);
 
 // Dequeue logic:
 //
@@ -128,23 +129,25 @@ logic                                   deq_ack;
 // Output logic:
 logic                                   lk_vld;
 stk_pkg::engid_t                        lk_engid;
+logic [stk_pkg::ENGID_W - 1:0]          lk_engid_d;
 stk_pkg::opcode_t                       lk_opcode;
 logic                                   lk_dat_vld;
 logic [127:0]                           lk_dat;
 
 // -------------------------------------------------------------------------- //
 // Command decoder:
-for (genvar i = 0; i < cfg_pkg::ENGS_N; i++) begin : cmd_decoder
+for (genvar ch = 0; ch < cfg_pkg::ENGS_N; ch++) begin : cmd_decoder
 
-assign cmd_is_push = (i_cmd_opcode [i] == stk_pkg::OPCODE_PUSH);
-assign cmd_is_pop = (i_cmd_opcode [i] == stk_pkg::OPCODE_POP);
-assign cmd_is_inv = (i_cmd_opcode [i] == stk_pkg::OPCODE_INV);
+assign cmd_vld [ch] = (i_cmd_opcode [ch] != stk_pkg::OPCODE_NOP);
+assign cmd_is_push [ch] = (i_cmd_opcode [ch] == stk_pkg::OPCODE_PUSH);
+assign cmd_is_pop [ch] = (i_cmd_opcode [ch] == stk_pkg::OPCODE_POP);
+assign cmd_is_inv [ch] = (i_cmd_opcode [ch] == stk_pkg::OPCODE_INV);
 
 end : cmd_decoder
 
 // -------------------------------------------------------------------------- //
 
-assign enq_req_d = i_cmd_vld &
+assign enq_req_d = cmd_vld &
   ((cmd_is_push & {cfg_pkg::ENGS_N{~qpush_full_r}}) |
    (cmd_is_pop  & {cfg_pkg::ENGS_N{~qpop_full_r}}));
 
@@ -174,9 +177,9 @@ mux #(.N(cfg_pkg::ENGS_N), .W(128)) u_enq_mux (
   .i_x(i_cmd_dat), .i_sel(enq_gnt_d), .o_y(qpush_push_dat_dat)
 );
 
-assign qpush_push_dat = '{id:enq_gnt, dat:qpush_dat_dat};
+assign qpush_push_dat = '{id:enq_gnt, dat:qpush_push_dat_dat};
 
-queue_rf #(.N(2), .W(QUEUE_W)) u_qpush (
+queue_rf #(.N(2), .W(QPUSH_W)) u_qpush (
 //
   .i_push                     (qpush_push)
 , .i_push_dat                 (qpush_push_dat)
@@ -254,7 +257,7 @@ stk_pipe_ad_inv u_stk_pipe_ad_inv (
 
 dec #(.W(stk_pkg::ENGID_W)) u_dec (.i_x(lk_engid), .o_y(lk_engid_d));
 
-assign active_set = (lk_engid_d & {stk_pkg:ENGS_N{lk_vld}});
+assign active_set = (lk_engid_d & {cfg_pkg::ENGS_N{lk_vld}});
 assign active_clr = i_rsp_vld;
 assign active_w = (~active_clr) & (active_r | active_set);
 
@@ -293,12 +296,12 @@ assign qpop_pop = deq_ack & deq_gnt_d [1];
 assign lk_vld = deq_ack;
 
 assign lk_engid =
-    ({stk_pkg::ENGID_W{deq_gnt[0]}} & qpush_pop_dat.id)
-  | ({stk_pkg::ENGID_W{deq_gnt[1]}} & qpop_pop_dat);
+    ({stk_pkg::ENGID_W{deq_gnt_d[0]}} & qpush_pop_dat.id)
+  | ({stk_pkg::ENGID_W{deq_gnt_d[1]}} & qpop_pop_dat);
 
 assign lk_opcode =
-    ({stk_pkg::OPCODE_W{deq_gnt[0]}} & stk_pkg::OPCODE_PUSH)
-  | ({stk_pkg::OPCODE_W{deq_gnt[1]}} & stk_pkg::OPCODE_POP);
+    ({stk_pkg::OPCODE_W{deq_gnt_d[0]}} & stk_pkg::OPCODE_PUSH)
+  | ({stk_pkg::OPCODE_W{deq_gnt_d[1]}} & stk_pkg::OPCODE_POP);
 
 assign lk_dat_vld = lk_vld & (lk_opcode == stk_pkg::OPCODE_PUSH);
 
@@ -317,7 +320,7 @@ assign o_cmd_ack = cmd_ack;
 assign o_lk_vld_w = lk_vld;
 assign o_lk_engid_w = lk_engid;
 assign o_lk_opcode_w = lk_opcode;
-assgin o_lk_dat_vld_w = lk_dat_vld;
+assign o_lk_dat_vld_w = lk_dat_vld;
 assign o_lk_dat_w = lk_dat;
 
 endmodule : stk_pipe_ad

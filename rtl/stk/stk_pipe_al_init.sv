@@ -119,9 +119,9 @@ assign init_waddr_en = (st_busy | st_idle);
 // Address update; zero in IDLE state, otherwise always increment.
 assign init_waddr_w  = st_idle ? '0 : (init_waddr_r + 'b1);
 
-localparam int FINAL_ADDRESS = N - 1;
+localparam int LAST_ADDR = stk_pkg::C_BANK_LINES_N - 1;
 
-assign init_waddr_is_final = (init_waddr_r == FINAL_ADDRESS[$clog2(N) - 1:0]);
+assign init_waddr_is_final = (init_waddr_r == stk_pkg::line_id_t'(LAST_ADDR));
 
 assign init_wen_w = (fsm_state_w == FSM_STATE_BUSY);
 

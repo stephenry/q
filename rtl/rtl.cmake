@@ -47,6 +47,7 @@ set(RTL_SOURCES
     "${SRC_ROOT}/eng/eng_pipe_fa.sv"
     "${SRC_ROOT}/eng/eng_pipe.sv"
     "${SRC_ROOT}/dc/dc.sv"
+    "${SRC_ROOT}/stk/stk_pipe_al_init.sv"
     "${SRC_ROOT}/stk/stk_pipe_al.sv"
     "${SRC_ROOT}/stk/stk_pipe_lk.sv"
     "${SRC_ROOT}/stk/stk_pipe_ad_inv.sv"

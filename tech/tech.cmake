@@ -29,7 +29,8 @@ set(TECH_ROOT "${CMAKE_SOURCE_DIR}/tech")
 
 
 set(TECH_SOURCES
-  "${TECH_ROOT}/${TARGET}/rams/stk_ptr_sram.sv"
+  "${TECH_ROOT}/${TARGET}/rams/stk_pipe_al_ptr_sram.sv"
+  "${TECH_ROOT}/${TARGET}/generic_sram_1rw.sv"
   "${TECH_ROOT}/${TARGET}/icg.sv"
   "${TECH_ROOT}/${TARGET}/dff.sv"
   "${TECH_ROOT}/${TARGET}/dffe.sv"

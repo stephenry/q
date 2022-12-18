@@ -44,9 +44,7 @@ module rr #(
 , input wire logic                                   arst_n
 );
 
-localparam int PTR_W = $clog2(W);
-
-`Q_DFFRE(logic [PTR_W - 1:0], ptr, 'b0, clk);
+`Q_DFFR(logic [$clog2(W) - 1:0], ptr, 'b0, clk);
 logic [W - 1:0] ptr_dec;
 logic [W - 1:0] mask_lsb;
 logic [W - 1:0] req_masked_lsb;
@@ -54,8 +52,9 @@ logic [W - 1:0] mask_msb;
 logic [W - 1:0] req_masked_msb;
 logic [W - 1:0] sel_lsb;
 logic [W - 1:0] sel_msb;
+logic [W - 1:0] gnt;
 logic [W - 1:0] gnt_nxt;
-logic [W - 1:0] gnt_nxt_enc;
+logic [$clog2(W) - 1:0] gnt_nxt_enc;
 
 // ========================================================================== //
 //                                                                            //
@@ -74,25 +73,25 @@ dec #(.W) u_ptr_dec (.i_x(ptr_r), .o_y(ptr_dec));
 // -------------------------------------------------------------------------- //
 // Compute LSB-oriented selection bitmap
 mask #(.W, .TOWARDS_LSB(1'b1)) u_left_lsb (
-, .i_x(ptr_dec), .o_y(mask_lsb)
+  .i_x(ptr_dec), .o_y(mask_lsb)
 );
 
 assign req_masked_lsb = i_req & mask_lsb;
 
 pri #(.W, .FROM_LSB(1'b1)) u_sel_lsb_pri (
-, .i_x(req_masked_lsb), .o_y(sel_lsb)
+  .i_x(req_masked_lsb), .o_y(sel_lsb)
 );
 
 // -------------------------------------------------------------------------- //
 // Compute MSB-oriented selection bitmap
 mask #(.W, .TOWARDS_LSB(1'b0), .INCLUSIVE(1'b1)) u_left_msb (
-, .i_x(ptr_dec), .o_y(mask_msb)
+  .i_x(ptr_dec), .o_y(mask_msb)
 );
 
 assign req_masked_msb = i_req & mask_msb;
 
 pri #(.W, .FROM_LSB(1'b1)) u_sel_msb_pri (
-, .i_x(req_masked_msb), .o_y(sel_msb)
+  .i_x(req_masked_msb), .o_y(sel_msb)
 );
 
 // -------------------------------------------------------------------------- //

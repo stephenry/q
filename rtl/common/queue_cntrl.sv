@@ -57,8 +57,8 @@ module queue_cntrl #(
 , input wire logic                                   arst_n
 );
 
-`Q_DFFRE(logic [ADDR_W:0], ra, 'b0, clk);
-`Q_DFFRE(logic [ADDR_W:0], wa, 'b0, clk);
+`Q_DFFR(logic [ADDR_W:0], ra, 'b0, clk);
+`Q_DFFR(logic [ADDR_W:0], wa, 'b0, clk);
 
 // ========================================================================== //
 //                                                                            //
@@ -90,8 +90,8 @@ assign o_empty_w = (ra_w == wa_w);
 assign o_wen = i_push;
 assign o_ren = i_pop;
 
-assign o_wa = wa_r;
-assign o_ra = ra_r;
+assign o_wa = wa_r [ADDR_W - 1:0];
+assign o_ra = ra_r [ADDR_W - 1:0];
 
 endmodule : queue_cntrl
 

@@ -58,8 +58,7 @@ module stk (
 //
 stk_pipe u_stk_pipe (
 //
-  .i_cmd_vld                  (i_cmd_vld)
-, .i_cmd_opcode               (i_cmd_opcode)
+  .i_cmd_opcode               (i_cmd_opcode)
 , .i_cmd_dat                  (i_cmd_dat)
 , .o_cmd_ack                  (o_cmd_ack)
 //

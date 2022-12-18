@@ -68,8 +68,7 @@ module q (
 //
 stk u_stk (
 //
-  .i_cmd_vld                 ()
-, .i_cmd_opcode              ()
+  .i_cmd_opcode              ()
 , .i_cmd_dat                 ()
 //
 , .o_cmd_ack                 ()

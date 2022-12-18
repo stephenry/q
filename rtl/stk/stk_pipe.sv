@@ -53,7 +53,7 @@ module stk_pipe (
 // AD <-> AL
 logic                         al_ad_empty_r;
 logic                         al_ad_busy;
-logic                         ad_al_alloc_req;
+logic                         ad_al_alloc;
 
 // -------------------------------------------------------------------------- //
 // AD -> LK
@@ -75,8 +75,7 @@ stk_pkg::ptr_t                al_lk_ptr;
 //
 stk_pipe_ad u_stk_pipe_ad (
 //
-  .i_cmd_vld                  (i_cmd_vld)
-, .i_cmd_push                 (i_cmd_opcode)
+  .i_cmd_opcode               (i_cmd_opcode)
 , .i_cmd_dat                  (i_cmd_dat)
 , .o_cmd_ack                  (o_cmd_ack)
 //
@@ -88,7 +87,7 @@ stk_pipe_ad u_stk_pipe_ad (
 //
 , .i_al_empty_r               (al_ad_empty_r)
 , .i_al_busy                  (al_ad_busy)
-, .o_al_alloc_req             (ad_al_alloc_req)
+, .o_al_alloc                 (ad_al_alloc)
 //
 , .i_rsp_vld                  (o_rsp_vld)
 //
@@ -118,7 +117,7 @@ stk_pipe_lk u_stk_pipe_lk (
 //
 stk_pipe_al u_stk_pipe_al (
 //
-  .i_ad_alloc_req             (ad_al_alloc_req)
+  .i_ad_alloc                 (ad_al_alloc)
 , .o_ad_empty_r               (al_ad_empty_r)
 , .o_ad_busy                  (al_ad_busy)
 //

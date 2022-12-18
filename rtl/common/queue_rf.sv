@@ -42,7 +42,7 @@ module queue_rf #(
 // -------------------------------------------------------------------------- //
 // Dequeue
 , input wire logic                                   i_pop
-, input wire logic [W - 1:0]                         o_pop_dat
+, output wire logic [W - 1:0]                        o_pop_dat
 
 // -------------------------------------------------------------------------- //
 // Status:

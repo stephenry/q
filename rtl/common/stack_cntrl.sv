@@ -55,11 +55,14 @@ module stack_cntrl #(
 );
 
 localparam int FIRST_ENTRY = 0;
-localparam int LAST_ENTRY = N - 1;
+localparam int LAST_ENTRY = (N - 1);
 
-`Q_DFFRE(logic, empty, 1'b1, clk);
-`Q_DFFRE(logic, full, 1'b0, clk);
-`Q_DFFRE(logic [ADDR_W - 1:0], ptr, 'b0, clk);
+logic                        empty_en;
+`Q_DFFRE(logic, empty, empty_en, 1'b1, clk);
+logic                        full_en;
+`Q_DFFRE(logic, full, full_en, 1'b0, clk);
+logic                        ptr_en;
+`Q_DFFRE(logic [ADDR_W - 1:0], ptr, ptr_en, 'b0, clk);
 logic                        state_upt;
 
 // ========================================================================== //
@@ -78,7 +81,7 @@ assign state_upt = (i_push | i_pop);
 //
 assign empty_en = state_upt;
 assign empty_w = (empty_r & (~i_push))                                // (1)
-               | (i_pop & (rd_addr_r == FIRST_ENTRY[ADDR_W - 1:0]));  // (2)
+               | (i_pop & (ptr_r == FIRST_ENTRY[ADDR_W - 1:0]));      // (2)
 
 // -------------------------------------------------------------------------- //
 // Full cleared on pop from full state (1); set on push to N'th (final)
@@ -86,7 +89,7 @@ assign empty_w = (empty_r & (~i_push))                                // (1)
 //
 assign full_en = state_upt;
 assign full_w = (full_r & (~i_pop))                                  // (1)
-              | (i_push & (wr_ptr_r == LAST_ENTRY[ADDR_W - 1:0]));   // (2)
+              | (i_push & (ptr_r == LAST_ENTRY[ADDR_W - 1:0]));      // (2)
 
 // -------------------------------------------------------------------------- //
 //

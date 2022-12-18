@@ -32,13 +32,13 @@ package stk_pkg;
 
 localparam int OPCODE_W = 2;
 typedef enum logic [OPCODE_W - 1:0] {
-  OPCODE_NOP  = OPCODE_W('b00)
-, OPCODE_PUSH = OPCODE_W('b01)
-, OPCODE_POP  = OPCODE_W('b10)
-, OPCODE_INV  = OPCODE_W('b11)
+  OPCODE_NOP  = OPCODE_W'('b00)
+, OPCODE_PUSH = OPCODE_W'('b01)
+, OPCODE_POP  = OPCODE_W'('b10)
+, OPCODE_INV  = OPCODE_W'('b11)
 } opcode_t;
 
-logic ENGID_W = 3;
+localparam ENGID_W = 3;
 typedef logic [ENGID_W - 1:0] engid_t;
 
 

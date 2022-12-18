@@ -63,12 +63,12 @@ module rf #(
 );
 
 // Write port signals:
-logic [WR_N - 1:0][N - 1:0]            wr_sel;
+logic [WR_N - 1:0][N - 1:0]            wa_d;
 logic [N - 1:0][WR_N - 1:0]            wr_port_sel;
 
 // Read port signals:
 logic [RD_N - 1:0][N - 1:0]            rd_sel;
-logic [N - 1:0][W - 1:0]               rdata;
+logic [RD_N - 1:0][W - 1:0]            rdata;
 
 logic [N - 1:0]                        flop_clk;
 logic [N - 1:0][W - 1:0]               flop_w;
@@ -85,7 +85,7 @@ logic [N - 1:0]                        flop_en;
 //
 for (genvar wr = 0; wr < WR_N; wr++) begin : write_dec_GEN
 
-dec #(.N(WR_N), .W) u_wr_dec (.o_y(wr_sel [wr]), .i_x(i_wa [wr]));
+dec #(.W(N)) u_wr_dec (.i_x(i_wa [wr]), .o_y(wa_d [wr]));
 
 end : write_dec_GEN
 
@@ -95,7 +95,7 @@ for (genvar n = 0; n < N; n++) begin : write_sel_word_GEN
 
 for (genvar wr = 0; wr < WR_N; wr++) begin : write_sel_port_GEN
 
-assign wr_port_sel [n][wr] = (i_wen [wr] & ra_d [wr][n]);
+assign wr_port_sel [n][wr] = (i_wen [wr] & wa_d [wr][n]);
 
 end : write_sel_port_GEN
 
@@ -109,7 +109,7 @@ mux #(.N(WR_N), .W) u_mux (
   .i_x(i_wdata), .i_sel(wr_port_sel [n]), .o_y(flop_w [n])
 );
 
-assign flop_en [j] = (wr_port_sel [n] != '0);
+assign flop_en [n] = (wr_port_sel [n] != '0);
 
 end : write_GEN
 
@@ -130,7 +130,7 @@ icg u_wordn_icg (
 );
 
 // RF state word 'N'
-dffen #(.W) u_wordn_dffen (
+dffe #(.W) u_wordn_dffe (
   .d(flop_w[n]), .en(flop_en[n]), .q(flop_r[n]), .clk(flop_clk [n])
 );
 
@@ -144,10 +144,10 @@ end : flop_GEN
 
 // -------------------------------------------------------------------------- //
 //
-for (genvar rd = 0; rd < RD_PORTS_N; rd++) begin : read_GEN
+for (genvar rd = 0; rd < RD_N; rd++) begin : read_GEN
 
 // Read address decoder
-dec #(.N) u_rd_dec (.o_y(rd_sel [rd]), .i_x(i_ra [rd]));
+dec #(.W(N)) u_rd_dec (.i_x(i_ra [rd]), .o_y(rd_sel [rd]));
 
 // Read word-select mux.
 mux #(.N, .W) u_rd_mux (
@@ -164,6 +164,6 @@ end : read_GEN
 
 // -------------------------------------------------------------------------- //
 //
-assign o_rdata = rd_data;
+assign o_rdata = rdata;
 
 endmodule : rf

@@ -54,10 +54,11 @@ module stk_pipe_al (
 
 // Initialization Logic
 //
+`Q_DFFR(logic, reset_init, 1'b1, clk);
+logic                                        init;
 logic                                        init_wen_r;
 stk_pkg::line_id_t                           init_waddr_r;
 stk_pkg::line_id_t                           init_wdata_r;
-`Q_DFFR(logic, reset_init, 1'b1, clk);
 
 // Descriptor Return Logic
 //
@@ -133,8 +134,9 @@ assign stk_collision = (i_ad_alloc & i_dealloc_vld);
 
 assign stk_bnk_popsel_req_d =
     (~stk_bnk_empty_r)                                                // (1)
-  & ({stk_pkg::BANKS_N{~stk_collision}})                              // (2)
-  & ({stk_pkg::BANKS_N{~i_dealloc_vld} | (~dealloc_ptr_bnk_id_d));    // (3)
+  & ({stk_pkg::BANKS_N{~i_dealloc_vld}} | (~dealloc_ptr_bnk_id_d));   // (2)
+
+assign stk_bnk_popsel_ack = 'b0;
 
 rr #(.W(stk_pkg::BANKS_N)) u_rr (
 //
@@ -146,18 +148,18 @@ rr #(.W(stk_pkg::BANKS_N)) u_rr (
 , .arst_n                     (arst_n)
 );
 
-for (genvar bnk = 0; bnk < stk_pkg::BANKS_N: bnk++) begin : stack_logical_GEN
+for (genvar bnk = 0; bnk < stk_pkg::BANKS_N; bnk++) begin : stack_logical_GEN
 
 assign stk_bnk_push = init_wen_r                                      // (1)
                     | (i_dealloc_vld & dealloc_ptr_bnk_id_d [bnk]);   // (2)
 
 assign stk_bnk_pop = stk_bnk_popsel_gnt_d;
 
-endfor : stack_logical_GEN
+end : stack_logical_GEN
 
 // -------------------------------------------------------------------------- //
 //
-for (genvar bnk = 0; bnk < stk_pkg::BANKS_N: bnk++) begin : stack_cntrl_GEN
+for (genvar bnk = 0; bnk < stk_pkg::BANKS_N; bnk++) begin : stack_cntrl_GEN
 
 stack_cntrl #(.N(stk_pkg::C_BANK_LINES_N)) u_stack_cntrl (
 //
@@ -181,7 +183,7 @@ assign ad_empty_w = (stk_bnk_empty_w != '1);
 
 // -------------------------------------------------------------------------- //
 //
-for (genvar bnk = 0; bnk < stk_pkg::BANKS_N: bnk++) begin : mem_wires_GEN
+for (genvar bnk = 0; bnk < stk_pkg::BANKS_N; bnk++) begin : mem_wires_GEN
 
 assign mem_addr [bnk] =
   init_wen_r ? init_waddr_r : stk_bnk_mem_addr [bnk];
@@ -197,9 +199,9 @@ end : mem_wires_GEN
 
 // -------------------------------------------------------------------------- //
 //
-for (genvar bnk = 0; bnk < stk_pkg::BANKS_N: bnk++) begin : stack_mem_GEN
+for (genvar bnk = 0; bnk < stk_pkg::BANKS_N; bnk++) begin : stack_mem_GEN
 
-stk_ptr_sram u_stk_ptr_sram (
+stk_pipe_al_ptr_sram u_stk_pipe_al_ptr_sram (
 //
   .i_addr                     (mem_addr [bnk])
 , .i_din                      (mem_din [bnk])
