@@ -74,13 +74,15 @@ public:
   std::uint64_t tb_time() const { return tb_time_; }
   std::uint64_t tb_cycle() const { return 0; }
 
-  bool run(KernelCallBack& cb) {
+  bool run(KernelCallBack* cb) {
+    if (!cb) return false;
+
     tb_time_ = 0;
 
     // Drive all interfaces to a quiescent state.
     Driver::clk(vtb(), false);
     Driver::arst_n(vtb(), true);
-    cb.idle();
+    cb->idle();
 
     enum class ResetState {
       PreReset, InReset, PostReset
@@ -126,12 +128,12 @@ public:
     return failed;
   }
 
-  bool eval_clock_edge(KernelCallBack& cb, bool edge) {
+  bool eval_clock_edge(KernelCallBack* cb, bool edge) {
     bool do_stepping;
     if (edge) {
-      do_stepping = cb.on_negedge_clk();
+      do_stepping = cb->on_negedge_clk();
     } else {
-      do_stepping = cb.on_posedge_clk();
+      do_stepping = cb->on_posedge_clk();
     }
     return do_stepping;
   }

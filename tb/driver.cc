@@ -28,6 +28,7 @@
 #include "cfg.h"
 #include "sim.h"
 #include "test.h"
+#include "rnd.h"
 #include "tb_stk/tb_stk.h"
 #include <iostream>
 #include <vector>
@@ -55,6 +56,7 @@ private:
   void print_usage(std::ostream& os) const;
 
   TestRegistry tr_;
+  Random rnd_;
 };
 
 Driver::Driver(int argc, const char** argv) {
@@ -64,6 +66,7 @@ Driver::Driver(int argc, const char** argv) {
 
 void Driver::init_environment() {
   tb_stk::init(tr_);
+  Globals::random = std::addressof(rnd_);
 }
 
 void Driver::parse_args(int argc, const char** argv) {
@@ -73,6 +76,9 @@ void Driver::parse_args(int argc, const char** argv) {
     if (is_one_of(argstr, "-h", "--help")) {
       print_usage(std::cout);
       std::exit(1);
+    } else if (is_one_of(argstr, "-s", "--seed")) {
+      const std::string sstr{vs.at(++i)};
+      Globals::random->seed(std::stoi(sstr));
     } else if (is_one_of(argstr, "--vcd")) {
       // --vcd: emit VCD of simulation.
 #ifdef ENABLE_VCD
@@ -107,6 +113,8 @@ void Driver::print_usage(std::ostream& os) const {
   os << "Usage is:\n"
      << "   -h|--help         Print help and quit.\n"
      << "   -t|--test         Select testcase.\n"
+     << "   -s|--seed         Randomization seed.\n"
+     << "      --vcd          Trace VCD waveform.\n"
     ;
 }
 

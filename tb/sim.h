@@ -29,8 +29,10 @@
 #define Q_TB_SIM_H
 
 #include <string>
+#include <memory>
 
 class TestFactory;
+class Random;
 
 struct Globals {
 
@@ -39,6 +41,8 @@ struct Globals {
   inline static std::string vcd_fn = "q.vcd";
 
   inline static TestFactory* test_factory = nullptr;
+
+  inline static Random* random = nullptr;
 
 };
 

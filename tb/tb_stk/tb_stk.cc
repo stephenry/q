@@ -27,10 +27,14 @@
 
 #include "tb_stk/tb_stk.h"
 #include "tb_stk/Vobj/Vtb_stk.h"
+#include "rnd.h"
 #include "test.h"
 #include "tb.h"
+#include <exception>
 
 namespace {
+
+using namespace tb_stk;
 
 struct StkDriver {
 
@@ -48,6 +52,26 @@ struct StkDriver {
 
   static bool arst_n(Vtb_stk* uut) {
     return VSupport::logic(&uut->arst_n);
+  }
+
+  static CData& cmd_opcode(Vtb_stk* uut, std::size_t ch) {
+    switch (ch) {
+    case 0: return uut->i_cmd0_opcode;
+    case 1: return uut->i_cmd1_opcode;
+    case 2: return uut->i_cmd2_opcode;
+    case 3: return uut->i_cmd3_opcode;
+    }
+    throw std::invalid_argument("ch is out of range");
+  }
+
+  static VlWide<4>& cmd_dat(Vtb_stk* uut, std::size_t ch) {
+    switch (ch) {
+    case 0: return uut->i_cmd0_dat;
+    case 1: return uut->i_cmd1_dat;
+    case 2: return uut->i_cmd2_dat;
+    case 3: return uut->i_cmd3_dat;
+    }
+    throw std::invalid_argument("ch is out of range");
   }
 
 };
@@ -83,8 +107,8 @@ public:
 
   bool run() override {
     StkTestCallBack cb{k_.vtb()};
-    cb.cycles(100);
-    return k_.run(cb);
+    cb.cycles(1 << 11);
+    return k_.run(&cb);
   }
 
 private:

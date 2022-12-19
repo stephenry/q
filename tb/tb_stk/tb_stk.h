@@ -35,7 +35,7 @@ class TestRegistry;
 
 namespace tb_stk {
 
-enum class Opcode {
+enum class Opcode : CData {
   Nop    = 0b00,
   Push   = 0b01,
   Pop    = 0b10,

@@ -155,7 +155,7 @@ assign stk_bnk_push [bnk] =
     init_wen_r                                              // (1)
   | (i_dealloc_vld & dealloc_ptr_bnk_id_d [bnk]);           // (2)
 
-assign stk_bnk_pop = stk_bnk_popsel_gnt_d;
+assign stk_bnk_pop = {stk_pkg::BANKS_N{i_ad_alloc}} & stk_bnk_popsel_gnt_d;
 
 end : stack_logical_GEN
 
