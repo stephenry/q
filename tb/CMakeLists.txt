@@ -26,81 +26,29 @@
 ##========================================================================== //
 
 # ---------------------------------------------------------------------------- #
-# Options:
-set(ENABLE_VCD ON)
-
-# ---------------------------------------------------------------------------- #
-# Build sources:
-include(rtl)
-
-set(TARGET "sim")
-include(tech)
-
-# Model/Design configuration.
-set(Q_ENGINES_N 16)
-set(Q_CONTEXTS_N 32)
-set(Q_CMP_KEY_BITS 32)
-set(Q_CMP_VAL_BITS 32)
-set(Q_CMP_MAX_N 1024)
-
-# ---------------------------------------------------------------------------- #
-# Configure sources
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cfg.h.in" cfg.h)
-
-foreach (src_fn "${RTL_GENERATED_SOURCES}")
-  cmake_path(GET src_fn STEM LAST_ONLY dst_fn)
-  configure_file(${src_fn} ${dst_fn})
-endforeach ()
-
-# ---------------------------------------------------------------------------- #
 # Verilate
+#
 
 # Build verilator support library
 verilator_build(vlib)
 
-set(VERILATOR_ARGS
-  "-cc"
-##  "-Wall"
-  "--Mdir Vobj"
-  "--build"
-  "--top tb"
-  )
-if (ENABLE_VCD)
-  list(APPEND VERILATOR_ARGS --trace)
-endif ()
-
-set(TB_SOURCES
-  "${RTL_SOURCES}"
-  "${TECH_SOURCES}"
-  "${CMAKE_CURRENT_SOURCE_DIR}/tb.sv")
-
-set(VERILATOR_INCLUDES "-I${CMAKE_CURRENT_BINARY_DIR}")
-foreach (inc_fn ${RTL_INCLUDE_PATHS})
-  list(APPEND VERILATOR_INCLUDES "-I${inc_fn}")
-endforeach ()
-foreach (inc_fn ${TECH_INCLUDE_PATHS})
-  list(APPEND VERILATOR_INCLUDES "-I${inc_fn}")
-endforeach ()
-
-set(VERILATOR_COMMAND_LIST
-  "${VERILATOR_ARGS}"
-  "${VERILATOR_INCLUDES}"
-  "${TB_SOURCES}")
-
-string(REGEX REPLACE ";" "\n" FILELIST "${VERILATOR_COMMAND_LIST}")
-file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/vc.f "${FILELIST}")
-
-add_custom_target(verilate
-  COMMAND ${Verilator_EXE} -f ${CMAKE_CURRENT_BINARY_DIR}/vc.f
-  COMMENT "Verilating...")
-
-set(VERILATOR_A "${CMAKE_CURRENT_BINARY_DIR}/Vobj/Vtb__ALL.a")
+# ---------------------------------------------------------------------------- #
+# Add subordinate, unit testbenches
+#
+add_subdirectory(tb_stk)
 
 # ---------------------------------------------------------------------------- #
 # Driver executable:
-set(DRIVER_CPP
-  "${CMAKE_CURRENT_SOURCE_DIR}/tb.cc"
+#
+set (TB_ROOT "${CMAKE_SOURCE_DIR}/tb")
 
+configure_file("${TB_ROOT}/cfg.h.in" cfg.h)
+
+set(DRIVER_CPP
+  "${TB_ROOT}/tb_stk/tb_stk.cc"
+  "${TB_ROOT}/test.cc"
+  "${TB_ROOT}/tb.cc"
+  "${TB_ROOT}/driver.cc"
   )
 
 add_executable(driver ${DRIVER_CPP})
@@ -108,5 +56,12 @@ target_include_directories(driver PRIVATE
   "${CMAKE_CURRENT_BINARY_DIR}"
   "${CMAKE_CURRENT_SOURCE_DIR}"
   "${VERILATOR_ROOT}/include")
-target_link_libraries(driver vlib ${VERILATOR_A})
+target_link_libraries(driver
+  vlib
+
+  # TODO: figure out a better way to import this dependency.
+  "${CMAKE_CURRENT_BINARY_DIR}/tb_stk/Vobj/Vtb_stk__ALL.a"
+  )
+
+
 add_dependencies(driver verilate)

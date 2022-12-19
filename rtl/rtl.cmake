@@ -28,7 +28,7 @@
 set(SRC_ROOT "${CMAKE_SOURCE_DIR}/rtl")
 set(BIN_ROOT "${CMAKE_BINARY_DIR}/rtl")
 
-set(RTL_SOURCES
+set(COMMON_SOURCES
     "${SRC_ROOT}/common/stack_cntrl.sv"
     "${SRC_ROOT}/common/queue_cntrl.sv"
     "${SRC_ROOT}/common/queue_rf.sv"
@@ -41,12 +41,9 @@ set(RTL_SOURCES
     "${SRC_ROOT}/common/cmp.sv"
     "${SRC_ROOT}/common/dec.sv"
     "${SRC_ROOT}/common/enc.sv"
-    "${SRC_ROOT}/common/mux.sv"
-    "${SRC_ROOT}/eng/eng_pipe_ca.sv"
-    "${SRC_ROOT}/eng/eng_pipe_xa.sv"
-    "${SRC_ROOT}/eng/eng_pipe_fa.sv"
-    "${SRC_ROOT}/eng/eng_pipe.sv"
-    "${SRC_ROOT}/dc/dc.sv"
+    "${SRC_ROOT}/common/mux.sv")
+
+set(STK_SOURCES
     "${SRC_ROOT}/stk/stk_pipe_al_init.sv"
     "${SRC_ROOT}/stk/stk_pipe_al.sv"
     "${SRC_ROOT}/stk/stk_pipe_lk.sv"
@@ -54,11 +51,20 @@ set(RTL_SOURCES
     "${SRC_ROOT}/stk/stk_pipe_ad.sv"
     "${SRC_ROOT}/stk/stk_pipe_wb.sv"
     "${SRC_ROOT}/stk/stk_pipe.sv"
-    "${SRC_ROOT}/stk/stk.sv"
-    "${SRC_ROOT}/q.sv")
+    "${SRC_ROOT}/stk/stk.sv")
 
-set(RTL_GENERATED_SOURCES
-    "${SRC_ROOT}/cfg_pkg.vh.in")
+set(ENG_SOURCES
+    "${SRC_ROOT}/eng/eng_pipe_ca.sv"
+    "${SRC_ROOT}/eng/eng_pipe_xa.sv"
+    "${SRC_ROOT}/eng/eng_pipe_fa.sv"
+    "${SRC_ROOT}/eng/eng_pipe.sv")
+
+set(DC_SOURCES
+    "${SRC_ROOT}/dc/dc.sv")
+
+set(RTL_SOURCES
+    "${SRC_ROOT}/dc/dc.sv"
+    "${SRC_ROOT}/q.sv")
 
 set(RTL_INCLUDE_PATHS
     "${BIN_ROOT}"

@@ -23,16 +23,27 @@
 // CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
-//========================================================================== //
+// ========================================================================== //
 
-`ifndef Q_TECH_COMMON_UNMACROS_VH
-`define Q_TECH_COMMON_UNMACROS_VH
+#ifndef Q_TB_STK_TB_STK_H
+#define Q_TB_STK_TB_STK_H
 
-`undef Q_ICG
-`undef Q_DFF
-`undef Q_DFFE
-`undef Q_DFFR
+#include "verilated.h"
 
-`undef Q_TECH_COMMON_MACROS_VH
+// Forwards:
+class TestRegistry;
 
-`endif //  `ifndef Q_TECH_COMMON_UNMACROS_VH
+namespace tb_stk {
+
+enum class Opcode {
+  Nop    = 0b00,
+  Push   = 0b01,
+  Pop    = 0b10,
+  Inv    = 0b11,
+};
+
+void init(TestRegistry& tr);
+
+} // namespace tb_stk
+
+#endif

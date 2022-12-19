@@ -1,0 +1,121 @@
+//========================================================================== //
+// Copyright (c) 2022, Stephen Henry
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// * Redistributions of source code must retain the above copyright notice, this
+//   list of conditions and the following disclaimer.
+//
+// * Redistributions in binary form must reproduce the above copyright notice,
+//   this list of conditions and the following disclaimer in the documentation
+//   and/or other materials provided with the distribution.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
+//========================================================================== //
+
+module tb_stk (
+
+// -------------------------------------------------------------------------- //
+// Command Interface 0
+  input wire stk_pkg::opcode_t                    i_cmd0_opcode
+, input wire logic [127:0]                        i_cmd0_dat
+//
+, output wire logic                               o_cmd0_ack
+
+// -------------------------------------------------------------------------- //
+// Command Interface 1
+, input wire stk_pkg::opcode_t                    i_cmd1_opcode
+, input wire logic [127:0]                        i_cmd1_dat
+//
+, output wire logic                               o_cmd1_ack
+
+// -------------------------------------------------------------------------- //
+// Command Interface 2
+, input wire stk_pkg::opcode_t                    i_cmd2_opcode
+, input wire logic [127:0]                        i_cmd2_dat
+//
+, output wire logic                               o_cmd2_ack
+
+// -------------------------------------------------------------------------- //
+// Command Interface 3
+, input wire stk_pkg::opcode_t                    i_cmd3_opcode
+, input wire logic [127:0]                        i_cmd3_dat
+//
+, output wire logic                               o_cmd3_ack
+
+// -------------------------------------------------------------------------- //
+// Response Interface
+, output wire logic [cfg_pkg::ENGS_N - 1:0]       o_rsp_vld
+, output wire logic [127:0]                       o_rsp_dat
+
+// -------------------------------------------------------------------------- //
+// Clk/Reset
+, input wire logic                                clk
+, input wire logic                                arst_n
+);
+
+// ========================================================================== //
+//                                                                            //
+//  Command Interface (In)                                                    //
+//                                                                            //
+// ========================================================================== //
+
+stk_pkg::opcode_t [cfg_pkg::ENGS_N - 1:0]       cmd_opcode;
+assign cmd_opcode [0] = i_cmd0_opcode;
+assign cmd_opcode [1] = i_cmd1_opcode;
+assign cmd_opcode [2] = i_cmd2_opcode;
+assign cmd_opcode [3] = i_cmd3_opcode;
+
+logic [cfg_pkg::ENGS_N - 1:0][127:0]            cmd_dat;
+assign cmd_dat [0] = i_cmd0_dat;
+assign cmd_dat [1] = i_cmd1_dat;
+assign cmd_dat [2] = i_cmd2_dat;
+assign cmd_dat [3] = i_cmd3_dat;
+
+// ========================================================================== //
+//                                                                            //
+//  Unit Under Test (UUT)                                                     //
+//                                                                            //
+// ========================================================================== //
+
+// -------------------------------------------------------------------------- //
+//
+stk u_stk (
+//
+  .i_cmd_opcode                         (cmd_opcode)
+, .i_cmd_dat                            (cmd_dat)
+//
+, .o_cmd_ack                            (cmd_ack)
+//
+, .o_rsp_vld                            (o_rsp_vld)
+, .o_rsp_dat                            (o_rsp_dat)
+//
+, .clk                                  (clk)
+, .arst_n                               (arst_n)
+);
+
+// ========================================================================== //
+//                                                                            //
+//  Command Interface (Out)                                                   //
+//                                                                            //
+// ========================================================================== //
+
+logic [cfg_pkg::ENGS_N - 1:0] cmd_ack;
+assign o_cmd0_ack = cmd_ack [0];
+assign o_cmd1_ack = cmd_ack [1];
+assign o_cmd2_ack = cmd_ack [2];
+assign o_cmd3_ack = cmd_ack [3];
+
+endmodule : tb_stk

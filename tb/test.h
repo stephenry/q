@@ -23,16 +23,45 @@
 // CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
-//========================================================================== //
+// ========================================================================== //
 
-`ifndef Q_TECH_COMMON_UNMACROS_VH
-`define Q_TECH_COMMON_UNMACROS_VH
+#ifndef Q_TB_TEST_H
+#define Q_TB_TEST_H
 
-`undef Q_ICG
-`undef Q_DFF
-`undef Q_DFFE
-`undef Q_DFFR
+#include <map>
+#include <string>
+#include <memory>
 
-`undef Q_TECH_COMMON_MACROS_VH
+class Test {
+public:
+  explicit Test() = default;
+  virtual ~Test() = default;
 
-`endif //  `ifndef Q_TECH_COMMON_UNMACROS_VH
+  virtual bool run() = 0;
+};
+
+class TestFactory {
+public:
+  explicit TestFactory() = default;
+  virtual ~TestFactory() = default;
+
+  virtual std::unique_ptr<Test> construct() = 0;
+};
+
+class TestRegistry {
+public:
+  explicit TestRegistry() = default;
+
+  TestFactory* get(const std::string& name);
+
+  template<typename T, typename ...Args>
+  void add(const std::string& name, Args&& ...args) {
+    tfm_.insert(std::make_pair(
+      name, std::make_unique<T>(std::forward<Args>(args)...)));
+  }
+
+private:
+  std::map<std::string, std::unique_ptr<TestFactory>> tfm_;
+};
+
+#endif

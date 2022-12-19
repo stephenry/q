@@ -23,16 +23,23 @@
 // CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
-//========================================================================== //
+// ========================================================================== //
 
-`ifndef Q_TECH_COMMON_UNMACROS_VH
-`define Q_TECH_COMMON_UNMACROS_VH
+#ifndef Q_TB_SIM_H
+#define Q_TB_SIM_H
 
-`undef Q_ICG
-`undef Q_DFF
-`undef Q_DFFE
-`undef Q_DFFR
+#include <string>
 
-`undef Q_TECH_COMMON_MACROS_VH
+class TestFactory;
 
-`endif //  `ifndef Q_TECH_COMMON_UNMACROS_VH
+struct Globals {
+
+  inline static bool vcd_on = false;
+
+  inline static std::string vcd_fn = "q.vcd";
+
+  inline static TestFactory* test_factory = nullptr;
+
+};
+
+#endif

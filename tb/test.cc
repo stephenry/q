@@ -23,16 +23,14 @@
 // CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
-//========================================================================== //
+// ========================================================================== //
 
-`ifndef Q_TECH_COMMON_UNMACROS_VH
-`define Q_TECH_COMMON_UNMACROS_VH
+#include "test.h"
 
-`undef Q_ICG
-`undef Q_DFF
-`undef Q_DFFE
-`undef Q_DFFR
-
-`undef Q_TECH_COMMON_MACROS_VH
-
-`endif //  `ifndef Q_TECH_COMMON_UNMACROS_VH
+TestFactory* TestRegistry::get(const std::string& name) {
+  TestFactory* ret = nullptr;
+  if (auto it = tfm_.find(name); it != tfm_.end()) {
+    ret = it->second.get();
+  }
+  return ret;
+}

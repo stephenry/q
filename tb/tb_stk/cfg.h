@@ -25,14 +25,8 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //========================================================================== //
 
-`ifndef Q_TECH_COMMON_UNMACROS_VH
-`define Q_TECH_COMMON_UNMACROS_VH
+#ifndef Q_TB_STK_CFG_PKG_V
+#define Q_TB_STK_CFG_PKG_V
 
-`undef Q_ICG
-`undef Q_DFF
-`undef Q_DFFE
-`undef Q_DFFR
 
-`undef Q_TECH_COMMON_MACROS_VH
-
-`endif //  `ifndef Q_TECH_COMMON_UNMACROS_VH
+#endif

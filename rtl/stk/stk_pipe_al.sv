@@ -98,6 +98,7 @@ logic                                        lk_bypass_ptr_en;
 //
 logic [stk_pkg::BANKS_N - 1:0]               lk_bank_id_d;
 stk_pkg::ptr_t                               lk_ptr_w;
+stk_pkg::line_id_t                           lk_mem_line_w;
 stk_pkg::ptr_t                               lk_mem_w;
 
 // -------------------------------------------------------------------------- //
@@ -233,8 +234,10 @@ dec #(.W(stk_pkg::BANKS_N)) u_lk_mem_sel (
 );
 
 mux #(.N(stk_pkg::BANKS_N), .W(stk_pkg::BANK_LINE_OFFSET_W)) u_lk_mem_mux (
-  .i_x (mem_dout), .i_sel (lk_bank_id_d), .o_y (lk_mem_w) // TODO: FIX
+  .i_x (mem_dout), .i_sel (lk_bank_id_d), .o_y (lk_mem_line_w)
 );
+
+assign lk_mem_w = '{bnk_id:lk_bank_id_r, line_id:lk_mem_line_w};
 
 assign lk_ptr_w =
     ({stk_pkg::PTR_W{ lk_bypass_r}} & lk_bypass_ptr_r)

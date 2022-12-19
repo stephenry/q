@@ -23,31 +23,18 @@
 // CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
-//========================================================================== //
+// ========================================================================== //
 
-`ifndef Q_RTL_CFG_PKG_VH
-`define Q_RTL_CFG_PKG_VH
+#ifndef Q_TB_STK_TB_STK_H
+#define Q_TB_STK_TB_STK_H
 
+// Forwards:
+class TestRegistry;
 
-package cfg_pkg;
+namespace tb_stk {
 
-parameter int ENGS_N = @Q_ENGINES_N@;
+void init(TestRegistry& tr);
 
-parameter int CONTEXTS_N = @Q_CONTEXTS_N@;
+} // namespace tb_stk
 
-parameter int CMP_KEY_BITS = @Q_CMP_KEY_BITS@;
-
-parameter int CMP_VAL_BITS = @Q_CMP_VAL_BITS@;
-
-parameter int CMP_MAX_N = @Q_CMP_MAX_N@;
-
-typedef enum bit {
-    UCODE_HOR  = 1'b0,
-    UCODE_VER  = 1'b1
-} ucode_format_t;
-
-parameter ucode_format_t UCODE_TYPE = UCODE_VER;
-
-endpackage : cfg_pkg
-
-`endif
+#endif

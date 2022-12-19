@@ -25,26 +25,61 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 ##========================================================================== //
 
-cmake_minimum_required(VERSION 3.22)
-project(q)
-
 # ---------------------------------------------------------------------------- #
 # Options:
-option(ENABLE_VCD "Enable waveform tracing." ON)
+set(ENABLE_VCD ON)
 
-option(ENABLE_SVA "Enable SystemVerilog assertions" ON)
+# ---------------------------------------------------------------------------- #
+# Build sources:
+include(rtl)
 
-set(CMAKE_CXX_STANDARD 17)
+set(TARGET "sim")
+include(tech)
 
-list(APPEND CMAKE_MODULE_PATH
-    "${CMAKE_SOURCE_DIR}/cmake"
-    "${CMAKE_SOURCE_DIR}/tech"
-    "${CMAKE_SOURCE_DIR}/rtl")
+# Model/Design configuration.
+set(Q_ENGINES_N 16)
+set(Q_CONTEXTS_N 32)
 
-include(FindVerilator)
-include(venv)
+# ---------------------------------------------------------------------------- #
+# Configure sources
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cfg_pkg.vh.in" cfg_pkg.vh)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cfg.h.in" cfg.h)
 
-set(Q_TOOLS_ROOT ${CMAKE_BINARY_DIR}/tools)
-add_subdirectory(tools)
-add_subdirectory(rtl)
-add_subdirectory(tb)
+set(VERILATOR_ARGS
+  "-cc"
+#  "-Wall"
+  "--Mdir Vobj"
+  "--build"
+  "--top tb_stk"
+  )
+if (ENABLE_VCD)
+  list(APPEND VERILATOR_ARGS --trace)
+endif ()
+
+set(TB_SOURCES
+  "${COMMON_SOURCES}"
+  "${STK_SOURCES}"
+  "${TECH_SOURCES}"
+  "${CMAKE_CURRENT_SOURCE_DIR}/tb_stk.sv")
+
+set(VERILATOR_INCLUDES "-I${CMAKE_CURRENT_BINARY_DIR}")
+foreach (inc_fn ${RTL_INCLUDE_PATHS})
+  list(APPEND VERILATOR_INCLUDES "-I${inc_fn}")
+endforeach ()
+foreach (inc_fn ${TECH_INCLUDE_PATHS})
+  list(APPEND VERILATOR_INCLUDES "-I${inc_fn}")
+endforeach ()
+
+set(VERILATOR_COMMAND_LIST
+  "${VERILATOR_ARGS}"
+  "${VERILATOR_INCLUDES}"
+  "${TB_SOURCES}")
+
+string(REGEX REPLACE ";" "\n" FILELIST "${VERILATOR_COMMAND_LIST}")
+file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/vc.f "${FILELIST}")
+
+add_custom_target(verilate
+  COMMAND ${Verilator_EXE} -f ${CMAKE_CURRENT_BINARY_DIR}/vc.f
+  COMMENT "Verilating...")
+
+set(LIB_TB_STK "${CMAKE_CURRENT_BINARY_DIR}/Vobj/Vtb_stk__ALL.a")

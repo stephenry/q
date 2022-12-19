@@ -30,9 +30,4 @@
 
 #cmakedefine ENABLE_VCD
 
-namespace cfg {
-
-
-} // namespace cfg
-
 #endif

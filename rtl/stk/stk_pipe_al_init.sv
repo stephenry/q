@@ -26,6 +26,7 @@
 //========================================================================== //
 
 `include "common_defs.vh"
+`include "macros.vh"
 `include "stk/stk_pkg.vh"
 
 module stk_pipe_al_init (

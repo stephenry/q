@@ -23,16 +23,87 @@
 // CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
-//========================================================================== //
+// ========================================================================== //
 
-`ifndef Q_TECH_COMMON_UNMACROS_VH
-`define Q_TECH_COMMON_UNMACROS_VH
+#include "tb_stk/tb_stk.h"
+#include "tb_stk/Vobj/Vtb_stk.h"
+#include "test.h"
+#include "tb.h"
 
-`undef Q_ICG
-`undef Q_DFF
-`undef Q_DFFE
-`undef Q_DFFR
+namespace {
 
-`undef Q_TECH_COMMON_MACROS_VH
+struct StkDriver {
 
-`endif //  `ifndef Q_TECH_COMMON_UNMACROS_VH
+  static void clk(Vtb_stk* uut, bool c) {
+    VSupport::logic(&uut->clk, c);
+  }
+
+  static bool clk(Vtb_stk* uut) {
+    return VSupport::logic(&uut->clk);
+  }
+
+  static void arst_n(Vtb_stk* uut, bool c) {
+    VSupport::logic(&uut->arst_n, c);
+  }
+
+  static bool arst_n(Vtb_stk* uut) {
+    return VSupport::logic(&uut->arst_n);
+  }
+
+};
+
+class StkTestCallBack : public KernelCallBack {
+public:
+  explicit StkTestCallBack(Vtb_stk* Vtb_stk)
+    : Vtb_stk_(Vtb_stk)
+  {}
+
+  void cycles(std::size_t cycles) { cycles_ = cycles; }
+
+  void idle() override {
+  }
+
+  bool on_negedge_clk() override {
+    return (cycles_-- != 0);
+  }
+
+  bool on_posedge_clk() override {
+    return true;
+  }
+
+private:
+  std::size_t cycles_ = 0;
+  Vtb_stk* Vtb_stk_;
+};
+
+class StkTestBasic : public Test {
+public:
+  explicit StkTestBasic() {
+  }
+
+  bool run() override {
+    StkTestCallBack cb{k_.vtb()};
+    cb.cycles(100);
+    return k_.run(cb);
+  }
+
+private:
+  Kernel<Vtb_stk, StkDriver> k_;
+};
+
+class StkTestFactory : public TestFactory {
+public:
+  std::unique_ptr<Test> construct() override {
+    return std::make_unique<StkTestBasic>();
+  }
+};
+
+};
+
+namespace tb_stk {
+
+void init(TestRegistry& tr) {
+  tr.add<StkTestFactory>("tb_stk");
+}
+
+} // namespace tb_stk
