@@ -94,14 +94,16 @@ public:
         const bool edge = Driver::clk(vtb());
         switch (reset_state) {
         case ResetState::PreReset: {
-          if (rundown_n-- == 0) {
+          const bool start_reset = (rundown_n-- == 0);
+          Driver::arst_n(vtb(), !start_reset);
+          if (start_reset) {
             rundown_n = 5;
             reset_state = ResetState::InReset;
           }
         } break;
         case ResetState::InReset: {
-	  const bool reset_complete = (rundown_n-- == 0);
-          Driver::arst_n(vtb(), !reset_complete);
+          const bool reset_complete = (rundown_n-- == 0);
+          Driver::arst_n(vtb(), reset_complete);
           if (reset_complete) {
             rundown_n = 5;
             reset_state = ResetState::PostReset;

@@ -61,6 +61,10 @@ module tb_stk (
 , output wire logic [127:0]                       o_rsp_dat
 
 // -------------------------------------------------------------------------- //
+// Testbench State
+, output wire logic [31:0]                        o_tb_cycle
+
+// -------------------------------------------------------------------------- //
 // Clk/Reset
 , input wire logic                                clk
 , input wire logic                                arst_n
@@ -68,17 +72,26 @@ module tb_stk (
 
 // ========================================================================== //
 //                                                                            //
+//  Wires                                                                     //
+//                                                                            //
+// ========================================================================== //
+
+int                                             tb_cycle;
+stk_pkg::opcode_t [cfg_pkg::ENGS_N - 1:0]       cmd_opcode;
+logic [cfg_pkg::ENGS_N - 1:0][127:0]            cmd_dat;
+logic [cfg_pkg::ENGS_N - 1:0]                   cmd_ack;
+
+// ========================================================================== //
+//                                                                            //
 //  Command Interface (In)                                                    //
 //                                                                            //
 // ========================================================================== //
 
-stk_pkg::opcode_t [cfg_pkg::ENGS_N - 1:0]       cmd_opcode;
 assign cmd_opcode [0] = i_cmd0_opcode;
 assign cmd_opcode [1] = i_cmd1_opcode;
 assign cmd_opcode [2] = i_cmd2_opcode;
 assign cmd_opcode [3] = i_cmd3_opcode;
 
-logic [cfg_pkg::ENGS_N - 1:0][127:0]            cmd_dat;
 assign cmd_dat [0] = i_cmd0_dat;
 assign cmd_dat [1] = i_cmd1_dat;
 assign cmd_dat [2] = i_cmd2_dat;
@@ -108,11 +121,25 @@ stk u_stk (
 
 // ========================================================================== //
 //                                                                            //
-//  Command Interface (Out)                                                   //
+//  TB                                                                        //
 //                                                                            //
 // ========================================================================== //
 
-logic [cfg_pkg::ENGS_N - 1:0] cmd_ack;
+// -------------------------------------------------------------------------- //
+//
+initial tb_cycle = 0;
+
+always_ff @(posedge clk)
+  tb_cycle <= tb_cycle + 'b1;
+
+// ========================================================================== //
+//                                                                            //
+//  Outputs                                                                   //
+//                                                                            //
+// ========================================================================== //
+
+assign o_tb_cycle = tb_cycle;
+
 assign o_cmd0_ack = cmd_ack [0];
 assign o_cmd1_ack = cmd_ack [1];
 assign o_cmd2_ack = cmd_ack [2];
