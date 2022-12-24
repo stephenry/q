@@ -27,14 +27,29 @@
 
 `include "common_defs.vh"
 
-module binds;
+module stack_cntrl_sva;
 
-bind mux mux_sva #(.N) b_mux_sva (.i_sel);
+logic full_r;
+logic empty_r;
 
-bind dffen dffen_sva b_dffen_sva (.en);
+// -------------------------------------------------------------------------- //
+//
+always_ff @(posedge clk)
+  full_r <= full_w;
 
-bind queue_cntrl queue_cntrl_sva b_queue_cntrl_sva ();
+NO_PUSH_WHEN_FULL: assert property (
+  @(posedge clk) disable iff (~arst_n) i_push -> ~full_r);
 
-bind stack_cntrl stack_cntrl_sva b_stack_cntrl_sva ();
+// -------------------------------------------------------------------------- //
+//
+always_ff @(posedge clk)
+  empty_r <= empty_w;
 
-endmodule : binds
+NO_POP_WHEN_EMPTY: assert property (
+  @(posedge clk) disable iff (~arst_n) i_pop -> ~empty_r);
+
+// -------------------------------------------------------------------------- //
+//
+NO_PUSH_AND_POP: assert final ($onehot0({i_push, i_pop}));
+
+endmodule : stack_cntrl_sva
