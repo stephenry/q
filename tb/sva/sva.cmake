@@ -1,5 +1,5 @@
 ##========================================================================== //
-## Copyright (c) 2020, Stephen Henry
+## Copyright (c) 2022, Stephen Henry
 ## All rights reserved.
 ##
 ## Redistribution and use in source and binary forms, with or without
@@ -25,43 +25,13 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 ##========================================================================== //
 
-# ---------------------------------------------------------------------------- #
-# Includes
-#
-include(sva/sva.cmake)
+set(SVA_ROOT ${CMAKE_SOURCE_DIR}/tb/sva)
 
-# ---------------------------------------------------------------------------- #
-# Driver executable
-#
-add_executable(driver)
-
-# ---------------------------------------------------------------------------- #
-# Build verilator support library
-#
-verilator_build(vlib)
-target_link_libraries(driver vlib)
-
-# ---------------------------------------------------------------------------- #
-# Add subordinate, unit testbenches
-#
-add_subdirectory(tb_stk)
-
-# ---------------------------------------------------------------------------- #
-# Driver executable:
-#
-target_sources(driver
-  PRIVATE
-  "${CMAKE_SOURCE_DIR}/tb/tb_stk/tb_stk.cc"
-  "${CMAKE_SOURCE_DIR}/tb/tb_stk/tb_stk_smoke.cc"
-  "${CMAKE_SOURCE_DIR}/tb/test.cc"
-  "${CMAKE_SOURCE_DIR}/tb/tb.cc"
-  "${CMAKE_SOURCE_DIR}/tb/driver.cc"
+set(SVA_SOURCES
+  ${SVA_ROOT}/mux_sva.sv
+  ${SVA_ROOT}/dffen_sva.sv
   )
 
-configure_file("${CMAKE_SOURCE_DIR}/tb/cfg_common.h.in" cfg_common.h)
-
-target_include_directories(driver
-  PRIVATE
-  "${CMAKE_CURRENT_BINARY_DIR}"
-  "${CMAKE_CURRENT_SOURCE_DIR}"
-  "${VERILATOR_ROOT}/include")
+set(SVA_INCLUDES
+  ${SVA_ROOT}
+  )

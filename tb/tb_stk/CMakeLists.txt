@@ -61,6 +61,14 @@ set(TB_SOURCES
   "${TECH_SOURCES}"
   "${CMAKE_CURRENT_SOURCE_DIR}/tb_stk.sv")
 
+if (ENABLE_SVA)
+  # Building with SV-Assertions (SVA); add in relevant sourcefiles as
+  # necessary.
+  list(APPEND TB_SOURCES
+    "${SVA_SOURCES}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tb_stk_sva.sv")
+endif ()
+
 set(VERILATOR_INCLUDES "-I${CMAKE_CURRENT_BINARY_DIR}")
 foreach (inc_fn ${RTL_INCLUDE_PATHS})
   list(APPEND VERILATOR_INCLUDES "-I${inc_fn}")
