@@ -35,12 +35,18 @@
 #include "verilated_vcd_c.h"
 #endif
 #include <iostream>
+#include <algorithm>
 
 struct VSupport {
 
   static bool logic(vluint8_t* v) { return (*v != 0); }
 
   static void logic(vluint8_t* v, bool b) { *v = b ? 1 : 0; }
+
+  template<std::size_t T_Words>
+  static void zero(VlWide<T_Words>& d) {
+    std::fill_n(d.data(), T_Words, 0);
+  }
 };
 
 struct KernelCallBack {
@@ -53,12 +59,25 @@ struct KernelCallBack {
   virtual bool on_posedge_clk() { return false; }
 };
 
-template<typename T, typename Driver>
 class Kernel {
 public:
-  explicit Kernel() {
+  explicit Kernel() = default;
+  virtual ~Kernel() = default;
+
+  std::uint64_t tb_time() const { return tb_time_; }
+  virtual std::uint64_t tb_cycle() const  = 0;
+
+protected:
+  std::uint64_t tb_time_;
+};
+
+template<typename T, typename Driver>
+class KernelVerilated : public Kernel {
+public:
+  explicit KernelVerilated() {
     vctxt_ = std::make_unique<VerilatedContext>();
     vtb_ = std::make_unique<T>(vctxt_.get());
+    driver_ = std::make_unique<Driver>(vtb_.get());
 #ifdef ENABLE_VCD
     if (Globals::vcd_on) {
       vctxt_->traceEverOn(true);
@@ -71,8 +90,8 @@ public:
 
   // Observers
   T* vtb() const { return vtb_.get(); }
-  std::uint64_t tb_time() const { return tb_time_; }
-  std::uint64_t tb_cycle() const { return 0; }
+  Driver* driver() const { return driver_.get(); }
+  std::uint64_t tb_cycle() const { return driver_->tb_cycle(); }
 
   bool run(KernelCallBack* cb) {
     if (!cb) return false;
@@ -80,8 +99,8 @@ public:
     tb_time_ = 0;
 
     // Drive all interfaces to a quiescent state.
-    Driver::clk(vtb(), false);
-    Driver::arst_n(vtb(), true);
+    driver_->clk(false);
+    driver_->arst_n(true);
     cb->idle();
 
     enum class ResetState {
@@ -93,11 +112,11 @@ public:
     bool failed = false;
     while (do_stepping || --rundown_n > 0) {
       if (++tb_time_ % 5 == 0) {
-        const bool edge = Driver::clk(vtb());
+        const bool edge = driver_->clk();
         switch (reset_state) {
         case ResetState::PreReset: {
           const bool start_reset = (rundown_n-- == 0);
-          Driver::arst_n(vtb(), !start_reset);
+          driver_->arst_n(!start_reset);
           if (start_reset) {
             rundown_n = 5;
             reset_state = ResetState::InReset;
@@ -105,7 +124,7 @@ public:
         } break;
         case ResetState::InReset: {
           const bool reset_complete = (rundown_n-- == 0);
-          Driver::arst_n(vtb(), reset_complete);
+          driver_->arst_n(reset_complete);
           if (reset_complete) {
             rundown_n = 5;
             reset_state = ResetState::PostReset;
@@ -117,7 +136,7 @@ public:
           }
         } break;
         }
-        Driver::clk(vtb(), !edge);
+        driver_->clk(!edge);
       }
       vtb()->eval();
 #ifdef ENABLE_VCD
@@ -154,7 +173,7 @@ private:
 #endif
   std::unique_ptr<VerilatedContext> vctxt_;
   std::unique_ptr<T> vtb_;
-  std::uint64_t tb_time_;
+  std::unique_ptr<Driver> driver_;
 };
 
 #endif

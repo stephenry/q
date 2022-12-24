@@ -30,6 +30,7 @@
 
 #include <random>
 #include <vector>
+#include <algorithm>
 #include "verilated.h"
 
 class Random {
@@ -60,16 +61,15 @@ class Random {
   }
 
   template<std::size_t T_Words>
-  void uniform(VlWide<T_Words>& v) {
-    for (WData* pos = v.data(); pos != (v.data() + T_Words); ++pos) {
-      *pos = uniform<WData>();
-    }
+  void uniform(VlWide<T_Words>& r) {
+    std::generate(r.data(), (r.data() + T_Words), [&]() {
+      return uniform<WData>();
+    });
   }
 
  private:
   std::mt19937 mt_;
 };
-
 
 template <typename T>
 class Bag {

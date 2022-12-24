@@ -26,11 +26,15 @@
 ##========================================================================== //
 
 # ---------------------------------------------------------------------------- #
-# Verilate
+# Driver executable
 #
+add_executable(driver)
 
+# ---------------------------------------------------------------------------- #
 # Build verilator support library
+#
 verilator_build(vlib)
+target_link_libraries(driver vlib)
 
 # ---------------------------------------------------------------------------- #
 # Add subordinate, unit testbenches
@@ -40,28 +44,19 @@ add_subdirectory(tb_stk)
 # ---------------------------------------------------------------------------- #
 # Driver executable:
 #
-set (TB_ROOT "${CMAKE_SOURCE_DIR}/tb")
-
-configure_file("${TB_ROOT}/cfg.h.in" cfg.h)
-
-set(DRIVER_CPP
-  "${TB_ROOT}/tb_stk/tb_stk.cc"
-  "${TB_ROOT}/test.cc"
-  "${TB_ROOT}/tb.cc"
-  "${TB_ROOT}/driver.cc"
+target_sources(driver
+  PRIVATE
+  "${CMAKE_SOURCE_DIR}/tb/tb_stk/tb_stk.cc"
+  "${CMAKE_SOURCE_DIR}/tb/tb_stk/tb_stk_smoke.cc"
+  "${CMAKE_SOURCE_DIR}/tb/test.cc"
+  "${CMAKE_SOURCE_DIR}/tb/tb.cc"
+  "${CMAKE_SOURCE_DIR}/tb/driver.cc"
   )
 
-add_executable(driver ${DRIVER_CPP})
-target_include_directories(driver PRIVATE
+configure_file("${CMAKE_SOURCE_DIR}/tb/cfg_common.h.in" cfg_common.h)
+
+target_include_directories(driver
+  PRIVATE
   "${CMAKE_CURRENT_BINARY_DIR}"
   "${CMAKE_CURRENT_SOURCE_DIR}"
   "${VERILATOR_ROOT}/include")
-target_link_libraries(driver
-  vlib
-
-  # TODO: figure out a better way to import this dependency.
-  "${CMAKE_CURRENT_BINARY_DIR}/tb_stk/Vobj/Vtb_stk__ALL.a"
-  )
-
-
-add_dependencies(driver verilate)

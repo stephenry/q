@@ -28,11 +28,12 @@
 #ifndef Q_TB_TEST_H
 #define Q_TB_TEST_H
 
+#include "tb.h"
 #include <map>
 #include <string>
 #include <memory>
 
-class Test {
+class Test : public KernelCallBack {
 public:
   explicit Test() = default;
   virtual ~Test() = default;

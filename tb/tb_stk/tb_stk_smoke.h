@@ -23,21 +23,27 @@
 // CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
-//========================================================================== //
+// ========================================================================== //
 
-#ifndef Q_TB_STK_CFG_PKG_V
-#define Q_TB_STK_CFG_PKG_V
+#ifndef Q_TB_STK_TB_STK_SMOKE_H
+#define Q_TB_STK_TB_STK_SMOKE_H
 
-#include "cfg_common.h"
+#include "tb_stk/tb_stk.h"
 
-namespace cfg {
+namespace tb_stk::smoke {
 
-  static constexpr std::size_t ENGS_N = @Q_ENGINES_N@;
+class Test : public StkTest {
+  class Impl;
+public:
+  explicit Test();
+  ~Test();
 
-  static constexpr std::size_t CONTEXTS_N = @Q_CONTEXTS_N@;
+  bool program() override;
 
-  static constexpr std::size_t CAPACITY = 1024;
+private:
+  std::unique_ptr<Impl> impl_;
+};
 
-} // namespace cfg_pkg
+} // namespace tb_stk::smoke
 
 #endif

@@ -26,10 +26,6 @@
 ##========================================================================== //
 
 # ---------------------------------------------------------------------------- #
-# Options:
-set(ENABLE_VCD ON)
-
-# ---------------------------------------------------------------------------- #
 # Build sources:
 include(rtl)
 
@@ -37,7 +33,7 @@ set(TARGET "sim")
 include(tech)
 
 # Model/Design configuration.
-set(Q_ENGINES_N 16)
+set(Q_ENGINES_N 4)
 set(Q_CONTEXTS_N 32)
 
 # ---------------------------------------------------------------------------- #
@@ -45,12 +41,15 @@ set(Q_CONTEXTS_N 32)
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cfg_pkg.vh.in" cfg_pkg.vh)
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cfg.h.in" cfg.h)
 
+set(VOUT_DIR "Vobj")
+set(VTOP "tb_stk")
+
 set(VERILATOR_ARGS
   "-cc"
 #  "-Wall"
-  "--Mdir Vobj"
+  "--Mdir ${VOUT_DIR}"
   "--build"
-  "--top tb_stk"
+  "--top ${VTOP}"
   )
 if (ENABLE_VCD)
   list(APPEND VERILATOR_ARGS --trace)
@@ -82,4 +81,6 @@ add_custom_target(verilate
   COMMAND ${Verilator_EXE} -f ${CMAKE_CURRENT_BINARY_DIR}/vc.f
   COMMENT "Verilating...")
 
-set(LIB_TB_STK "${CMAKE_CURRENT_BINARY_DIR}/Vobj/Vtb_stk__ALL.a")
+add_dependencies(driver verilate)
+target_link_libraries(driver
+  "${CMAKE_CURRENT_BINARY_DIR}/${VOUT_DIR}/V${VTOP}__ALL.a")

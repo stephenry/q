@@ -33,6 +33,7 @@
 
 class TestFactory;
 class Random;
+class Kernel;
 
 struct Globals {
 
@@ -43,6 +44,8 @@ struct Globals {
   inline static TestFactory* test_factory = nullptr;
 
   inline static Random* random = nullptr;
+
+  inline static Kernel* kernel = nullptr;
 
 };
 

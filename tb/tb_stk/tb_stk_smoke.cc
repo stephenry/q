@@ -23,21 +23,69 @@
 // CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
-//========================================================================== //
+// ========================================================================== //
 
-#ifndef Q_TB_STK_CFG_PKG_V
-#define Q_TB_STK_CFG_PKG_V
+#include "tb_stk/tb_stk_smoke.h"
+#include "rnd.h"
 
-#include "cfg_common.h"
+struct tb_stk::smoke::Test::Impl {
 
-namespace cfg {
+  explicit Impl(StkTest* t) : t_(t) {}
 
-  static constexpr std::size_t ENGS_N = @Q_ENGINES_N@;
+  bool program() {
 
-  static constexpr std::size_t CONTEXTS_N = @Q_CONTEXTS_N@;
+    // Wait until internal Stack initialization has completed;
+    // probably unnecessary as RTL will back-pressure anyway.
+    //
+    t_->wait_until(StkTest::EventType::EndOfInitialization);
 
-  static constexpr std::size_t CAPACITY = 1024;
+    // Push data to channel 0,
+    //
+    push_random_to_ch(0);
 
-} // namespace cfg_pkg
+    // Wait some number of cycles to allow command to be issued.  (On
+    // an empty queue, admission stage scheduler ought to choose the
+    // Push opcode queue over Pop, but for the purpose of the smoke
+    // test, we don't want to rely upon this constraint).
+    t_->wait(10);
 
-#endif
+    // Pop data from channel 0; expect the same data back.
+    //
+    pop_from_ch(0);
+
+    // No further stimulus
+    //
+    return false;
+  }
+
+  // Issue Push command to channel 'ch'
+  //
+  void push_random_to_ch(std::size_t ch) {
+    VlWide<4> dat;
+    Globals::random->uniform(dat);
+    t_->issue(ch, Opcode::Push, dat);
+  }
+
+  // Issue Pop command to channel 'ch'
+  //
+  void pop_from_ch(std::size_t ch) {
+    t_->issue(ch, Opcode::Pop);
+  }
+
+private:
+  StkTest* t_;
+};
+
+namespace tb_stk::smoke {
+
+Test::Test() {
+  impl_ = std::make_unique<Test::Impl>(this);
+}
+
+Test::~Test() {}
+
+bool Test::program() {
+  return impl_->program();
+}
+
+} // namespace tb_stk::smoke

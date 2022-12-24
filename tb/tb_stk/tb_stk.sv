@@ -63,6 +63,8 @@ module tb_stk (
 // -------------------------------------------------------------------------- //
 // Testbench State
 , output wire logic [31:0]                        o_tb_cycle
+//
+, output wire logic                               o_busy_r
 
 // -------------------------------------------------------------------------- //
 // Clk/Reset
@@ -131,6 +133,16 @@ initial tb_cycle = 0;
 
 always_ff @(posedge clk)
   tb_cycle <= tb_cycle + 'b1;
+
+// ========================================================================== //
+//                                                                            //
+//  Hierarchical Probes                                                       //
+//                                                                            //
+// ========================================================================== //
+
+// Allocation Stage, Initialization Logic busy flag.
+//
+assign o_busy_r = u_stk.u_stk_pipe.u_stk_pipe_al.u_stk_pipe_al_init.busy_r;
 
 // ========================================================================== //
 //                                                                            //

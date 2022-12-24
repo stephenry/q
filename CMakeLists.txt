@@ -27,12 +27,17 @@
 
 cmake_minimum_required(VERSION 3.22)
 project(q)
+enable_testing()
 
 # ---------------------------------------------------------------------------- #
 # Options:
+
+# Enable VCD tracing
 option(ENABLE_VCD "Enable waveform tracing." ON)
 
+# Enable SystemVerilog Assertions (SVA)
 option(ENABLE_SVA "Enable SystemVerilog assertions" ON)
+
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -47,4 +52,5 @@ include(venv)
 set(Q_TOOLS_ROOT ${CMAKE_BINARY_DIR}/tools)
 add_subdirectory(tools)
 add_subdirectory(rtl)
+
 add_subdirectory(tb)
