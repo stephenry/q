@@ -41,10 +41,10 @@ public:
   virtual bool run() = 0;
 };
 
-class TestFactory {
+class TestBuilder {
 public:
-  explicit TestFactory() = default;
-  virtual ~TestFactory() = default;
+  explicit TestBuilder() = default;
+  virtual ~TestBuilder() = default;
 
   virtual std::unique_ptr<Test> construct() = 0;
 };
@@ -53,7 +53,7 @@ class TestRegistry {
 public:
   explicit TestRegistry() = default;
 
-  TestFactory* get(const std::string& name);
+  TestBuilder* get(const std::string& name);
 
   template<typename T, typename ...Args>
   void add(const std::string& name, Args&& ...args) {
@@ -62,7 +62,7 @@ public:
   }
 
 private:
-  std::map<std::string, std::unique_ptr<TestFactory>> tfm_;
+  std::map<std::string, std::unique_ptr<TestBuilder>> tfm_;
 };
 
 #endif

@@ -76,12 +76,14 @@ public:
 
   void issue(std::size_t ch, Opcode opcode, VlWide<4>& dat);
 
+  bool ack(std::size_t ch) const;
+
 private:
   Vtb_stk* tb_stk_;
 };
 
 class StkTest : public Test {
-  friend class StkTestFactory;
+  friend class StkTestBuilder;
 
   struct Event {
     explicit Event() = default;
@@ -102,8 +104,6 @@ public:
 
   virtual bool program() = 0;
 
-  void attach_note(const std::string& s);
-
   void wait(std::size_t cycles = 1);
 
   void wait_until(EventType et);
@@ -116,7 +116,7 @@ protected:
   std::unique_ptr<KernelVerilated<Vtb_stk, StkDriver> > kernel_;
   std::unique_ptr<Model> model_;
 
-  bool on_posedge_clk() override;
+  bool on_negedge_clk() override;
   std::deque<std::unique_ptr<Event> > event_queue_;
 };
 

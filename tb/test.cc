@@ -27,8 +27,8 @@
 
 #include "test.h"
 
-TestFactory* TestRegistry::get(const std::string& name) {
-  TestFactory* ret = nullptr;
+TestBuilder* TestRegistry::get(const std::string& name) {
+  TestBuilder* ret = nullptr;
   if (auto it = tfm_.find(name); it != tfm_.end()) {
     ret = it->second.get();
   }

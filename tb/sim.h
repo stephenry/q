@@ -32,7 +32,7 @@
 #include <memory>
 #include <string>
 
-class TestFactory;
+class TestBuilder;
 class Random;
 class Kernel;
 
@@ -42,7 +42,7 @@ struct Globals {
 
   inline static std::string vcd_fn = "q.vcd";
 
-  inline static TestFactory* test_factory = nullptr;
+  inline static TestBuilder* test_builder = nullptr;
 
   inline static std::string test_name;
 

@@ -51,7 +51,7 @@ module stk_pipe_ad (
 // -------------------------------------------------------------------------- //
 // Allocation Interface:
 , input wire logic                                i_al_empty_r
-, input wire logic                                i_al_busy
+, input wire logic                                i_al_busy_r
 //
 , output wire logic                               o_al_alloc
 
@@ -94,8 +94,8 @@ logic                                   qpush_pop;
 qpush_t                                 qpush_push_dat;
 qpush_t                                 qpush_pop_dat;
 logic [cfg_pkg::ENGS_N - 1:0]           qpush_pop_dat_engid_d;
-`Q_DFF(logic, qpush_full, clk);
-`Q_DFF(logic, qpush_empty, clk);
+`Q_DFFR(logic, qpush_full, 1'b0, clk);
+`Q_DFFR(logic, qpush_empty, 1'b1, clk);
 
 // "Pop" Command Queue:
 //
@@ -103,16 +103,16 @@ logic                                   qpop_push;
 stk_pkg::engid_t                        qpop_push_dat;
 logic                                   qpop_pop;
 stk_pkg::engid_t                        qpop_pop_dat;
-`Q_DFF(logic, qpop_full, clk);
-`Q_DFF(logic, qpop_empty, clk);
+`Q_DFFR(logic, qpop_full, 1'b0, clk);
+`Q_DFFR(logic, qpop_empty, 1'b1, clk);
 logic [cfg_pkg::ENGS_N - 1:0]          qpop_pop_dat_engid_d;
 
 // "Invalidation" Command Queue:
 //
 logic                                   qinv_push;
 stk_pkg::engid_t                        qinv_push_dat;
-`Q_DFF(logic, qinv_full, clk);
-`Q_DFF(logic, qinv_empty, clk);
+`Q_DFFR(logic, qinv_full, 1'b0, clk);
+`Q_DFFR(logic, qinv_empty, 1'b1, clk);
 
 // "Active" Set:
 //
@@ -127,12 +127,15 @@ logic [2:0]                             deq_gnt_d;
 logic                                   deq_ack;
 
 // Output logic:
-logic                                   lk_vld;
-stk_pkg::engid_t                        lk_engid;
 logic [cfg_pkg::ENGS_N - 1:0]           lk_engid_d;
-stk_pkg::opcode_t                       lk_opcode;
-logic                                   lk_dat_vld;
-logic [127:0]                           lk_dat;
+
+logic                                   al_alloc;
+
+// ========================================================================== //
+//                                                                            //
+//  Command Decoder                                                           //
+//                                                                            //
+// ========================================================================== //
 
 // -------------------------------------------------------------------------- //
 // Command decoder:
@@ -145,12 +148,20 @@ assign cmd_is_inv [ch] = (i_cmd_opcode [ch] == stk_pkg::OPCODE_INV);
 
 end : cmd_decoder
 
-// -------------------------------------------------------------------------- //
+// ========================================================================== //
+//                                                                            //
+//  Enqueue Logic                                                             //
+//                                                                            //
+// ========================================================================== //
 
+// -------------------------------------------------------------------------- //
+//
 assign enq_req_d = cmd_vld &
   ((cmd_is_push & {cfg_pkg::ENGS_N{~qpush_full_r}}) |
    (cmd_is_pop  & {cfg_pkg::ENGS_N{~qpop_full_r}}));
 
+// -------------------------------------------------------------------------- //
+//
 rr #(.W(cfg_pkg::ENGS_N)) u_rr_enq (
 //
   .i_req                      (enq_req_d)
@@ -161,17 +172,34 @@ rr #(.W(cfg_pkg::ENGS_N)) u_rr_enq (
 , .arst_n                     (arst_n)
 );
 
+// -------------------------------------------------------------------------- //
+//
 enc #(.W(cfg_pkg::ENGS_N)) u_rr_enq_gnt_enc (
   .i_x(enq_gnt_d), .o_y(enq_gnt)
 );
 
+// -------------------------------------------------------------------------- //
+//
 assign enq_ack = (qpush_push | qpop_push | qinv_push);
 
+// -------------------------------------------------------------------------- //
+//
 assign cmd_ack = (enq_gnt_d & {cfg_pkg::ENGS_N{enq_ack}});
+
+
+// ========================================================================== //
+//                                                                            //
+//  "Push" Opcode Queue                                                       //
+//                                                                            //
+// ========================================================================== //
 
 // -------------------------------------------------------------------------- //
 //
 assign qpush_push = (enq_gnt_d & cmd_is_push) != '0;
+
+// -------------------------------------------------------------------------- //
+//
+assign qpush_pop = deq_ack & deq_gnt_d [0];
 
 mux #(.N(cfg_pkg::ENGS_N), .W(128)) u_enq_mux (
   .i_x(i_cmd_dat), .i_sel(enq_gnt_d), .o_y(qpush_push_dat_dat)
@@ -187,8 +215,8 @@ queue_rf #(.N(2), .W(QPUSH_W)) u_qpush (
 , .i_pop                      (qpush_pop)
 , .o_pop_dat                  (qpush_pop_dat)
 //
-, .o_full_w                   (qpush_empty_w)
-, .o_empty_w                  (qpush_full_w)
+, .o_full_w                   (qpush_full_w)
+, .o_empty_w                  (qpush_empty_w)
 //
 , .clk                        (clk)
 , .arst_n                     (arst_n)
@@ -198,9 +226,19 @@ dec #(.W(cfg_pkg::ENGS_N)) u_dec_qpush_engid (
   .i_x(qpush_pop_dat.id), .o_y(qpush_pop_dat_engid_d)
 );
 
+
+// ========================================================================== //
+//                                                                            //
+//  "Pop" Opcode Queue                                                        //
+//                                                                            //
+// ========================================================================== //
+
 // -------------------------------------------------------------------------- //
 //
 assign qpop_push = (enq_gnt_d & cmd_is_pop) != '0;
+
+assign qpop_pop = deq_ack & deq_gnt_d [1];
+
 assign qpop_push_dat = enq_gnt;
 
 queue_rf #(.N(2), .W(stk_pkg::ENGID_W)) u_qpop (
@@ -211,8 +249,8 @@ queue_rf #(.N(2), .W(stk_pkg::ENGID_W)) u_qpop (
 , .i_pop                      (qpop_pop)
 , .o_pop_dat                  (qpop_pop_dat)
 //
-, .o_full_w                   (qpop_empty_w)
-, .o_empty_w                  (qpop_full_w)
+, .o_full_w                   (qpop_full_w)
+, .o_empty_w                  (qpop_empty_w)
 //
 , .clk                        (clk)
 , .arst_n                     (arst_n)
@@ -221,6 +259,12 @@ queue_rf #(.N(2), .W(stk_pkg::ENGID_W)) u_qpop (
 dec #(.W(cfg_pkg::ENGS_N)) u_dec_qpop_engid (
   .i_x(qpop_pop_dat), .o_y(qpop_pop_dat_engid_d)
 );
+
+// ========================================================================== //
+//                                                                            //
+//  "INV" Opcode Queue                                                        //
+//                                                                            //
+// ========================================================================== //
 
 // -------------------------------------------------------------------------- //
 //
@@ -235,8 +279,8 @@ queue_rf #(.N(2), .W(stk_pkg::ENGID_W)) u_qinv (
 , .i_pop                      ()
 , .o_pop_dat                  ()
 //
-, .o_full_w                   (qinv_empty_w)
-, .o_empty_w                  (qinv_full_w)
+, .o_full_w                   (qinv_full_w)
+, .o_empty_w                  (qinv_empty_w)
 //
 , .clk                        (clk)
 , .arst_n                     (arst_n)
@@ -255,17 +299,12 @@ stk_pipe_ad_inv u_stk_pipe_ad_inv (
 // -------------------------------------------------------------------------- //
 //
 
-dec #(.W(cfg_pkg::ENGS_N)) u_dec (.i_x(lk_engid), .o_y(lk_engid_d));
-
-assign active_set = (lk_engid_d & {cfg_pkg::ENGS_N{lk_vld}});
-assign active_clr = i_rsp_vld;
-assign active_w = (~active_clr) & (active_r | active_set);
+dec #(.W(cfg_pkg::ENGS_N)) u_dec (.i_x(o_lk_engid_w), .o_y(lk_engid_d));
 
 // -------------------------------------------------------------------------- //
 //
-
 assign deq_req_d [0] =
-  (~i_al_empty_r) & (~qpush_empty_r) & ((active_r & qpush_pop_dat_engid_d) == '0);
+  (~qpush_empty_r) & (~i_al_empty_r) & ((active_r & qpush_pop_dat_engid_d) == '0);
 
 assign deq_req_d [1] =
   (~qpop_empty_r) & ((active_r & qpop_pop_dat_engid_d) == '0);
@@ -273,7 +312,9 @@ assign deq_req_d [1] =
 assign deq_req_d [2] =
   1'b0; // TODO
 
-assign deq_ack = (~i_al_busy) & (deq_req_d != '0);
+// -------------------------------------------------------------------------- //
+//
+assign deq_ack = (~i_al_busy_r) & (deq_req_d != '0);
 
 // -------------------------------------------------------------------------- //
 //
@@ -287,25 +328,16 @@ rr #(.W(3)) u_rr (
 , .arst_n                     (arst_n)
 );
 
-assign qpush_pop = deq_ack & deq_gnt_d [0];
-assign qpop_pop = deq_ack & deq_gnt_d [1];
+// ========================================================================== //
+//                                                                            //
+//  Line Allocation Request (to AL-stage)                                     //
+//                                                                            //
+// ========================================================================== //
 
 // -------------------------------------------------------------------------- //
-// Output
-
-assign lk_vld = deq_ack;
-
-assign lk_engid =
-    ({stk_pkg::ENGID_W{deq_gnt_d[0]}} & qpush_pop_dat.id)
-  | ({stk_pkg::ENGID_W{deq_gnt_d[1]}} & qpop_pop_dat);
-
-assign lk_opcode =
-    ({stk_pkg::OPCODE_W{deq_gnt_d[0]}} & stk_pkg::OPCODE_PUSH)
-  | ({stk_pkg::OPCODE_W{deq_gnt_d[1]}} & stk_pkg::OPCODE_POP);
-
-assign lk_dat_vld = lk_vld & (lk_opcode == stk_pkg::OPCODE_PUSH);
-
-assign lk_dat = qpush_pop_dat.dat;
+// Request new line if outgoing request is a PUSH.
+//
+assign al_alloc = o_lk_vld_w & (o_lk_opcode_w == stk_pkg::OPCODE_PUSH);
 
 // ========================================================================== //
 //                                                                            //
@@ -313,14 +345,54 @@ assign lk_dat = qpush_pop_dat.dat;
 //                                                                            //
 // ========================================================================== //
 
+// -------------------------------------------------------------------------- //
+//
+assign active_set = (lk_engid_d & {cfg_pkg::ENGS_N{o_lk_vld_w}});
+
+// -------------------------------------------------------------------------- //
+//
+assign active_clr = i_rsp_vld;
+
+// -------------------------------------------------------------------------- //
+//
+assign active_w = (~active_clr) & (active_r | active_set);
+
+// ========================================================================== //
+//                                                                            //
+//  Outputs                                                                   //
+//                                                                            //
+// ========================================================================== //
+
+// -------------------------------------------------------------------------- //
 // Command response:
 assign o_cmd_ack = cmd_ack;
 
-// Downstream microcode.
-assign o_lk_vld_w = lk_vld;
-assign o_lk_engid_w = lk_engid;
-assign o_lk_opcode_w = lk_opcode;
-assign o_lk_dat_vld_w = lk_dat_vld;
-assign o_lk_dat_w = lk_dat;
+// -------------------------------------------------------------------------- //
+//
+assign o_lk_vld_w = deq_ack;
+
+// -------------------------------------------------------------------------- //
+//
+assign o_lk_engid_w =
+    ({stk_pkg::ENGID_W{deq_gnt_d[0]}} & qpush_pop_dat.id)
+  | ({stk_pkg::ENGID_W{deq_gnt_d[1]}} & qpop_pop_dat);
+
+// -------------------------------------------------------------------------- //
+//
+assign o_lk_opcode_w =
+    ({stk_pkg::OPCODE_W{deq_gnt_d[0]}} & stk_pkg::OPCODE_PUSH)
+  | ({stk_pkg::OPCODE_W{deq_gnt_d[1]}} & stk_pkg::OPCODE_POP);
+
+// -------------------------------------------------------------------------- //
+//
+assign o_lk_dat_vld_w = o_lk_vld_w & (o_lk_opcode_w == stk_pkg::OPCODE_PUSH);
+
+// -------------------------------------------------------------------------- //
+//
+assign o_lk_dat_w = qpush_pop_dat.dat;
+
+// -------------------------------------------------------------------------- //
+//
+assign o_al_alloc = al_alloc;
 
 endmodule : stk_pipe_ad

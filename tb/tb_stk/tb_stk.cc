@@ -92,34 +92,15 @@ void StkDriver::issue(std::size_t ch, Opcode opcode, VlWide<4>& dat) {
   }
 }
 
-namespace {
-
-class StkTestCallBack : public KernelCallBack {
-public:
-  explicit StkTestCallBack(Vtb_stk* Vtb_stk)
-    : Vtb_stk_(Vtb_stk)
-  {}
-
-  void cycles(std::size_t cycles) { cycles_ = cycles; }
-
-  void idle() override {
+bool StkDriver::ack(std::size_t ch) const {
+  switch (ch) {
+  case 0: return VSupport::logic(&tb_stk_->o_cmd0_ack);
+  case 1: return VSupport::logic(&tb_stk_->o_cmd1_ack);
+  case 2: return VSupport::logic(&tb_stk_->o_cmd2_ack);
+  case 3: return VSupport::logic(&tb_stk_->o_cmd3_ack);
   }
-
-  bool on_negedge_clk() override {
-    return (cycles_-- != 0);
-  }
-
-  bool on_posedge_clk() override {
-    return true;
-  }
-
-private:
-  std::size_t cycles_ = 0;
-  Vtb_stk* Vtb_stk_;
-};
-
-
-};
+  return false;
+}
 
 namespace tb_stk {
 
@@ -155,7 +136,7 @@ void StkTest::issue(std::size_t ch, Opcode opcode) {
     {}
     bool execute(StkDriver* d) override {
       d->issue(ch_, opcode_);
-      return false;
+      return d->ack(ch_);
     }
   private:
     std::size_t ch_;
@@ -172,7 +153,7 @@ void StkTest::issue(std::size_t ch, Opcode opcode, const VlWide<4>& dat) {
     {}
     bool execute(StkDriver* d) override {
       d->issue(ch_, opcode_, dat_);
-      return false;
+      return d->ack(ch_);
     }
   private:
     std::size_t ch_;
@@ -182,36 +163,13 @@ void StkTest::issue(std::size_t ch, Opcode opcode, const VlWide<4>& dat) {
   event_queue_.push_back(std::make_unique<IssueEvent>(ch, opcode, dat));
 }
 
-void StkTest::attach_note(const std::string& msg) {
-  struct AttachNoteEvent : Event {
-    explicit AttachNoteEvent(
-      const std::string& msg, std::unique_ptr<Event>&& event)
-      : msg_(msg), event_(std::move(event))
-    {}
-    bool execute(StkDriver* d) override {
-      std::cout << msg_ << "\n";
-      return !event_ || event_->execute(d);
-    }
-  private:
-    std::string msg_;
-    std::unique_ptr<Event> event_;
-  };
-  std::unique_ptr<Event> child_event{nullptr};
-  if (!event_queue_.empty()) {
-    child_event = std::move(event_queue_.back());
-    event_queue_.pop_back();
-  }
-  event_queue_.push_back(
-    std::make_unique<AttachNoteEvent>(msg, std::move(child_event)));
-}
-
 void StkTest::wait(std::size_t cycles) {
   struct WaitCyclesEvent : Event {
     explicit WaitCyclesEvent(std::size_t cycles)
       : cycles_(cycles)
     {}
     bool execute(StkDriver*) override {
-      return (--cycles_ == 0);
+      return (--cycles_ != 0);
     }
   private:
     std::size_t cycles_;
@@ -240,7 +198,10 @@ void StkTest::wait_until(EventType et) {
   event_queue_.push_back(std::make_unique<WaitUntilEvent>(et));
 }
 
-bool StkTest::on_posedge_clk() {
+bool StkTest::on_negedge_clk() {
+  // TODO(stephenry): should be an assertion.
+  if (event_queue_.empty()) return false;
+
   StkDriver* driver{kernel_->driver()};
   driver->idle();
 
@@ -255,20 +216,28 @@ bool StkTest::on_posedge_clk() {
 }
 
 bool StkTest::run() {
-  return kernel_->run(this);
+  program();
+  const bool success = kernel_->run(this);
+  return !success;
 }
 
-class StkTestFactory : public TestFactory {
+struct StkTestFactory {
+  static std::unique_ptr<StkTest> construct(const std::string& name) {
+    std::unique_ptr<StkTest> p;
+    if (Globals::test_name == "tb_stk_smoke") {
+      p = std::make_unique<tb_stk::smoke::Test>();
+    }
+    return p;
+  }
+};
+
+class StkTestBuilder : public TestBuilder {
 public:
-  explicit StkTestFactory() = default;
+  explicit StkTestBuilder() = default;
 
   std::unique_ptr<Test> construct() override {
-    std::unique_ptr<tb_stk::StkTest> t;
-    if (Globals::test_name == "tb_stk_smoke") {
-      t = std::make_unique<tb_stk::smoke::Test>();
-    } else {
-      // throw
-    }
+    std::unique_ptr<tb_stk::StkTest> t{
+      StkTestFactory::construct(Globals::test_name)};
     t->kernel_ = std::make_unique<KernelVerilated<Vtb_stk, StkDriver>>();
     t->model_ = std::make_unique<Model>();
     return t;
@@ -277,7 +246,7 @@ public:
 };
 
 void init(TestRegistry& tr) {
-  tr.add<StkTestFactory>("tb_stk_smoke");
+  tr.add<StkTestBuilder>("tb_stk_smoke");
 }
 
 } // namespace tb_stk

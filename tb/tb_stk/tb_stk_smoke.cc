@@ -39,7 +39,6 @@ struct tb_stk::smoke::Test::Impl {
     // probably unnecessary as RTL will back-pressure anyway.
     //
     t_->wait_until(StkTest::EventType::EndOfInitialization);
-    t_->attach_note("Initialization complete!");
 
     // Push data to channel 0,
     //
@@ -56,6 +55,10 @@ struct tb_stk::smoke::Test::Impl {
     //
     pop_from_ch(0);
 
+    // Wait some cycles to allow the prior instructions to execute.
+    //
+    t_->wait(100);
+
     // No further stimulus
     //
     done_ = true;
@@ -68,14 +71,12 @@ struct tb_stk::smoke::Test::Impl {
     VlWide<4> dat;
     Globals::random->uniform(dat);
     t_->issue(ch, Opcode::Push, dat);
-    t_->attach_note("Pushing data...");
   }
 
   // Issue Pop command to channel 'ch'
   //
   void pop_from_ch(std::size_t ch) {
     t_->issue(ch, Opcode::Pop);
-    t_->attach_note("Popping data...");
   }
 
 private:

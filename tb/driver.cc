@@ -90,8 +90,8 @@ void Driver::parse_args(int argc, const char** argv) {
 #endif
     } else if (is_one_of(argstr, "-t", "--test")) {
       Globals::test_name = vs.at(++i);
-      Globals::test_factory = tr_.get(Globals::test_name);
-      if (!Globals::test_factory) {
+      Globals::test_builder = tr_.get(Globals::test_name);
+      if (!Globals::test_builder) {
         std::cout << "Test does not exist " << Globals::test_name << "\n";
         std::exit(1);
       }
@@ -102,8 +102,8 @@ void Driver::parse_args(int argc, const char** argv) {
 }
 
 int Driver::execute() {
-  if (Globals::test_factory) {
-    std::unique_ptr<Test> test{Globals::test_factory->construct()};
+  if (Globals::test_builder) {
+    std::unique_ptr<Test> test{Globals::test_builder->construct()};
     test->run();
     return 0;
   }

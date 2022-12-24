@@ -35,7 +35,7 @@ module stk_pipe_al (
 // Admission ("ad") Stage Interface
   input wire logic                                i_ad_alloc
 , output wire logic                               o_ad_empty_r
-, output wire logic                               o_ad_busy
+, output wire logic                               o_ad_busy_r
 
 // -------------------------------------------------------------------------- //
 // Lookup ("lk") Stage Interface
@@ -59,6 +59,7 @@ logic                                        init;
 logic                                        init_wen_r;
 stk_pkg::line_id_t                           init_waddr_r;
 stk_pkg::line_id_t                           init_wdata_r;
+logic                                        init_busy_r;
 
 // Descriptor Return Logic
 //
@@ -101,6 +102,12 @@ stk_pkg::ptr_t                               lk_ptr_w;
 stk_pkg::line_id_t                           lk_mem_line_w;
 stk_pkg::ptr_t                               lk_mem_w;
 
+// ========================================================================== //
+//                                                                            //
+//  Initialization                                                            //
+//                                                                            //
+// ========================================================================== //
+
 // -------------------------------------------------------------------------- //
 // Stack Initialization Logic
 assign init = reset_init_r;
@@ -112,7 +119,7 @@ stk_pipe_al_init u_stk_pipe_al_init (
 , .o_init_wdata_r             (init_wdata_r)
 //
 , .i_init                     (init)
-, .o_busy_r                   ()
+, .o_busy_r                   (init_busy_r)
 //
 , .clk                        (clk)
 );
@@ -250,6 +257,8 @@ assign lk_ptr_w =
 // ========================================================================== //
 
 assign o_lk_ptr_w = lk_ptr_w;
+
+assign o_ad_busy_r = init_busy_r;
 
 endmodule : stk_pipe_al
 

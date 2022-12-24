@@ -54,9 +54,9 @@ struct KernelCallBack {
 
   virtual void idle() {}
 
-  virtual bool on_negedge_clk() { return false; }
+  virtual bool on_negedge_clk() { return true; }
 
-  virtual bool on_posedge_clk() { return false; }
+  virtual bool on_posedge_clk() { return true; }
 };
 
 class Kernel {
@@ -109,7 +109,7 @@ public:
     ResetState reset_state{ResetState::PreReset};
     int rundown_n = 5;
     bool do_stepping = true;
-    bool failed = false;
+    bool success = true;
     while (do_stepping || --rundown_n > 0) {
       if (++tb_time_ % 5 == 0) {
         const bool edge = driver_->clk();
@@ -144,7 +144,7 @@ public:
 #endif
     }
     fini();
-    return failed;
+    return success;
   }
 
   bool eval_clock_edge(KernelCallBack* cb, bool edge) {
