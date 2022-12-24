@@ -30,6 +30,7 @@
 
 #include <string>
 #include <memory>
+#include <string>
 
 class TestFactory;
 class Random;
@@ -42,6 +43,8 @@ struct Globals {
   inline static std::string vcd_fn = "q.vcd";
 
   inline static TestFactory* test_factory = nullptr;
+
+  inline static std::string test_name;
 
   inline static Random* random = nullptr;
 

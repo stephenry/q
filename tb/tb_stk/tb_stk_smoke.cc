@@ -30,14 +30,16 @@
 
 struct tb_stk::smoke::Test::Impl {
 
-  explicit Impl(StkTest* t) : t_(t) {}
+  explicit Impl(StkTest* t) : t_(t), done_(false) {}
 
   bool program() {
+    if (done_) return false;
 
     // Wait until internal Stack initialization has completed;
     // probably unnecessary as RTL will back-pressure anyway.
     //
     t_->wait_until(StkTest::EventType::EndOfInitialization);
+    t_->attach_note("Initialization complete!");
 
     // Push data to channel 0,
     //
@@ -47,6 +49,7 @@ struct tb_stk::smoke::Test::Impl {
     // an empty queue, admission stage scheduler ought to choose the
     // Push opcode queue over Pop, but for the purpose of the smoke
     // test, we don't want to rely upon this constraint).
+    //
     t_->wait(10);
 
     // Pop data from channel 0; expect the same data back.
@@ -55,6 +58,7 @@ struct tb_stk::smoke::Test::Impl {
 
     // No further stimulus
     //
+    done_ = true;
     return false;
   }
 
@@ -64,15 +68,18 @@ struct tb_stk::smoke::Test::Impl {
     VlWide<4> dat;
     Globals::random->uniform(dat);
     t_->issue(ch, Opcode::Push, dat);
+    t_->attach_note("Pushing data...");
   }
 
   // Issue Pop command to channel 'ch'
   //
   void pop_from_ch(std::size_t ch) {
     t_->issue(ch, Opcode::Pop);
+    t_->attach_note("Popping data...");
   }
 
 private:
+  bool done_;
   StkTest* t_;
 };
 

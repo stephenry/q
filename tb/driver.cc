@@ -89,10 +89,10 @@ void Driver::parse_args(int argc, const char** argv) {
           << "Waveform tracing has not been enabled in current build.\n";
 #endif
     } else if (is_one_of(argstr, "-t", "--test")) {
-      const std::string sstr{vs.at(++i)};
-      Globals::test_factory = tr_.get(sstr);
+      Globals::test_name = vs.at(++i);
+      Globals::test_factory = tr_.get(Globals::test_name);
       if (!Globals::test_factory) {
-        std::cout << "Test does not exist " << sstr << "\n";
+        std::cout << "Test does not exist " << Globals::test_name << "\n";
         std::exit(1);
       }
     } else {

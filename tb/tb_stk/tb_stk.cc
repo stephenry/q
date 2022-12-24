@@ -64,6 +64,11 @@ bool StkDriver::busy_r() const {
   return VSupport::logic(&tb_stk_->o_busy_r);
 }
 
+void StkDriver::idle() {
+  for (std::size_t ch = 0; ch < cfg::ENGS_N; ch++) {
+    issue(ch, Opcode::Nop);
+  }
+}
 
 void StkDriver::issue(std::size_t ch, Opcode opcode) {
   auto to_underlying = [](Opcode opcode) {
@@ -177,6 +182,29 @@ void StkTest::issue(std::size_t ch, Opcode opcode, const VlWide<4>& dat) {
   event_queue_.push_back(std::make_unique<IssueEvent>(ch, opcode, dat));
 }
 
+void StkTest::attach_note(const std::string& msg) {
+  struct AttachNoteEvent : Event {
+    explicit AttachNoteEvent(
+      const std::string& msg, std::unique_ptr<Event>&& event)
+      : msg_(msg), event_(std::move(event))
+    {}
+    bool execute(StkDriver* d) override {
+      std::cout << msg_ << "\n";
+      return !event_ || event_->execute(d);
+    }
+  private:
+    std::string msg_;
+    std::unique_ptr<Event> event_;
+  };
+  std::unique_ptr<Event> child_event{nullptr};
+  if (!event_queue_.empty()) {
+    child_event = std::move(event_queue_.back());
+    event_queue_.pop_back();
+  }
+  event_queue_.push_back(
+    std::make_unique<AttachNoteEvent>(msg, std::move(child_event)));
+}
+
 void StkTest::wait(std::size_t cycles) {
   struct WaitCyclesEvent : Event {
     explicit WaitCyclesEvent(std::size_t cycles)
@@ -213,11 +241,11 @@ void StkTest::wait_until(EventType et) {
 }
 
 bool StkTest::on_posedge_clk() {
-  // TODO(stephenry): change to assertion; should never be reached.
-  if (event_queue_.empty()) return false;
+  StkDriver* driver{kernel_->driver()};
+  driver->idle();
 
-  if (!event_queue_.back()->execute(kernel_->driver())) {
-    event_queue_.pop_back();
+  if (!event_queue_.front()->execute(driver)) {
+    event_queue_.pop_front();
   }
 
   // If more events to go, reschedule, otherwise, try to reprogram
@@ -235,7 +263,12 @@ public:
   explicit StkTestFactory() = default;
 
   std::unique_ptr<Test> construct() override {
-    std::unique_ptr<tb_stk::smoke::Test> t;
+    std::unique_ptr<tb_stk::StkTest> t;
+    if (Globals::test_name == "tb_stk_smoke") {
+      t = std::make_unique<tb_stk::smoke::Test>();
+    } else {
+      // throw
+    }
     t->kernel_ = std::make_unique<KernelVerilated<Vtb_stk, StkDriver>>();
     t->model_ = std::make_unique<Model>();
     return t;

@@ -70,6 +70,8 @@ public:
 
   bool busy_r() const;
 
+  void idle();
+
   void issue(std::size_t ch, Opcode opcode);
 
   void issue(std::size_t ch, Opcode opcode, VlWide<4>& dat);
@@ -99,6 +101,8 @@ public:
   bool run() override;
 
   virtual bool program() = 0;
+
+  void attach_note(const std::string& s);
 
   void wait(std::size_t cycles = 1);
 
