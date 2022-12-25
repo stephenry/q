@@ -49,8 +49,7 @@ set(VERILATOR_ARGS
 #  "-Wall"
   "--Mdir ${VOUT_DIR}"
   "--build"
-  "--top ${VTOP}"
-  )
+  "--top ${VTOP}")
 if (ENABLE_VCD)
   list(APPEND VERILATOR_ARGS --trace)
 endif ()

@@ -38,9 +38,7 @@ if (${TARGET} STREQUAL "sim")
     "${TECH_ROOT}/sim/dffre.sv")
 else ()
   message(FATAL_ERROR
-    "Technology \"${TARGET}\" is unknown; RTL cannot be compiled."
-    )
+    "Technology \"${TARGET}\" is unknown; RTL cannot be compiled.")
 endif ()
-
 
 set(TECH_INCLUDE_PATHS "${TECH_ROOT}")

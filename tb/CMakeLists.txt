@@ -52,8 +52,7 @@ target_sources(driver
   PRIVATE
   "${CMAKE_SOURCE_DIR}/tb/test.cc"
   "${CMAKE_SOURCE_DIR}/tb/tb.cc"
-  "${CMAKE_SOURCE_DIR}/tb/driver.cc"
-  )
+  "${CMAKE_SOURCE_DIR}/tb/driver.cc")
 
 configure_file("${CMAKE_SOURCE_DIR}/tb/cfg_common.h.in" cfg_common.h)
 
@@ -61,10 +60,8 @@ target_include_directories(driver
   PRIVATE
   "${CMAKE_CURRENT_BINARY_DIR}"
   "${CMAKE_CURRENT_SOURCE_DIR}"
-  "${VERILATOR_ROOT}/include"
-  )
+  "${VERILATOR_ROOT}/include")
 
 target_link_libraries(driver
   vlib
-  stk
-  )
+  stk)

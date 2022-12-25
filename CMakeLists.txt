@@ -50,7 +50,6 @@ include(FindVerilator)
 # include(venv)
 
 set(Q_TOOLS_ROOT ${CMAKE_BINARY_DIR}/tools)
-add_subdirectory(tools)
+#add_subdirectory(tools)
 add_subdirectory(rtl)
-
 add_subdirectory(tb)
