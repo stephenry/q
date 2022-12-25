@@ -28,97 +28,10 @@
 #ifndef Q_TB_STK_TB_STK_H
 #define Q_TB_STK_TB_STK_H
 
-#include "test.h"
-#include "tb.h"
-#include "tb_stk/cfg.h"
-#include "verilated.h"
-#include "tb_stk/Vobj/Vtb_stk.h"
-#include <deque>
-#include <array>
-
 // Forwards:
 class TestRegistry;
-class Vtb_stk;
 
 namespace tb_stk {
-
-class Model;
-
-enum class Opcode : CData {
-  Nop    = 0b00,
-  Push   = 0b01,
-  Pop    = 0b10,
-  Inv    = 0b11,
-};
-
-class StkDriver {
-public:
-
-  explicit StkDriver() = default;
-
-  explicit StkDriver(Vtb_stk* uut);
-
-  void clk(bool c);
-
-  bool clk() const;
-
-  vluint64_t tb_cycle() const;
-
-  void arst_n(bool c);
-
-  bool arst_n() const;
-
-  bool busy_r() const;
-
-  void idle();
-
-  void issue(std::size_t ch, Opcode opcode);
-
-  void issue(std::size_t ch, Opcode opcode, VlWide<4>& dat);
-
-  bool ack(std::size_t ch) const;
-
-private:
-  Vtb_stk* tb_stk_;
-};
-
-class StkTest : public Test {
-  friend class StkTestBuilder;
-
-  struct Event {
-    explicit Event() = default;
-    virtual ~Event() = default;
-
-    virtual bool execute(StkDriver*) = 0;
-  };
-
-public:
-  enum class EventType {
-    EndOfInitialization
-  };
-
-  explicit StkTest();
-  virtual ~StkTest();
-
-  bool run() override;
-
-  virtual bool program() = 0;
-
-  void wait(std::size_t cycles = 1);
-
-  void wait_until(EventType et);
-
-  void issue(std::size_t ch, Opcode opcode);
-
-  void issue(std::size_t ch, Opcode opcode, const VlWide<4>& v);
-
-protected:
-  std::unique_ptr<KernelVerilated<Vtb_stk, StkDriver> > kernel_;
-  std::unique_ptr<Model> model_;
-
-  bool on_negedge_clk() override;
-  std::deque<std::unique_ptr<Event> > event_queue_;
-};
 
 void init(TestRegistry& tr);
 

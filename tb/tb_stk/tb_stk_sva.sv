@@ -23,46 +23,14 @@
 // CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
-// ========================================================================== //
+//========================================================================== //
 
-#include "tb_stk/tb_stk.h"
-#include "tb_stk/tb_stk_main.h"
-#include "tb_stk/tb_stk_smoke.h"
-#include "test.h"
-#include "sim.h"
-#include <memory>
-#include <string>
+`include "common_defs.vh"
 
-using namespace tb_stk;
+module binds;
 
-struct StkTest::Factory {
-  static std::unique_ptr<StkTest> construct(const std::string& name) {
-    std::unique_ptr<StkTest> p;
-    if (Globals::test_name == "tb_stk_smoke") {
-      p = std::make_unique<smoke::Test>();
-    }
-    return p;
-  }
-};
+bind mux mux_sva #(.N) b_mux_sva (.i_sel);
 
-class StkTest::Builder : public TestBuilder {
-public:
-  explicit Builder() = default;
+bind dffen dffen_sva b_dffen_sva (.en);
 
-  std::unique_ptr<Test> construct() override {
-    std::unique_ptr<StkTest> t{
-      StkTest::Factory::construct(Globals::test_name)};
-    t->kernel_ = std::make_unique<KernelVerilated<Vtb_stk, Driver>>();
-    t->model_ = std::make_unique<Model>();
-    return t;
-  }
-
-};
-
-namespace tb_stk {
-
-void init(TestRegistry& tr) {
-  tr.add<StkTest::Builder>("tb_stk_smoke");
-}
-
-} // namespace tb_stk
+endmodule : binds

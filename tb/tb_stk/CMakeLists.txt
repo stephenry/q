@@ -90,6 +90,7 @@ add_custom_target(verilate_stk
 
 add_library(stk STATIC
   "${CMAKE_SOURCE_DIR}/tb/tb_stk/tb_stk.cc"
+  "${CMAKE_SOURCE_DIR}/tb/tb_stk/tb_stk_main.cc"
   "${CMAKE_SOURCE_DIR}/tb/tb_stk/tb_stk_smoke.cc")
 
 target_include_directories(stk

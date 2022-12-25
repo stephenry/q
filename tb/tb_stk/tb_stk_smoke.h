@@ -28,7 +28,7 @@
 #ifndef Q_TB_STK_TB_STK_SMOKE_H
 #define Q_TB_STK_TB_STK_SMOKE_H
 
-#include "tb_stk/tb_stk.h"
+#include "tb_stk/tb_stk_main.h"
 
 namespace tb_stk::smoke {
 
