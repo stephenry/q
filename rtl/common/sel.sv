@@ -34,7 +34,7 @@ module sel #(
 // Number of selection bits
 , parameter int              N
 
-, localparam int             OUT_W = (W / N);
+, localparam int             OUT_W = (W / N)
 ) (
 // -------------------------------------------------------------------------- //
 // Selection Vector

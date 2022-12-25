@@ -32,6 +32,7 @@
 #include <vector>
 #include <algorithm>
 #include "verilated.h"
+#include "sim.h"
 
 class Random {
   using seed_type = std::mt19937::result_type;
@@ -77,28 +78,24 @@ class Bag {
   explicit Bag() = default;
 
   void push_back(const T& t, float weight = 0.0f) {
-    ts_.push_back(std::make_pair(t, weight));
+    ts_.push_back(std::make_pair(weight_total_, t));
     weight_total_ += weight;
   }
 
-  T pick(Random* r) const {
+  T pick() const {
     if (ts_.empty()) return T{};
 
-    // assert(!ts_.empty());
-    const float sel = r->uniform(0.0f, weight_total_);
-    float pos = 0.0f;
-    // O(N) with number of items in bag.
-    for (std::size_t i = 0; i < ts_.size() - 1; i++) {
-      pos += ts_[i].second;
-      if (pos >= sel) return ts_[i].first;
-    }
-    // Select last entry
-    return ts_.back().first;
+    const float sel = Globals::random->uniform(0.0f, weight_total_);
+    auto it = std::lower_bound(ts_.begin(), ts_.end(), sel,
+      [](const std::pair<float, T>& lhs, const std::pair<float, T>& rhs) {
+        return lhs.first < rhs.first;
+      });
+    return it->second;
   }
 
  private:
-  float weight_total_ = 0;
-  std::vector<std::pair<T, float> > ts_;
+  float weight_total_ = 0.0f;
+  std::vector<std::pair<float, T> > ts_;
 };
 
 #endif
