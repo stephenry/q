@@ -39,6 +39,7 @@ set(COMMON_SOURCES
     "${SRC_ROOT}/common/pri.sv"
     "${SRC_ROOT}/common/cla.sv"
     "${SRC_ROOT}/common/cmp.sv"
+    "${SRC_ROOT}/common/sel.sv"
     "${SRC_ROOT}/common/dec.sv"
     "${SRC_ROOT}/common/enc.sv"
     "${SRC_ROOT}/common/mux.sv")
