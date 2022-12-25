@@ -39,7 +39,6 @@ add_executable(driver)
 # Build verilator support library
 #
 verilator_build(vlib)
-target_link_libraries(driver vlib)
 
 # ---------------------------------------------------------------------------- #
 # Add subordinate, unit testbenches
@@ -51,8 +50,6 @@ add_subdirectory(tb_stk)
 #
 target_sources(driver
   PRIVATE
-  "${CMAKE_SOURCE_DIR}/tb/tb_stk/tb_stk.cc"
-  "${CMAKE_SOURCE_DIR}/tb/tb_stk/tb_stk_smoke.cc"
   "${CMAKE_SOURCE_DIR}/tb/test.cc"
   "${CMAKE_SOURCE_DIR}/tb/tb.cc"
   "${CMAKE_SOURCE_DIR}/tb/driver.cc"
@@ -64,4 +61,10 @@ target_include_directories(driver
   PRIVATE
   "${CMAKE_CURRENT_BINARY_DIR}"
   "${CMAKE_CURRENT_SOURCE_DIR}"
-  "${VERILATOR_ROOT}/include")
+  "${VERILATOR_ROOT}/include"
+  )
+
+target_link_libraries(driver
+  vlib
+  stk
+  )

@@ -85,10 +85,22 @@ set(VERILATOR_COMMAND_LIST
 string(REGEX REPLACE ";" "\n" FILELIST "${VERILATOR_COMMAND_LIST}")
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/vc.f "${FILELIST}")
 
-add_custom_target(verilate
+add_custom_target(verilate_stk
   COMMAND ${Verilator_EXE} -f ${CMAKE_CURRENT_BINARY_DIR}/vc.f
   COMMENT "Verilating...")
 
-add_dependencies(driver verilate)
-target_link_libraries(driver
+add_library(stk STATIC
+  "${CMAKE_SOURCE_DIR}/tb/tb_stk/tb_stk.cc"
+  "${CMAKE_SOURCE_DIR}/tb/tb_stk/tb_stk_smoke.cc")
+
+target_include_directories(stk
+  PRIVATE
+  ${CMAKE_SOURCE_DIR}/tb
+  ${CMAKE_BINARY_DIR}/tb
+  ${CMAKE_CURRENT_BINARY_DIR}
+  "${VERILATOR_ROOT}/include")
+
+target_link_libraries(stk
   "${CMAKE_CURRENT_BINARY_DIR}/${VOUT_DIR}/V${VTOP}__ALL.a")
+
+add_dependencies(stk verilate_stk)

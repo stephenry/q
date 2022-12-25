@@ -27,17 +27,20 @@
 
 set(TECH_ROOT "${CMAKE_SOURCE_DIR}/tech")
 
+if (${TARGET} STREQUAL "sim")
+  set(TECH_SOURCES
+    "${TECH_ROOT}/sim/rams/stk_pipe_al_ptr_sram.sv"
+    "${TECH_ROOT}/sim/generic_sram_1rw.sv"
+    "${TECH_ROOT}/sim/icg.sv"
+    "${TECH_ROOT}/sim/dff.sv"
+    "${TECH_ROOT}/sim/dffe.sv"
+    "${TECH_ROOT}/sim/dffr.sv"
+    "${TECH_ROOT}/sim/dffre.sv")
+else ()
+  message(FATAL_ERROR
+    "Technology \"${TARGET}\" is unknown; RTL cannot be compiled."
+    )
+endif ()
 
-set(TECH_SOURCES
-  "${TECH_ROOT}/${TARGET}/rams/stk_pipe_al_ptr_sram.sv"
-  "${TECH_ROOT}/${TARGET}/generic_sram_1rw.sv"
-  "${TECH_ROOT}/${TARGET}/icg.sv"
-  "${TECH_ROOT}/${TARGET}/dff.sv"
-  "${TECH_ROOT}/${TARGET}/dffe.sv"
-  "${TECH_ROOT}/${TARGET}/dffr.sv"
-  "${TECH_ROOT}/${TARGET}/dffre.sv"
-  )
 
-set(TECH_INCLUDE_PATHS
-  "${TECH_ROOT}"
-  )
+set(TECH_INCLUDE_PATHS "${TECH_ROOT}")
