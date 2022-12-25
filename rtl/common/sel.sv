@@ -47,18 +47,18 @@ module sel #(
 , output wire logic [OUT_W - 1:0]                o_y
 );
 
-logic [N - 1:0][OUT_W - 1:0]            bins;
+logic [N - 1:0][OUT_W - 1:0]            grp;
 logic [OUT_W - 1:0]                     y;
 
 // -------------------------------------------------------------------------- //
 //
 for (genvar i = 0; i < N; i++) begin
 
-assign bins [i] = i_x [(OUT_W * i) +: OUT_W];
+assign grp [i] = i_x [(OUT_W * i) +: OUT_W];
 
 end
 
-mux #(.N, .W(OUT_W)) u_idx_mux (.i_x(bins), .i_sel, .o_y(y));
+mux #(.N, .W(OUT_W)) u_idx_mux (.i_x(grp), .i_sel, .o_y(y));
 
 // ========================================================================== //
 //                                                                            //
