@@ -63,7 +63,7 @@ class Random {
 
   template<std::size_t T_Words>
   void uniform(VlWide<T_Words>& r) {
-    std::generate(r.data(), (r.data() + T_Words), [&]() {
+    std::generate_n(r.data(), T_Words, [&]() {
       return uniform<WData>();
     });
   }
