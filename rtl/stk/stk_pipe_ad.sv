@@ -66,6 +66,12 @@ module stk_pipe_ad (
 , input wire logic                                arst_n
 );
 
+// ========================================================================== //
+//                                                                            //
+//  Wires                                                                     //
+//                                                                            //
+// ========================================================================== //
+
 typedef struct packed {
   logic [$clog2(cfg_pkg::ENGS_N) - 1:0]    id;
   logic [127:0]                            dat;
@@ -123,6 +129,10 @@ logic [cfg_pkg::ENGS_N - 1:0]           active_clr;
 `Q_DFFR(logic [cfg_pkg::ENGS_N - 1:0], active, '0, clk);
 
 // Dequeue logic:
+//
+localparam int IDX_PUSH = 0;
+localparam int IDX_POP = 1;
+localparam int IDX_INV = 2;
 //
 logic [2:0]                             deq_req_d;
 logic [2:0]                             deq_gnt_d;
@@ -305,13 +315,13 @@ dec #(.W(cfg_pkg::ENGS_N)) u_dec (.i_x(o_lk_engid_w), .o_y(lk_engid_d));
 
 // -------------------------------------------------------------------------- //
 //
-assign deq_req_d [0] =
+assign deq_req_d [IDX_PUSH] =
   (~qpush_empty_r) & (~i_al_empty_r) & ((active_r & qpush_pop_dat_engid_d) == '0);
 
-assign deq_req_d [1] =
+assign deq_req_d [IDX_POP] =
   (~qpop_empty_r) & ((active_r & qpop_pop_dat_engid_d) == '0);
 
-assign deq_req_d [2] =
+assign deq_req_d [IDX_INV] =
   1'b0; // TODO
 
 // -------------------------------------------------------------------------- //
@@ -384,14 +394,14 @@ assign o_lk_vld_w = deq_ack;
 // -------------------------------------------------------------------------- //
 //
 assign o_lk_engid_w =
-    ({stk_pkg::ENGID_W{deq_gnt_d[0]}} & qpush_pop_dat.id)
-  | ({stk_pkg::ENGID_W{deq_gnt_d[1]}} & qpop_pop_dat);
+    ({stk_pkg::ENGID_W{deq_gnt_d[IDX_PUSH]}} & qpush_pop_dat.id)
+  | ({stk_pkg::ENGID_W{deq_gnt_d[IDX_POP]}} & qpop_pop_dat);
 
 // -------------------------------------------------------------------------- //
 //
 assign o_lk_opcode_w =
-    ({stk_pkg::OPCODE_W{deq_gnt_d[0]}} & stk_pkg::OPCODE_PUSH)
-  | ({stk_pkg::OPCODE_W{deq_gnt_d[1]}} & stk_pkg::OPCODE_POP);
+    ({stk_pkg::OPCODE_W{deq_gnt_d[IDX_PUSH]}} & stk_pkg::OPCODE_PUSH)
+  | ({stk_pkg::OPCODE_W{deq_gnt_d[IDX_POP]}} & stk_pkg::OPCODE_POP);
 
 // -------------------------------------------------------------------------- //
 //
