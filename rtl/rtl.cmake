@@ -42,6 +42,7 @@ set(COMMON_SOURCES
     "${SRC_ROOT}/common/sel.sv"
     "${SRC_ROOT}/common/dec.sv"
     "${SRC_ROOT}/common/enc.sv"
+    "${SRC_ROOT}/common/muxe.sv"
     "${SRC_ROOT}/common/mux.sv")
 
 set(STK_SOURCES
@@ -51,6 +52,7 @@ set(STK_SOURCES
     "${SRC_ROOT}/stk/stk_pipe_ad_inv.sv"
     "${SRC_ROOT}/stk/stk_pipe_ad.sv"
     "${SRC_ROOT}/stk/stk_pipe_wb.sv"
+    "${SRC_ROOT}/stk/stk_pipe_mem.sv"
     "${SRC_ROOT}/stk/stk_pipe.sv"
     "${SRC_ROOT}/stk/stk.sv")
 

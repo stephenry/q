@@ -49,6 +49,12 @@ module stk_pipe (
 , input wire logic                                arst_n
 );
 
+// ========================================================================== //
+//                                                                            //
+//  Wires                                                                     //
+//                                                                            //
+// ========================================================================== //
+
 // -------------------------------------------------------------------------- //
 // AD <-> AL
 logic                         al_ad_empty_r;
@@ -69,7 +75,31 @@ logic lk_dat_en;
 stk_pkg::ptr_t                al_lk_ptr;
 
 // -------------------------------------------------------------------------- //
-// LK -> ?
+// LK -> MEM
+//
+logic [stk_pkg::BANKS_N- 1:0]                     lk_ptr_head_ce;
+logic [stk_pkg::BANKS_N- 1:0]                     lk_ptr_head_oe;
+stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]       lk_ptr_head_addr;
+stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]       lk_ptr_head_din;
+stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]       lk_ptr_head_dout;
+//
+logic [stk_pkg::BANKS_N- 1:0]                     lk_ptr_tail_ce;
+logic [stk_pkg::BANKS_N- 1:0]                     lk_ptr_tail_oe;
+stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]       lk_ptr_tail_addr;
+stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]       lk_ptr_tail_din;
+stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]       lk_ptr_tail_dout;
+//
+logic [stk_pkg::BANKS_N- 1:0]                     lk_ptr_dat_ce;
+logic [stk_pkg::BANKS_N- 1:0]                     lk_ptr_dat_oe;
+stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]       lk_ptr_dat_addr;
+logic [stk_pkg::BANKS_N - 1:0][127:0]             lk_ptr_dat_din;
+logic [stk_pkg::BANKS_N - 1:0][127:0]             lk_ptr_dat_dout;
+
+// ========================================================================== //
+//                                                                            //
+//  Admission (AD) Stage                                                      //
+//                                                                            //
+// ========================================================================== //
 
 // -------------------------------------------------------------------------- //
 //
@@ -95,23 +125,11 @@ stk_pipe_ad u_stk_pipe_ad (
 , .arst_n                     (arst_n)
 );
 
-assign lk_dat_en = (lk_vld_w & lk_dat_vld_w);
-
-// -------------------------------------------------------------------------- //
-//
-stk_pipe_lk u_stk_pipe_lk (
-//
-  .i_lk_vld_r                 (lk_vld_r)
-, .i_lk_engid_r               (lk_engid_r)
-, .i_lk_opcode_r              (lk_opcode_r)
-, .i_lk_dat_vld_r             (lk_dat_vld_r)
-, .i_lk_dat_r                 (lk_dat_r)
-//
-, .i_lk_ptr                   (al_lk_ptr)
-//
-, .clk                        (clk)
-, .arst_n                     (arst_n)
-);
+// ========================================================================== //
+//                                                                            //
+//  Allocation (AL) Stage                                                     //
+//                                                                            //
+// ========================================================================== //
 
 // -------------------------------------------------------------------------- //
 //
@@ -128,6 +146,76 @@ stk_pipe_al u_stk_pipe_al (
 //
 , .clk                        (clk)
 , .arst_n                     (arst_n)
+);
+
+assign lk_dat_en = (lk_vld_w & lk_dat_vld_w);
+
+// ========================================================================== //
+//                                                                            //
+//  Lookup (LK) Stage                                                         //
+//                                                                            //
+// ========================================================================== //
+
+// -------------------------------------------------------------------------- //
+//
+stk_pipe_lk u_stk_pipe_lk (
+//
+  .i_lk_vld_r                 (lk_vld_r)
+, .i_lk_engid_r               (lk_engid_r)
+, .i_lk_opcode_r              (lk_opcode_r)
+, .i_lk_dat_vld_r             (lk_dat_vld_r)
+, .i_lk_dat_r                 (lk_dat_r)
+//
+, .i_lk_ptr                   (al_lk_ptr)
+//
+, .o_lk_ptr_head_ce           (lk_ptr_head_ce)
+, .o_lk_ptr_head_oe           (lk_ptr_head_oe)
+, .o_lk_ptr_head_addr         (lk_ptr_head_addr)
+, .o_lk_ptr_head_din          (lk_ptr_head_din)
+//
+, .o_lk_ptr_tail_ce           (lk_ptr_tail_ce)
+, .o_lk_ptr_tail_oe           (lk_ptr_tail_oe)
+, .o_lk_ptr_tail_addr         (lk_ptr_tail_addr)
+, .o_lk_ptr_tail_din          (lk_ptr_tail_din)
+//
+, .o_lk_ptr_dat_ce            (lk_ptr_dat_ce)
+, .o_lk_ptr_dat_oe            (lk_ptr_dat_oe)
+, .o_lk_ptr_dat_addr          (lk_ptr_dat_addr)
+, .o_lk_ptr_dat_din           (lk_ptr_dat_din)
+//
+, .clk                        (clk)
+, .arst_n                     (arst_n)
+);
+
+// ========================================================================== //
+//                                                                            //
+//  Memory (MEM) Stage                                                        //
+//                                                                            //
+// ========================================================================== //
+
+// -------------------------------------------------------------------------- //
+//
+stk_pipe_mem u_stk_pipe_mem (
+//
+  .i_lk_ptr_head_ce           (lk_ptr_head_ce)
+, .i_lk_ptr_head_oe           (lk_ptr_head_oe)
+, .i_lk_ptr_head_addr         (lk_ptr_head_addr)
+, .i_lk_ptr_head_din          (lk_ptr_head_din)
+, .o_lk_ptr_head_dout         (lk_ptr_head_dout)
+//
+, .i_lk_ptr_tail_ce           (lk_ptr_tail_ce)
+, .i_lk_ptr_tail_oe           (lk_ptr_tail_oe)
+, .i_lk_ptr_tail_addr         (lk_ptr_tail_addr)
+, .i_lk_ptr_tail_din          (lk_ptr_tail_din)
+, .o_lk_ptr_tail_dout         (lk_ptr_tail_dout)
+//
+, .i_lk_ptr_dat_ce            (lk_ptr_dat_ce)
+, .i_lk_ptr_dat_oe            (lk_ptr_dat_oe)
+, .i_lk_ptr_dat_addr          (lk_ptr_dat_addr)
+, .i_lk_ptr_dat_din           (lk_ptr_dat_din)
+, .o_lk_ptr_dat_dout          (lk_ptr_dat_dout)
+//
+, .clk                        (clk)
 );
 
 // -------------------------------------------------------------------------- //

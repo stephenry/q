@@ -52,6 +52,12 @@ module stk_pipe_al (
 , input wire logic                                arst_n
 );
 
+// ========================================================================== //
+//                                                                            //
+//  Wires                                                                     //
+//                                                                            //
+// ========================================================================== //
+
 // Initialization Logic
 //
 `Q_DFFR(logic, reset_init, 1'b1, clk);
@@ -87,17 +93,18 @@ logic [stk_pkg::BANKS_N - 1:0]               mem_ce;
 logic [stk_pkg::BANKS_N - 1:0]               mem_oe;
 stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]  mem_dout;
 
+// -------------------------------------------------------------------------- //
 // Admission Stage Microcode
 //
-logic                                        lk_en;
 `Q_DFF(logic, lk_bypass, clk);
 logic                                        lk_bypass_ptr_en;
 `Q_DFFE(stk_pkg::ptr_t, lk_bypass_ptr, lk_bypass_ptr_en, clk);
+logic                                        lk_en;
 `Q_DFFE(stk_pkg::bank_id_t, lk_bank_id, lk_en, clk);
 
+// -------------------------------------------------------------------------- //
 // Lookup Stage Microcode
 //
-logic [stk_pkg::BANKS_N - 1:0]               lk_bank_id_d;
 stk_pkg::ptr_t                               lk_ptr_w;
 stk_pkg::line_id_t                           lk_mem_line_w;
 stk_pkg::ptr_t                               lk_mem_w;
@@ -124,28 +131,39 @@ stk_pipe_al_init u_stk_pipe_al_init (
 , .clk                        (clk)
 );
 
-// -------------------------------------------------------------------------- //
-// Descriptor Return Logic
+// ========================================================================== //
+//                                                                            //
+//  Bank Selection Logic                                                      //
+//                                                                            //
+// ========================================================================== //
 
+// -------------------------------------------------------------------------- //
+// Decode line field of deallocated descriptor to identify home bank.
+//
 dec #(.W(stk_pkg::BANKS_N)) u_dec_qpush_engid (
   .i_x(i_dealloc_ptr.bnk_id), .o_y(dealloc_ptr_bnk_id_d)
 );
 
 // -------------------------------------------------------------------------- //
-// Stack Logical Operation Logic
-
 // An allocation request occurs in the same cycle as a deallocation. In this
 // case, immediately the deallocated descriptor to the request to avoid having
 // to touch the allocators.
 //
 assign stk_collision = (i_ad_alloc & i_dealloc_vld);
 
-assign stk_bnk_popsel_req_d =
-    (~stk_bnk_empty_r)                                                // (1)
-  & ({stk_pkg::BANKS_N{~i_dealloc_vld}} | (~dealloc_ptr_bnk_id_d));   // (2)
+// -------------------------------------------------------------------------- //
+// Compute bank request set as those which have available descriptors;
+// we do not collision conditions here specifically as we always reuse
+// deallocated descriptors immediately.
+//
+assign stk_bnk_popsel_req_d = (~stk_bnk_empty_r);
 
-assign stk_bnk_popsel_ack = 'b0;
+// Load balance across banks whenever a descriptor is allocated.
+assign stk_bnk_popsel_ack = i_ad_alloc & (~i_dealloc_vld);
 
+// -------------------------------------------------------------------------- //
+// Compute nominated bank for non-bypassed case.
+//
 rr #(.W(stk_pkg::BANKS_N)) u_rr (
 //
   .i_req                      (stk_bnk_popsel_req_d)
@@ -156,13 +174,20 @@ rr #(.W(stk_pkg::BANKS_N)) u_rr (
 , .arst_n                     (arst_n)
 );
 
+// ========================================================================== //
+//                                                                            //
+//  Free Pool Stack control                                                   //
+//                                                                            //
+// ========================================================================== //
+
 for (genvar bnk = 0; bnk < stk_pkg::BANKS_N; bnk++) begin : stack_logical_GEN
 
 assign stk_bnk_push [bnk] =
-    init_wen_r                                              // (1)
-  | (i_dealloc_vld & dealloc_ptr_bnk_id_d [bnk]);           // (2)
+    init_wen_r                                                        // (1)
+  | (i_dealloc_vld & dealloc_ptr_bnk_id_d [bnk] & ~stk_collision);    // (2)
 
-assign stk_bnk_pop = {stk_pkg::BANKS_N{i_ad_alloc}} & stk_bnk_popsel_gnt_d;
+assign stk_bnk_pop [bnk] =
+  (i_ad_alloc & stk_bnk_popsel_gnt_d [bnk] & ~stk_collision);
 
 end : stack_logical_GEN
 
@@ -189,6 +214,12 @@ stack_cntrl #(.N(stk_pkg::C_BANK_LINES_N)) u_stack_cntrl (
 end : stack_cntrl_GEN
 
 assign ad_empty_w = (stk_bnk_empty_w != '1);
+
+// ========================================================================== //
+//                                                                            //
+//  Free Pool SRAM control                                                    //
+//                                                                            //
+// ========================================================================== //
 
 // -------------------------------------------------------------------------- //
 //
@@ -223,29 +254,47 @@ stk_pipe_al_ptr_sram u_stk_pipe_al_ptr_sram (
 
 end : stack_mem_GEN
 
-// -------------------------------------------------------------------------- //
-// Admission Stage ("AD") Microcode
+// ========================================================================== //
+//                                                                            //
+//  Admission Stage (AD)                                                      //
+//                                                                            //
+// ========================================================================== //
+
+// Enable bus on allocation request.
 assign lk_en = i_ad_alloc;
+
+// Flag indicating that descriptor is to be sourced from the bypass
+// and not the RAM.
 assign lk_bypass_w = stk_collision;
+
+// Descriptor bypass bus and enable.
 assign lk_bypass_ptr_en = (lk_en & lk_bypass_w);
 assign lk_bypass_ptr_w = i_dealloc_ptr;
+
+// For non-bypassed case, encode bank select for subsequent downstream
+// muxing.
 enc #(.W(stk_pkg::BANKS_N)) u_rr_enc (
   .i_x(stk_bnk_popsel_gnt_d), .o_y(lk_bank_id_w)
 );
 
-// -------------------------------------------------------------------------- //
-// Lookup Stage
+// ========================================================================== //
+//                                                                            //
+//  Lookup Stage (LK)                                                         //
+//                                                                            //
+// ========================================================================== //
 
-dec #(.W(stk_pkg::BANKS_N)) u_lk_mem_sel (
-  .i_x(lk_bank_id_r), .o_y(lk_bank_id_d)
+// Select bank output.
+//
+muxe #(.N(stk_pkg::BANKS_N), .W(stk_pkg::BANK_LINE_OFFSET_W)) u_lk_mem_muxe (
+  .i_x (mem_dout), .i_sel (lk_bank_id_r), .o_y (lk_mem_line_w)
 );
 
-mux #(.N(stk_pkg::BANKS_N), .W(stk_pkg::BANK_LINE_OFFSET_W)) u_lk_mem_mux (
-  .i_x (mem_dout), .i_sel (lk_bank_id_d), .o_y (lk_mem_line_w)
-);
-
+// Compose final pointer returning from memory.
+//
 assign lk_mem_w = '{bnk_id:lk_bank_id_r, line_id:lk_mem_line_w};
 
+// Select between bypassed or non-bypassed buses.
+//
 assign lk_ptr_w =
     ({stk_pkg::PTR_W{ lk_bypass_r}} & lk_bypass_ptr_r)
   | ({stk_pkg::PTR_W{~lk_bypass_r}} & lk_mem_w);
@@ -257,7 +306,6 @@ assign lk_ptr_w =
 // ========================================================================== //
 
 assign o_lk_ptr_w = lk_ptr_w;
-
 assign o_ad_busy_r = init_busy_r;
 
 endmodule : stk_pipe_al

@@ -29,101 +29,122 @@
 `include "macros.vh"
 `include "stk/stk_pkg.vh"
 
-module stk_pipe_lk (
-// -------------------------------------------------------------------------- //
-//
-  input wire logic                                i_lk_vld_r
-, input wire stk_pkg::engid_t                     i_lk_engid_r
-, input wire stk_pkg::opcode_t                    i_lk_opcode_r
-, input wire logic                                i_lk_dat_vld_r
-, input wire logic [127:0]                        i_lk_dat_r
-
-// -------------------------------------------------------------------------- //
-// Allocation Interface
-, input wire stk_pkg::ptr_t                       i_lk_ptr
+module stk_pipe_mem (
 
 // -------------------------------------------------------------------------- //
 // Head SRAM interfaces
-, output wire logic [stk_pkg::BANKS_N - 1:0]      o_lk_ptr_head_ce
-, output wire logic [stk_pkg::BANKS_N - 1:0]      o_lk_ptr_head_oe
+  input wire logic [stk_pkg::BANKS_N - 1:0]       i_lk_ptr_head_ce
+, input wire logic [stk_pkg::BANKS_N - 1:0]       i_lk_ptr_head_oe
+, input wire stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
+                                                  i_lk_ptr_head_addr
+, input wire stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
+                                                  i_lk_ptr_head_din
+//
 , output wire stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
-                                                  o_lk_ptr_head_addr
-, output wire stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
-                                                  o_lk_ptr_head_din
+                                                  o_lk_ptr_head_dout
 
 // -------------------------------------------------------------------------- //
 // Tail SRAM interfaces
-, output wire logic [stk_pkg::BANKS_N - 1:0]      o_lk_ptr_tail_ce
-, output wire logic [stk_pkg::BANKS_N - 1:0]      o_lk_ptr_tail_oe
+, input wire logic [stk_pkg::BANKS_N - 1:0]       i_lk_ptr_tail_ce
+, input wire logic [stk_pkg::BANKS_N - 1:0]       i_lk_ptr_tail_oe
+, input wire stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
+                                                  i_lk_ptr_tail_addr
+, input wire stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
+                                                  i_lk_ptr_tail_din
+//
 , output wire stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
-                                                  o_lk_ptr_tail_addr
-, output wire stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
-                                                  o_lk_ptr_tail_din
+                                                  o_lk_ptr_tail_dout
 
 // -------------------------------------------------------------------------- //
 // Data SRAM interfaces
-, output wire logic [stk_pkg::BANKS_N - 1:0]      o_lk_ptr_dat_ce
-, output wire logic [stk_pkg::BANKS_N - 1:0]      o_lk_ptr_dat_oe
-, output wire stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
-                                                  o_lk_ptr_dat_addr
-, output wire [stk_pkg::BANKS_N - 1:0][127:0]
-                                                  o_lk_ptr_dat_din
+, input wire logic [stk_pkg::BANKS_N - 1:0]       i_lk_ptr_dat_ce
+, input wire logic [stk_pkg::BANKS_N - 1:0]       i_lk_ptr_dat_oe
+, input wire stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
+                                                  i_lk_ptr_dat_addr
+, input wire [stk_pkg::BANKS_N - 1:0][127:0]
+                                                  i_lk_ptr_dat_din
+//
+, output wire logic [stk_pkg::BANKS_N - 1:0][127:0]
+                                                  o_lk_ptr_dat_dout
 
 // -------------------------------------------------------------------------- //
 // Clk/Reset
 , input wire logic                                clk
-, input wire logic                                arst_n
 );
 
-// ========================================================================== //
-//                                                                            //
-//  Wires                                                                     //
-//                                                                            //
-// ========================================================================== //
-
-// Stack empty flag status on a per. engine basis.
-`Q_DFFR(logic [cfg_pkg::ENGS_N - 1:0], empty, 'b0, clk);
 
 // ========================================================================== //
 //                                                                            //
-//  Head Pointer Table                                                        //
+//  Head Pointer SRAM                                                         //
 //                                                                            //
 // ========================================================================== //
 
 // -------------------------------------------------------------------------- //
 //
-rf #(.W(stk_pkg::PTR_W), .N(cfg_pkg::ENGS_N)) u_rf_head (
+for (genvar bnk = 0; bnk < stk_pkg::BANKS_N; bnk++) begin : head_sram_GEN
+
+stk_pipe_mem_head_sram u_stk_pipe_mem_head_sram (
 //
-  .i_ra                       ()
-, .o_rdata                    ()
+  .i_addr                     (i_lk_ptr_head_addr [bnk])
+, .i_din                      (i_lk_ptr_head_din [bnk])
+, .i_ce                       (i_lk_ptr_head_ce [bnk])
+, .i_oe                       (i_lk_ptr_head_oe [bnk])
 //
-, .i_wen                      ()
-, .i_wa                       ()
-, .i_wdata                    ()
+, .o_dout                     (o_lk_ptr_head_dout [bnk])
 //
 , .clk                        (clk)
 );
 
+end : head_sram_GEN
+
 // ========================================================================== //
 //                                                                            //
-//  Tail Pointer Table                                                        //
+//  Tail Pointer SRAM                                                         //
 //                                                                            //
 // ========================================================================== //
 
 // -------------------------------------------------------------------------- //
 //
-rf #(.W(stk_pkg::PTR_W), .N(cfg_pkg::ENGS_N)) u_rf_tail (
+for (genvar bnk = 0; bnk < stk_pkg::BANKS_N; bnk++) begin : tail_sram_GEN
+
+stk_pipe_mem_tail_sram u_stk_pipe_mem_tail_sram (
 //
-  .i_ra                       ()
-, .o_rdata                    ()
+  .i_addr                     (i_lk_ptr_tail_addr [bnk])
+, .i_din                      (i_lk_ptr_tail_din [bnk])
+, .i_ce                       (i_lk_ptr_tail_ce [bnk])
+, .i_oe                       (i_lk_ptr_tail_oe [bnk])
 //
-, .i_wen                      ()
-, .i_wa                       ()
-, .i_wdata                    ()
+, .o_dout                     (o_lk_ptr_tail_dout [bnk])
 //
 , .clk                        (clk)
 );
 
-endmodule : stk_pipe_lk
+end : tail_sram_GEN
+
+// ========================================================================== //
+//                                                                            //
+//  Data Pointer SRAM                                                         //
+//                                                                            //
+// ========================================================================== //
+
+// -------------------------------------------------------------------------- //
+//
+for (genvar bnk = 0; bnk < stk_pkg::BANKS_N; bnk++) begin : data_sram_GEN
+
+stk_pipe_mem_data_sram u_stk_pipe_mem_data_sram (
+//
+  .i_addr                     (i_lk_ptr_dat_addr [bnk])
+, .i_din                      (i_lk_ptr_dat_din [bnk])
+, .i_ce                       (i_lk_ptr_dat_ce [bnk])
+, .i_oe                       (i_lk_ptr_dat_oe [bnk])
+//
+, .o_dout                     (o_lk_ptr_dat_dout [bnk])
+//
+, .clk                        (clk)
+);
+
+end : data_sram_GEN
+
+endmodule : stk_pipe_mem
 
 `include "unmacros.vh"
