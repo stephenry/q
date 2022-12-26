@@ -46,39 +46,34 @@ module stk_pipe_lk (
 // MEM microcode update (reg).
 , input wire logic                                i_wrbk_uc_vld_r
 , input wire stk_pkg::engid_t                     i_wrbk_uc_engid_r
-, input wire logic                                i_wrbk_uc_set_empty_r
-, input wire logic                                i_wrbk_uc_clr_empty_r
 , input wire logic                                i_wrbk_uc_head_vld_r
 , input wire stk_pkg::ptr_t                       i_wrbk_uc_head_ptr_r
 , input wire logic                                i_wrbk_uc_tail_vld_r
 , input wire stk_pkg::ptr_t                       i_wrbk_uc_tail_ptr_r
-//
 
 // -------------------------------------------------------------------------- //
 // Tail SRAM interfaces
-, output wire logic [stk_pkg::BANKS_N - 1:0]      o_lk_prev_ptr_ce
-, output wire logic [stk_pkg::BANKS_N - 1:0]      o_lk_prev_ptr_oe
+, output wire logic [stk_pkg::BANKS_N - 1:0]      o_lk_prev_ptr_ce_w
+, output wire logic [stk_pkg::BANKS_N - 1:0]      o_lk_prev_ptr_oe_w
 , output wire stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
-                                                  o_lk_prev_ptr_addr
+                                                  o_lk_prev_ptr_addr_w
 , output wire stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
-                                                  o_lk_prev_ptr_din
+                                                  o_lk_prev_ptr_din_w
 
 // -------------------------------------------------------------------------- //
 // Data SRAM interfaces
-, output wire logic [stk_pkg::BANKS_N - 1:0]      o_lk_ptr_dat_ce
-, output wire logic [stk_pkg::BANKS_N - 1:0]      o_lk_ptr_dat_oe
+, output wire logic [stk_pkg::BANKS_N - 1:0]      o_lk_ptr_dat_ce_w
+, output wire logic [stk_pkg::BANKS_N - 1:0]      o_lk_ptr_dat_oe_w
 , output wire stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
-                                                  o_lk_ptr_dat_addr
-, output wire [stk_pkg::BANKS_N - 1:0][127:0]
-                                                  o_lk_ptr_dat_din
+                                                  o_lk_ptr_dat_addr_w
+, output wire logic [stk_pkg::BANKS_N - 1:0][127:0]
+                                                  o_lk_ptr_dat_din_w
 
 // -------------------------------------------------------------------------- //
 // MEM microcode update (nxt).
 , output wire logic                               o_mem_uc_vld_w
 , output wire stk_pkg::engid_t                    o_mem_uc_engid_w
 , output wire stk_pkg::bank_id_t                  o_mem_uc_bankid_w
-, output wire logic                               o_mem_uc_set_empty_w
-, output wire logic                               o_mem_uc_clr_empty_w
 , output wire logic                               o_mem_uc_head_vld_w
 , output wire stk_pkg::ptr_t                      o_mem_uc_head_ptr_w
 , output wire logic                               o_mem_uc_tail_vld_w
@@ -107,8 +102,6 @@ logic                                   cmd_is_inv;
 //
 logic                                   mem_uc_vld;
 stk_pkg::engid_t                        mem_uc_engid;
-logic                                   mem_uc_set_empty;
-logic                                   mem_uc_clr_empty;
 logic                                   mem_uc_head_vld;
 stk_pkg::ptr_t                          mem_uc_head_ptr;
 logic                                   mem_uc_tail_vld;
@@ -130,8 +123,28 @@ stk_pkg::ptr_t                          rf_tail_rdata;
 
 // Empty Status
 //
+logic [cfg_pkg::ENGS_N - 1:0]           lk_engid_d;
 logic                                   engid_is_empty;
+logic                                   empty_set_engid;
+logic [cfg_pkg::ENGS_N - 1:0]           empty_set;
+logic                                   empty_clr_engid;
+logic [cfg_pkg::ENGS_N - 1:0]           empty_clr;
 `Q_DFFR(logic [cfg_pkg::ENGS_N - 1:0], empty, '1, clk);
+
+// Tail SRAM
+logic [stk_pkg::BANKS_N - 1:0]          lk_prev_ptr_ce_w;
+logic [stk_pkg::BANKS_N - 1:0]          lk_prev_ptr_oe_w;
+stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
+                                        lk_prev_ptr_addr_w;
+stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
+                                        lk_prev_ptr_din_w;
+
+// Data SRAM
+logic [stk_pkg::BANKS_N - 1:0]          lk_ptr_dat_ce_w;
+logic [stk_pkg::BANKS_N - 1:0]          lk_ptr_dat_oe_w;
+stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
+                                        lk_ptr_dat_addr_w;
+logic [stk_pkg::BANKS_N - 1:0][127:0]   lk_ptr_dat_din_w;
 
 // ========================================================================== //
 //                                                                            //
@@ -153,8 +166,14 @@ assign cmd_is_inv = (i_lk_opcode_r == stk_pkg::OPCODE_INV);
 // ========================================================================== //
 
 // -------------------------------------------------------------------------- //
-//
+// Read Interface
 assign rf_head_ra = i_lk_engid_r;
+
+// -------------------------------------------------------------------------- //
+// Write Interface:
+assign rf_head_wen = i_wrbk_uc_head_vld_r;
+assign rf_head_wa = i_wrbk_uc_engid_r;
+assign rf_head_wdata = i_wrbk_uc_head_ptr_r;
 
 // -------------------------------------------------------------------------- //
 //
@@ -177,8 +196,14 @@ rf #(.W(stk_pkg::PTR_W), .N(cfg_pkg::ENGS_N)) u_rf_head (
 // ========================================================================== //
 
 // -------------------------------------------------------------------------- //
-//
+// Read Interface
 assign rf_tail_ra = i_lk_engid_r;
+
+// -------------------------------------------------------------------------- //
+// Write Interface
+assign rf_tail_wen = i_wrbk_uc_tail_vld_r;
+assign rf_tail_wa = i_wrbk_uc_engid_r;
+assign rf_tail_wdata = i_wrbk_uc_tail_ptr_r;
 
 // -------------------------------------------------------------------------- //
 //
@@ -201,19 +226,34 @@ rf #(.W(stk_pkg::PTR_W), .N(cfg_pkg::ENGS_N)) u_rf_tail (
 // ========================================================================== //
 
 // -------------------------------------------------------------------------- //
+// Decode current engine-id.
+//
+dec #(.W(cfg_pkg::ENGS_N)) u_dec_qpush_engid (
+  .i_x(i_lk_engid_r), .o_y(lk_engid_d)
+);
+
+// -------------------------------------------------------------------------- //
 // Compute empty status of currently addressed engine context.
+//
 sel #(.W(cfg_pkg::ENGS_N)) u_empty_sel (
   .i_x(empty_r), .i_sel(i_lk_engid_r), .o_y(engid_is_empty)
 );
 
-// ========================================================================== //
-//                                                                            //
-//  NEXT SRAM                                                                 //
-//                                                                            //
-// ========================================================================== //
-
 // -------------------------------------------------------------------------- //
+// Compute update to EMPTY set.
 //
+assign empty_clr_engid =
+  (cmd_is_push & (rf_head_rdata != rf_tail_rdata) & engid_is_empty);
+
+assign empty_clr = lk_engid_d & {cfg_pkg::ENGS_N{empty_clr_engid}};
+
+assign empty_set_engid =
+  (cmd_is_pop & (rf_head_rdata == rf_tail_rdata) & (~engid_is_empty));
+
+assign empty_set = lk_engid_d & {cfg_pkg::ENGS_N{empty_set_engid}};
+
+// Set/Clear update.
+assign empty_w = (~empty_clr) & (empty_r | empty_set);
 
 // ========================================================================== //
 //                                                                            //
@@ -223,6 +263,21 @@ sel #(.W(cfg_pkg::ENGS_N)) u_empty_sel (
 
 // -------------------------------------------------------------------------- //
 //
+for (genvar bank = 0; bank < stk_pkg::BANKS_N; bank++) begin : prev_bank_GEN
+
+//
+assign lk_prev_ptr_ce_w [bank] = '0;
+
+//
+assign lk_prev_ptr_oe_w [bank] = '0;
+
+//
+assign lk_prev_ptr_addr_w [bank] = '0;
+
+//
+assign lk_prev_ptr_din_w [bank] = i_lk_dat_r;
+
+end : prev_bank_GEN
 
 // ========================================================================== //
 //                                                                            //
@@ -232,6 +287,21 @@ sel #(.W(cfg_pkg::ENGS_N)) u_empty_sel (
 
 // -------------------------------------------------------------------------- //
 //
+for (genvar bank = 0; bank < stk_pkg::BANKS_N; bank++) begin : data_bank_GEN
+
+//
+assign lk_ptr_dat_ce_w [bank] = '0;
+
+//
+assign lk_ptr_dat_oe_w [bank] = '0;
+
+//
+assign lk_ptr_dat_addr_w [bank] = '0;
+
+//
+assign lk_ptr_dat_din_w [bank] = i_lk_dat_r;
+
+end : data_bank_GEN
 
 // ========================================================================== //
 //                                                                            //
@@ -243,8 +313,6 @@ sel #(.W(cfg_pkg::ENGS_N)) u_empty_sel (
 //
 assign mem_uc_vld = 0;
 assign mem_uc_engid = 0;
-assign mem_uc_set_empty = 0;
-assign mem_uc_clr_empty = 0;
 assign mem_uc_head_vld = 0;
 assign mem_uc_head_ptr = 0;
 assign mem_uc_tail_vld = 0;
@@ -260,12 +328,20 @@ assign mem_uc_tail_vld = 0;
 // Microcode (WRBK) output
 assign o_mem_uc_vld_w = mem_uc_vld;
 assign o_mem_uc_engid_w = mem_uc_engid;
-assign o_mem_uc_set_empty_w = mem_uc_set_empty;
-assign o_mem_uc_clr_empty_w = mem_uc_clr_empty;
 assign o_mem_uc_head_vld_w = mem_uc_head_vld;
 assign o_mem_uc_head_ptr_w = mem_uc_head_ptr;
 assign o_mem_uc_tail_vld_w = mem_uc_tail_vld;
 assign o_mem_uc_tail_ptr_w = mem_uc_tail_ptr;
+
+assign o_lk_prev_ptr_ce_w = lk_prev_ptr_ce_w;
+assign o_lk_prev_ptr_oe_w = lk_prev_ptr_oe_w;
+assign o_lk_prev_ptr_addr_w = lk_prev_ptr_addr_w;
+assign o_lk_prev_ptr_din_w = lk_prev_ptr_din_w;
+
+assign o_lk_ptr_dat_ce_w = lk_ptr_dat_ce_w;
+assign o_lk_ptr_dat_oe_w = lk_ptr_dat_oe_w;
+assign o_lk_ptr_dat_addr_w = lk_ptr_dat_addr_w;
+assign o_lk_ptr_dat_din_w = lk_ptr_dat_din_w;
 
 endmodule : stk_pipe_lk
 

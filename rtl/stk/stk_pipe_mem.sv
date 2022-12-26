@@ -33,35 +33,33 @@ module stk_pipe_mem (
 
 // -------------------------------------------------------------------------- //
 // Tail SRAM interfaces
-  input wire logic [stk_pkg::BANKS_N - 1:0]       i_lk_prev_ptr_ce
-, input wire logic [stk_pkg::BANKS_N - 1:0]       i_lk_prev_ptr_oe
+  input wire logic [stk_pkg::BANKS_N - 1:0]       i_lk_prev_ptr_ce_r
+, input wire logic [stk_pkg::BANKS_N - 1:0]       i_lk_prev_ptr_oe_r
 , input wire stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
-                                                  i_lk_prev_ptr_addr
+                                                  i_lk_prev_ptr_addr_r
 , input wire stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
-                                                  i_lk_prev_ptr_din
+                                                  i_lk_prev_ptr_din_r
 //
 , output wire stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
-                                                  o_lk_prev_ptr_dout
+                                                  o_lk_prev_ptr_dout_w
 
 // -------------------------------------------------------------------------- //
 // Data SRAM interfaces
-, input wire logic [stk_pkg::BANKS_N - 1:0]       i_lk_ptr_dat_ce
-, input wire logic [stk_pkg::BANKS_N - 1:0]       i_lk_ptr_dat_oe
+, input wire logic [stk_pkg::BANKS_N - 1:0]       i_lk_ptr_dat_ce_r
+, input wire logic [stk_pkg::BANKS_N - 1:0]       i_lk_ptr_dat_oe_r
 , input wire stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
-                                                  i_lk_ptr_dat_addr
+                                                  i_lk_ptr_dat_addr_r
 , input wire [stk_pkg::BANKS_N - 1:0][127:0]
-                                                  i_lk_ptr_dat_din
+                                                  i_lk_ptr_dat_din_r
 //
 , output wire logic [stk_pkg::BANKS_N - 1:0][127:0]
-                                                  o_lk_ptr_dat_dout
+                                                  o_lk_ptr_dat_dout_w
 
 // -------------------------------------------------------------------------- //
 // Lookup ("LK") microcode
 , input wire logic                                i_mem_uc_vld_r
 , input wire stk_pkg::engid_t                     i_mem_uc_engid_r
 , input wire stk_pkg::bank_id_t                   i_mem_uc_bankid_r
-, input wire logic                                i_mem_uc_set_empty_r
-, input wire logic                                i_mem_uc_clr_empty_r
 , input wire logic                                i_mem_uc_head_vld_r
 , input wire stk_pkg::ptr_t                       i_mem_uc_head_ptr_r
 , input wire logic                                i_mem_uc_tail_vld_r
@@ -71,8 +69,6 @@ module stk_pipe_mem (
 // Writeback ("WRBK") microcode
 , output wire logic                               o_wrbk_uc_vld_w
 , output wire stk_pkg::engid_t                    o_wrbk_uc_engid_w
-, output wire logic                               o_wrbk_uc_set_empty_w
-, output wire logic                               o_wrbk_uc_clr_empty_w
 , output wire logic                               o_wrbk_uc_head_vld_w
 , output wire stk_pkg::ptr_t                      o_wrbk_uc_head_ptr_w
 , output wire logic                               o_wrbk_uc_tail_vld_w
@@ -95,12 +91,12 @@ for (genvar bnk = 0; bnk < stk_pkg::BANKS_N; bnk++) begin : prev_sram_GEN
 
 stk_pipe_mem_prev_sram u_stk_pipe_mem_prev_sram (
 //
-  .i_addr                     (i_lk_prev_ptr_addr [bnk])
-, .i_din                      (i_lk_prev_ptr_din [bnk])
-, .i_ce                       (i_lk_prev_ptr_ce [bnk])
-, .i_oe                       (i_lk_prev_ptr_oe [bnk])
+  .i_addr                     (i_lk_prev_ptr_addr_r [bnk])
+, .i_din                      (i_lk_prev_ptr_din_r [bnk])
+, .i_ce                       (i_lk_prev_ptr_ce_r [bnk])
+, .i_oe                       (i_lk_prev_ptr_oe_r [bnk])
 //
-, .o_dout                     (o_lk_prev_ptr_dout [bnk])
+, .o_dout                     (o_lk_prev_ptr_dout_w [bnk])
 //
 , .clk                        (clk)
 );
@@ -119,12 +115,12 @@ for (genvar bnk = 0; bnk < stk_pkg::BANKS_N; bnk++) begin : data_sram_GEN
 
 stk_pipe_mem_data_sram u_stk_pipe_mem_data_sram (
 //
-  .i_addr                     (i_lk_ptr_dat_addr [bnk])
-, .i_din                      (i_lk_ptr_dat_din [bnk])
-, .i_ce                       (i_lk_ptr_dat_ce [bnk])
-, .i_oe                       (i_lk_ptr_dat_oe [bnk])
+  .i_addr                     (i_lk_ptr_dat_addr_r [bnk])
+, .i_din                      (i_lk_ptr_dat_din_r [bnk])
+, .i_ce                       (i_lk_ptr_dat_ce_r [bnk])
+, .i_oe                       (i_lk_ptr_dat_oe_r [bnk])
 //
-, .o_dout                     (o_lk_ptr_dat_dout [bnk])
+, .o_dout                     (o_lk_ptr_dat_dout_w [bnk])
 //
 , .clk                        (clk)
 );

@@ -80,24 +80,22 @@ stk_pkg::ptr_t                al_lk_ptr;
 `Q_DFFR(logic, mem_uc_vld, 1'b0, clk);
 `Q_DFFE(stk_pkg::engid_t, mem_uc_engid, mem_uc_vld_w, clk);
 `Q_DFFE(stk_pkg::bank_id_t, mem_uc_bankid, mem_uc_vld_w, clk);
-`Q_DFFE(logic, mem_uc_set_empty, mem_uc_vld_w, clk);
-`Q_DFFE(logic, mem_uc_clr_empty, mem_uc_vld_w, clk);
 `Q_DFFE(logic, mem_uc_head_vld, mem_uc_vld_w, clk);
 `Q_DFFE(stk_pkg::ptr_t, mem_uc_head_ptr, mem_uc_vld_w, clk);
 `Q_DFFE(logic, mem_uc_tail_vld, mem_uc_vld_w, clk);
 `Q_DFFE(stk_pkg::ptr_t, mem_uc_tail_ptr, mem_uc_vld_w, clk);
 //
-logic [stk_pkg::BANKS_N- 1:0]                     lk_prev_ptr_ce;
-logic [stk_pkg::BANKS_N- 1:0]                     lk_prev_ptr_oe;
-stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]       lk_prev_ptr_addr;
-stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]       lk_prev_ptr_din;
-stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]       lk_prev_ptr_dout;
+`Q_DFF(logic [stk_pkg::BANKS_N- 1:0], lk_prev_ptr_ce, clk);
+`Q_DFF(logic [stk_pkg::BANKS_N- 1:0], lk_prev_ptr_oe, clk);
+`Q_DFF(stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0], lk_prev_ptr_addr, clk);
+`Q_DFF(stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0], lk_prev_ptr_din, clk);
+`Q_DFF(stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0], lk_prev_ptr_dout, clk);
 //
-logic [stk_pkg::BANKS_N- 1:0]                     lk_ptr_dat_ce;
-logic [stk_pkg::BANKS_N- 1:0]                     lk_ptr_dat_oe;
-stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]       lk_ptr_dat_addr;
-logic [stk_pkg::BANKS_N - 1:0][127:0]             lk_ptr_dat_din;
-logic [stk_pkg::BANKS_N - 1:0][127:0]             lk_ptr_dat_dout;
+`Q_DFF(logic [stk_pkg::BANKS_N- 1:0], lk_ptr_dat_ce, clk);
+`Q_DFF(logic [stk_pkg::BANKS_N- 1:0], lk_ptr_dat_oe, clk);
+`Q_DFF(stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0], lk_ptr_dat_addr, clk);
+`Q_DFF(logic [stk_pkg::BANKS_N - 1:0][127:0], lk_ptr_dat_din, clk);
+`Q_DFF(logic [stk_pkg::BANKS_N - 1:0][127:0], lk_ptr_dat_dout, clk);
 
 // -------------------------------------------------------------------------- //
 // MEM -> WRBK
@@ -105,8 +103,6 @@ logic [stk_pkg::BANKS_N - 1:0][127:0]             lk_ptr_dat_dout;
 `Q_DFFR(logic, wrbk_uc_vld, 1'b0, clk);
 `Q_DFFE(stk_pkg::engid_t, wrbk_uc_engid, wrbk_uc_vld_w, clk);
 `Q_DFFE(stk_pkg::bank_id_t, wrbk_uc_bankid, wrbk_uc_vld_w, clk);
-`Q_DFFE(logic, wrbk_uc_set_empty, wrbk_uc_vld_w, clk);
-`Q_DFFE(logic, wrbk_uc_clr_empty, wrbk_uc_vld_w, clk);
 `Q_DFFE(logic, wrbk_uc_head_vld, wrbk_uc_vld_w, clk);
 `Q_DFFE(stk_pkg::ptr_t, wrbk_uc_head_ptr, wrbk_uc_vld_w, clk);
 `Q_DFFE(logic, wrbk_uc_tail_vld, wrbk_uc_vld_w, clk);
@@ -188,28 +184,24 @@ stk_pipe_lk u_stk_pipe_lk (
 //
 , .i_wrbk_uc_vld_r            (wrbk_uc_vld_r)
 , .i_wrbk_uc_engid_r          (wrbk_uc_engid_r)
-, .i_wrbk_uc_set_empty_r      (wrbk_uc_set_empty_r)
-, .i_wrbk_uc_clr_empty_r      (wrbk_uc_clr_empty_r)
 , .i_wrbk_uc_head_vld_r       (wrbk_uc_head_vld_r)
 , .i_wrbk_uc_head_ptr_r       (wrbk_uc_head_ptr_r)
 , .i_wrbk_uc_tail_vld_r       (wrbk_uc_tail_vld_r)
 , .i_wrbk_uc_tail_ptr_r       (wrbk_uc_tail_ptr_r)
 //
-, .o_lk_prev_ptr_ce           (lk_prev_ptr_ce)
-, .o_lk_prev_ptr_oe           (lk_prev_ptr_oe)
-, .o_lk_prev_ptr_addr         (lk_prev_ptr_addr)
-, .o_lk_prev_ptr_din          (lk_prev_ptr_din)
+, .o_lk_prev_ptr_ce_w         (lk_prev_ptr_ce_w)
+, .o_lk_prev_ptr_oe_w         (lk_prev_ptr_oe_w)
+, .o_lk_prev_ptr_addr_w       (lk_prev_ptr_addr_w)
+, .o_lk_prev_ptr_din_w        (lk_prev_ptr_din_w)
 //
-, .o_lk_ptr_dat_ce            (lk_ptr_dat_ce)
-, .o_lk_ptr_dat_oe            (lk_ptr_dat_oe)
-, .o_lk_ptr_dat_addr          (lk_ptr_dat_addr)
-, .o_lk_ptr_dat_din           (lk_ptr_dat_din)
+, .o_lk_ptr_dat_ce_w          (lk_ptr_dat_ce_w)
+, .o_lk_ptr_dat_oe_w          (lk_ptr_dat_oe_w)
+, .o_lk_ptr_dat_addr_w        (lk_ptr_dat_addr_w)
+, .o_lk_ptr_dat_din_w         (lk_ptr_dat_din_w)
 //
 , .o_mem_uc_vld_w             (mem_uc_vld_w)
 , .o_mem_uc_engid_w           (mem_uc_engid_w)
 , .o_mem_uc_bankid_w          (mem_uc_bankid_w)
-, .o_mem_uc_set_empty_w       (mem_uc_set_empty_w)
-, .o_mem_uc_clr_empty_w       (mem_uc_clr_empty_w)
 , .o_mem_uc_head_vld_w        (mem_uc_head_vld_w)
 , .o_mem_uc_head_ptr_w        (mem_uc_head_ptr_w)
 , .o_mem_uc_tail_vld_w        (mem_uc_tail_vld_w)
@@ -229,23 +221,21 @@ stk_pipe_lk u_stk_pipe_lk (
 //
 stk_pipe_mem u_stk_pipe_mem (
 //
-  .i_lk_prev_ptr_ce           (lk_prev_ptr_ce)
-, .i_lk_prev_ptr_oe           (lk_prev_ptr_oe)
-, .i_lk_prev_ptr_addr         (lk_prev_ptr_addr)
-, .i_lk_prev_ptr_din          (lk_prev_ptr_din)
-, .o_lk_prev_ptr_dout         (lk_prev_ptr_dout)
+  .i_lk_prev_ptr_ce_r         (lk_prev_ptr_ce_r)
+, .i_lk_prev_ptr_oe_r         (lk_prev_ptr_oe_r)
+, .i_lk_prev_ptr_addr_r       (lk_prev_ptr_addr_r)
+, .i_lk_prev_ptr_din_r        (lk_prev_ptr_din_r)
+, .o_lk_prev_ptr_dout_w       (lk_prev_ptr_dout_w)
 //
-, .i_lk_ptr_dat_ce            (lk_ptr_dat_ce)
-, .i_lk_ptr_dat_oe            (lk_ptr_dat_oe)
-, .i_lk_ptr_dat_addr          (lk_ptr_dat_addr)
-, .i_lk_ptr_dat_din           (lk_ptr_dat_din)
-, .o_lk_ptr_dat_dout          (lk_ptr_dat_dout)
+, .i_lk_ptr_dat_ce_r          (lk_ptr_dat_ce_r)
+, .i_lk_ptr_dat_oe_r          (lk_ptr_dat_oe_r)
+, .i_lk_ptr_dat_addr_r        (lk_ptr_dat_addr_r)
+, .i_lk_ptr_dat_din_r         (lk_ptr_dat_din_r)
+, .o_lk_ptr_dat_dout_w        (lk_ptr_dat_dout_w)
 //
 , .i_mem_uc_vld_r             (mem_uc_vld_r)
 , .i_mem_uc_engid_r           (mem_uc_engid_r)
 , .i_mem_uc_bankid_r          (mem_uc_bankid_r)
-, .i_mem_uc_set_empty_r       (mem_uc_set_empty_r)
-, .i_mem_uc_clr_empty_r       (mem_uc_clr_empty_r)
 , .i_mem_uc_head_vld_r        (mem_uc_head_vld_r)
 , .i_mem_uc_head_ptr_r        (mem_uc_head_ptr_r)
 , .i_mem_uc_tail_vld_r        (mem_uc_tail_vld_r)
@@ -253,8 +243,6 @@ stk_pipe_mem u_stk_pipe_mem (
 //
 , .o_wrbk_uc_vld_w            (wrbk_uc_vld_w)
 , .o_wrbk_uc_engid_w          (wrbk_uc_engid_w)
-, .o_wrbk_uc_set_empty_w      (wrbk_uc_set_empty_w)
-, .o_wrbk_uc_clr_empty_w      (wrbk_uc_clr_empty_w)
 , .o_wrbk_uc_head_vld_w       (wrbk_uc_head_vld_w)
 , .o_wrbk_uc_head_ptr_w       (wrbk_uc_head_ptr_w)
 , .o_wrbk_uc_tail_vld_w       (wrbk_uc_tail_vld_w)
