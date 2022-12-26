@@ -68,6 +68,29 @@ module stk_pipe_mem (
                                                   o_lk_ptr_dat_dout
 
 // -------------------------------------------------------------------------- //
+// Lookup ("LK") microcode
+, input wire logic                                i_mem_uc_vld_r
+, input wire stk_pkg::engid_t                     i_mem_uc_engid_r
+, input wire stk_pkg::bank_id_t                   i_mem_uc_bankid_r
+, input wire logic                                i_mem_uc_set_empty_r
+, input wire logic                                i_mem_uc_clr_empty_r
+, input wire logic                                i_mem_uc_head_vld_r
+, input wire stk_pkg::ptr_t                       i_mem_uc_head_ptr_r
+, input wire logic                                i_mem_uc_tail_vld_r
+, input wire stk_pkg::ptr_t                       i_mem_uc_tail_ptr_r
+
+// -------------------------------------------------------------------------- //
+// Writeback ("WRBK") microcode
+, output wire logic                               o_wrbk_uc_vld_w
+, output wire stk_pkg::engid_t                    o_wrbk_uc_engid_w
+, output wire logic                               o_wrbk_uc_set_empty_w
+, output wire logic                               o_wrbk_uc_clr_empty_w
+, output wire logic                               o_wrbk_uc_head_vld_w
+, output wire stk_pkg::ptr_t                      o_wrbk_uc_head_ptr_w
+, output wire logic                               o_wrbk_uc_tail_vld_w
+, output wire stk_pkg::ptr_t                      o_wrbk_uc_tail_ptr_w
+
+// -------------------------------------------------------------------------- //
 // Clk/Reset
 , input wire logic                                clk
 );

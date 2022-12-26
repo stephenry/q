@@ -43,6 +43,18 @@ module stk_pipe_lk (
 , input wire stk_pkg::ptr_t                       i_lk_ptr
 
 // -------------------------------------------------------------------------- //
+// MEM microcode update (reg).
+, input wire logic                                i_wrbk_uc_vld_r
+, input wire stk_pkg::engid_t                     i_wrbk_uc_engid_r
+, input wire logic                                i_wrbk_uc_set_empty_r
+, input wire logic                                i_wrbk_uc_clr_empty_r
+, input wire logic                                i_wrbk_uc_head_vld_r
+, input wire stk_pkg::ptr_t                       i_wrbk_uc_head_ptr_r
+, input wire logic                                i_wrbk_uc_tail_vld_r
+, input wire stk_pkg::ptr_t                       i_wrbk_uc_tail_ptr_r
+//
+
+// -------------------------------------------------------------------------- //
 // Head SRAM interfaces
 , output wire logic [stk_pkg::BANKS_N - 1:0]      o_lk_ptr_head_ce
 , output wire logic [stk_pkg::BANKS_N - 1:0]      o_lk_ptr_head_oe
@@ -70,6 +82,18 @@ module stk_pipe_lk (
                                                   o_lk_ptr_dat_din
 
 // -------------------------------------------------------------------------- //
+// MEM microcode update (nxt).
+, output wire logic                               o_mem_uc_vld_w
+, output wire stk_pkg::engid_t                    o_mem_uc_engid_w
+, output wire stk_pkg::bank_id_t                  o_mem_uc_bankid_w
+, output wire logic                               o_mem_uc_set_empty_w
+, output wire logic                               o_mem_uc_clr_empty_w
+, output wire logic                               o_mem_uc_head_vld_w
+, output wire stk_pkg::ptr_t                      o_mem_uc_head_ptr_w
+, output wire logic                               o_mem_uc_tail_vld_w
+, output wire stk_pkg::ptr_t                      o_mem_uc_tail_ptr_w
+
+// -------------------------------------------------------------------------- //
 // Clk/Reset
 , input wire logic                                clk
 , input wire logic                                arst_n
@@ -81,8 +105,54 @@ module stk_pipe_lk (
 //                                                                            //
 // ========================================================================== //
 
-// Stack empty flag status on a per. engine basis.
-`Q_DFFR(logic [cfg_pkg::ENGS_N - 1:0], empty, 'b0, clk);
+// -------------------------------------------------------------------------- //
+// Decoder:
+//
+logic                                   cmd_vld;
+logic                                   cmd_is_push;
+logic                                   cmd_is_pop;
+logic                                   cmd_is_inv;
+
+//
+logic                                   mem_uc_vld;
+stk_pkg::engid_t                        mem_uc_engid;
+logic                                   mem_uc_set_empty;
+logic                                   mem_uc_clr_empty;
+logic                                   mem_uc_head_vld;
+stk_pkg::ptr_t                          mem_uc_head_ptr;
+logic                                   mem_uc_tail_vld;
+stk_pkg::ptr_t                          mem_uc_tail_ptr;
+
+//
+logic                                   rf_head_wen;
+stk_pkg::engid_t                        rf_head_wa;
+stk_pkg::ptr_t                          rf_head_wdata;
+stk_pkg::engid_t                        rf_head_ra;
+stk_pkg::ptr_t                          rf_head_rdata;
+
+//
+logic                                   rf_tail_wen;
+stk_pkg::engid_t                        rf_tail_wa;
+stk_pkg::ptr_t                          rf_tail_wdata;
+stk_pkg::engid_t                        rf_tail_ra;
+stk_pkg::ptr_t                          rf_tail_rdata;
+
+// Empty Status
+//
+`Q_DFFR(logic [cfg_pkg::ENGS_N - 1:0], empty, '1, clk);
+
+// ========================================================================== //
+//                                                                            //
+//  Decoder                                                                   //
+//                                                                            //
+// ========================================================================== //
+
+// -------------------------------------------------------------------------- //
+// Command decoder
+assign cmd_vld = (i_lk_opcode_r != stk_pkg::OPCODE_NOP);
+assign cmd_is_push = (i_lk_opcode_r == stk_pkg::OPCODE_PUSH);
+assign cmd_is_pop = (i_lk_opcode_r == stk_pkg::OPCODE_POP);
+assign cmd_is_inv = (i_lk_opcode_r == stk_pkg::OPCODE_INV);
 
 // ========================================================================== //
 //                                                                            //
@@ -92,14 +162,18 @@ module stk_pipe_lk (
 
 // -------------------------------------------------------------------------- //
 //
+
+
+// -------------------------------------------------------------------------- //
+//
 rf #(.W(stk_pkg::PTR_W), .N(cfg_pkg::ENGS_N)) u_rf_head (
 //
-  .i_ra                       ()
-, .o_rdata                    ()
+  .i_ra                       (rf_head_ra)
+, .o_rdata                    (rf_head_rdata)
 //
-, .i_wen                      ()
-, .i_wa                       ()
-, .i_wdata                    ()
+, .i_wen                      (rf_head_wen)
+, .i_wa                       (rf_head_wa)
+, .i_wdata                    (rf_head_wdata)
 //
 , .clk                        (clk)
 );
@@ -114,15 +188,86 @@ rf #(.W(stk_pkg::PTR_W), .N(cfg_pkg::ENGS_N)) u_rf_head (
 //
 rf #(.W(stk_pkg::PTR_W), .N(cfg_pkg::ENGS_N)) u_rf_tail (
 //
-  .i_ra                       ()
-, .o_rdata                    ()
+  .i_ra                       (rf_tail_ra)
+, .o_rdata                    (rf_tail_rdata)
 //
-, .i_wen                      ()
-, .i_wa                       ()
-, .i_wdata                    ()
+, .i_wen                      (rf_tail_wen)
+, .i_wa                       (rf_tail_wa)
+, .i_wdata                    (rf_tail_wdata)
 //
 , .clk                        (clk)
 );
+
+// ========================================================================== //
+//                                                                            //
+//  Empty Status                                                              //
+//                                                                            //
+// ========================================================================== //
+
+// -------------------------------------------------------------------------- //
+//
+
+
+// ========================================================================== //
+//                                                                            //
+//  Head SRAM                                                                 //
+//                                                                            //
+// ========================================================================== //
+
+// -------------------------------------------------------------------------- //
+//
+
+// ========================================================================== //
+//                                                                            //
+//  Tail SRAM                                                                 //
+//                                                                            //
+// ========================================================================== //
+
+// -------------------------------------------------------------------------- //
+//
+
+// ========================================================================== //
+//                                                                            //
+//  Data SRAM                                                                 //
+//                                                                            //
+// ========================================================================== //
+
+// -------------------------------------------------------------------------- //
+//
+
+// ========================================================================== //
+//                                                                            //
+//  Microcode                                                                 //
+//                                                                            //
+// ========================================================================== //
+
+// -------------------------------------------------------------------------- //
+//
+assign mem_uc_vld = 0;
+assign mem_uc_engid = 0;
+assign mem_uc_set_empty = 0;
+assign mem_uc_clr_empty = 0;
+assign mem_uc_head_vld = 0;
+assign mem_uc_head_ptr = 0;
+assign mem_uc_tail_vld = 0;
+assign mem_uc_tail_vld = 0;
+
+// ========================================================================== //
+//                                                                            //
+//  Outputs                                                                   //
+//                                                                            //
+// ========================================================================== //
+
+// -------------------------------------------------------------------------- //
+// Microcode (WRBK) output
+assign o_mem_uc_vld_w = mem_uc_vld;
+assign o_mem_uc_engid_w = mem_uc_engid;
+assign o_mem_uc_set_empty_w = mem_uc_set_empty;
+assign o_mem_uc_clr_empty_w = mem_uc_clr_empty;
+assign o_mem_uc_head_vld_w = mem_uc_head_vld;
+assign o_mem_uc_head_ptr_w = mem_uc_head_ptr;
+assign o_mem_uc_tail_vld_w = mem_uc_tail_vld;
+assign o_mem_uc_tail_ptr_w = mem_uc_tail_ptr;
 
 endmodule : stk_pipe_lk
 

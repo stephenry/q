@@ -51,7 +51,7 @@ localparam int C_BANK_LINES_N = 1024;
 
 localparam int BANK_W = $clog2(BANKS_N);
 
-typedef logic [BANK_W - 1:0] bank_id_t;
+typedef logic [BANK_W - 1:0] bank_id_t; // -> bankid_t
 
 localparam int BANK_LINE_OFFSET_W = $clog2(C_BANK_LINES_N);
 

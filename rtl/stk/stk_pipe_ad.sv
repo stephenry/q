@@ -56,8 +56,9 @@ module stk_pipe_ad (
 , output wire logic                               o_al_alloc
 
 // -------------------------------------------------------------------------- //
-// Response Interface:
-, input wire logic [cfg_pkg::ENGS_N - 1:0]        i_rsp_vld
+// Writeback ("WRBK") microcode
+, output wire logic                               i_wrbk_uc_vld_r
+, output wire stk_pkg::engid_t                    i_wrbk_uc_engid_r
 
 // -------------------------------------------------------------------------- //
 // Clk/Reset
@@ -105,7 +106,7 @@ logic                                   qpop_pop;
 stk_pkg::engid_t                        qpop_pop_dat;
 `Q_DFFR(logic, qpop_full, 1'b0, clk);
 `Q_DFFR(logic, qpop_empty, 1'b1, clk);
-logic [cfg_pkg::ENGS_N - 1:0]          qpop_pop_dat_engid_d;
+logic [cfg_pkg::ENGS_N - 1:0]           qpop_pop_dat_engid_d;
 
 // "Invalidation" Command Queue:
 //
@@ -116,6 +117,7 @@ stk_pkg::engid_t                        qinv_push_dat;
 
 // "Active" Set:
 //
+logic [cfg_pkg::ENGS_N - 1:0]           wrbk_uc_engid_d;
 logic [cfg_pkg::ENGS_N - 1:0]           active_set;
 logic [cfg_pkg::ENGS_N - 1:0]           active_clr;
 `Q_DFFR(logic [cfg_pkg::ENGS_N - 1:0], active, '0, clk);
@@ -346,15 +348,23 @@ assign al_alloc = o_lk_vld_w & (o_lk_opcode_w == stk_pkg::OPCODE_PUSH);
 // ========================================================================== //
 
 // -------------------------------------------------------------------------- //
-//
+// On issue, set a bit in the active set to hold-off (backpressure) further
+// commands belonging to the same engine-id.
 assign active_set = (lk_engid_d & {cfg_pkg::ENGS_N{o_lk_vld_w}});
 
 // -------------------------------------------------------------------------- //
+// As responses egress the pipe, the engine-ID is decoded to clear the
+// "active" bitmap. Once the associated bit has been cleared, ENGID commands
+// are no longer backpressured and are able to be issued.
 //
-assign active_clr = i_rsp_vld;
+dec #(.W(cfg_pkg::ENGS_N)) u_wrbk_uc_engid_dec (
+  .i_x(i_wrbk_uc_engid_r), .o_y(wrbk_uc_engid_d)
+);
+
+assign active_clr = {cfg_pkg::ENGS_N{i_wrbk_uc_vld_r}} & wrbk_uc_engid_d;
 
 // -------------------------------------------------------------------------- //
-//
+// 'active' set derives as a standard set/clear update.
 assign active_w = (~active_clr) & (active_r | active_set);
 
 // ========================================================================== //

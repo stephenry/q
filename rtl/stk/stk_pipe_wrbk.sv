@@ -25,7 +25,15 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //========================================================================== //
 
-module stk_pipe_wb (
+module stk_pipe_wrbk (
+
+// -------------------------------------------------------------------------- //
+// Mem ("MEM") microcode
+
+
+// -------------------------------------------------------------------------- //
+// Writeback ("WRBK") microcode
+
 
 // -------------------------------------------------------------------------- //
 // Clk/Reset
@@ -33,4 +41,4 @@ module stk_pipe_wb (
 , input wire logic                                arst_n
 );
 
-endmodule : stk_pipe_wb
+endmodule : stk_pipe_wrbk
