@@ -88,8 +88,8 @@ stk_pkg::ptr_t                al_lk_ptr;
 `Q_DFF(logic [stk_pkg::BANKS_N- 1:0], lk_prev_ptr_ce, clk);
 `Q_DFF(logic [stk_pkg::BANKS_N- 1:0], lk_prev_ptr_oe, clk);
 `Q_DFF(stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0], lk_prev_ptr_addr, clk);
-`Q_DFF(stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0], lk_prev_ptr_din, clk);
-`Q_DFF(stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0], lk_prev_ptr_dout, clk);
+`Q_DFF(stk_pkg::ptr_t [stk_pkg::BANKS_N - 1:0], lk_prev_ptr_din, clk);
+`Q_DFF(stk_pkg::ptr_t [stk_pkg::BANKS_N - 1:0], lk_prev_ptr_dout, clk);
 //
 `Q_DFF(logic [stk_pkg::BANKS_N- 1:0], lk_ptr_dat_ce, clk);
 `Q_DFF(logic [stk_pkg::BANKS_N- 1:0], lk_ptr_dat_oe, clk);
@@ -249,6 +249,7 @@ stk_pipe_mem u_stk_pipe_mem (
 , .o_wrbk_uc_tail_ptr_w       (wrbk_uc_tail_ptr_w)
 //
 , .clk                        (clk)
+, .arst_n                     (arst_n)
 );
 
 endmodule : stk_pipe

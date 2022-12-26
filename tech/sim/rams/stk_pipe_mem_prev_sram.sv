@@ -29,11 +29,11 @@ module stk_pipe_mem_prev_sram (
 // -------------------------------------------------------------------------- //
 //
   input wire logic [9:0]                             i_addr
-, input wire logic [9:0]                             i_din
+, input wire logic [11:0]                            i_din
 , input wire logic                                   i_ce
 , input wire logic                                   i_oe
 //
-, output wire logic [9:0]                            o_dout
+, output wire logic [11:0]                           o_dout
 
 // -------------------------------------------------------------------------- //
 //
@@ -42,7 +42,7 @@ module stk_pipe_mem_prev_sram (
 
 // -------------------------------------------------------------------------- //
 //
-generic_sram_1rw #(.W(10), .N(1024)) mem (
+generic_sram_1rw #(.W(12), .N(1024)) mem (
 //
   .addr                       (i_addr)
 , .din                        (i_din)

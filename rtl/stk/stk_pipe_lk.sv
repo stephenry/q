@@ -57,7 +57,7 @@ module stk_pipe_lk (
 , output wire logic [stk_pkg::BANKS_N - 1:0]      o_lk_prev_ptr_oe_w
 , output wire stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
                                                   o_lk_prev_ptr_addr_w
-, output wire stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
+, output wire stk_pkg::ptr_t [stk_pkg::BANKS_N - 1:0]
                                                   o_lk_prev_ptr_din_w
 
 // -------------------------------------------------------------------------- //
@@ -136,7 +136,7 @@ logic [stk_pkg::BANKS_N - 1:0]          lk_prev_ptr_ce_w;
 logic [stk_pkg::BANKS_N - 1:0]          lk_prev_ptr_oe_w;
 stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
                                         lk_prev_ptr_addr_w;
-stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
+stk_pkg::ptr_t [stk_pkg::BANKS_N - 1:0]
                                         lk_prev_ptr_din_w;
 
 // Data SRAM
@@ -275,7 +275,7 @@ assign lk_prev_ptr_oe_w [bank] = '0;
 assign lk_prev_ptr_addr_w [bank] = '0;
 
 //
-assign lk_prev_ptr_din_w [bank] = i_lk_dat_r;
+assign lk_prev_ptr_din_w [bank] = i_lk_ptr;
 
 end : prev_bank_GEN
 

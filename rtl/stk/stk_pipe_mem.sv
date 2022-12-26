@@ -37,10 +37,10 @@ module stk_pipe_mem (
 , input wire logic [stk_pkg::BANKS_N - 1:0]       i_lk_prev_ptr_oe_r
 , input wire stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
                                                   i_lk_prev_ptr_addr_r
-, input wire stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
+, input wire stk_pkg::ptr_t [stk_pkg::BANKS_N - 1:0]
                                                   i_lk_prev_ptr_din_r
 //
-, output wire stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
+, output wire stk_pkg::ptr_t [stk_pkg::BANKS_N - 1:0]
                                                   o_lk_prev_ptr_dout_w
 
 // -------------------------------------------------------------------------- //
@@ -77,7 +77,22 @@ module stk_pipe_mem (
 // -------------------------------------------------------------------------- //
 // Clk/Reset
 , input wire logic                                clk
+, input wire logic                                arst_n
 );
+
+// ========================================================================== //
+//                                                                            //
+//  Wires                                                                     //
+//                                                                            //
+// ========================================================================== //
+
+`Q_DFFR(logic, mdat_uc_vld, 1'b0, clk);
+`Q_DFFE(stk_pkg::engid_t, mdat_uc_engid, mdat_uc_vld_w, clk);
+`Q_DFFE(stk_pkg::bank_id_t, mdat_uc_bankid, mdat_uc_vld_w, clk);
+`Q_DFFE(logic, mdat_uc_head_vld, mdat_uc_vld_w, clk);
+`Q_DFFE(stk_pkg::ptr_t, mdat_uc_head_ptr, mdat_uc_vld_w, clk);
+`Q_DFFE(logic, mdat_uc_tail_vld, mdat_uc_vld_w, clk);
+`Q_DFFE(stk_pkg::ptr_t, mdat_uc_tail_ptr, mdat_uc_vld_w, clk);
 
 // ========================================================================== //
 //                                                                            //
@@ -103,6 +118,12 @@ stk_pipe_mem_prev_sram u_stk_pipe_mem_prev_sram (
 
 end : prev_sram_GEN
 
+// -------------------------------------------------------------------------- //
+// Data SRAM demux.
+muxe #(.N(stk_pkg::BANKS_N), .W(stk_pkg::PTR_W)) u_prev_muxe (
+  .i_x(o_lk_prev_ptr_dout_w), .i_sel(mdat_uc_bankid_r), .o_y()
+);
+
 // ========================================================================== //
 //                                                                            //
 //  Data Pointer SRAM                                                         //
@@ -126,6 +147,25 @@ stk_pipe_mem_data_sram u_stk_pipe_mem_data_sram (
 );
 
 end : data_sram_GEN
+
+// -------------------------------------------------------------------------- //
+// Data SRAM demux.
+muxe #(.N(stk_pkg::BANKS_N), .W(128)) u_data_muxe (
+  .i_x(o_lk_ptr_dat_dout_w), .i_sel(mdat_uc_bankid_r), .o_y()
+);
+
+// ========================================================================== //
+//                                                                            //
+//  Microcode                                                                 //
+//                                                                            //
+// ========================================================================== //
+
+assign o_wrbk_uc_vld_w = mdat_uc_vld_r;
+assign o_wrbk_uc_engid_w = mdat_uc_engid_r;
+assign o_wrbk_uc_head_vld_w = mdat_uc_head_vld_r;
+assign o_wrbk_uc_head_ptr_w = mdat_uc_head_ptr_r;
+assign o_wrbk_uc_tail_vld_w = mdat_uc_tail_vld_r;
+assign o_wrbk_uc_tail_ptr_w = mdat_uc_tail_ptr_r;
 
 endmodule : stk_pipe_mem
 
