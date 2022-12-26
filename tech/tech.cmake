@@ -29,8 +29,8 @@ set(TECH_ROOT "${CMAKE_SOURCE_DIR}/tech")
 
 if (${TARGET} STREQUAL "sim")
   set(TECH_SOURCES
-    "${TECH_ROOT}/sim/rams/stk_pipe_mem_head_sram.sv"
-    "${TECH_ROOT}/sim/rams/stk_pipe_mem_tail_sram.sv"
+    "${TECH_ROOT}/sim/rams/stk_pipe_mem_next_sram.sv"
+    "${TECH_ROOT}/sim/rams/stk_pipe_mem_prev_sram.sv"
     "${TECH_ROOT}/sim/rams/stk_pipe_mem_data_sram.sv"
     "${TECH_ROOT}/sim/rams/stk_pipe_al_ptr_sram.sv"
     "${TECH_ROOT}/sim/generic_sram_1rw.sv"

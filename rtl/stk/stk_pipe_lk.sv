@@ -56,21 +56,21 @@ module stk_pipe_lk (
 
 // -------------------------------------------------------------------------- //
 // Head SRAM interfaces
-, output wire logic [stk_pkg::BANKS_N - 1:0]      o_lk_ptr_head_ce
-, output wire logic [stk_pkg::BANKS_N - 1:0]      o_lk_ptr_head_oe
+, output wire logic [stk_pkg::BANKS_N - 1:0]      o_lk_next_ptr_ce
+, output wire logic [stk_pkg::BANKS_N - 1:0]      o_lk_next_ptr_oe
 , output wire stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
-                                                  o_lk_ptr_head_addr
+                                                  o_lk_next_ptr_addr
 , output wire stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
-                                                  o_lk_ptr_head_din
+                                                  o_lk_next_ptr_din
 
 // -------------------------------------------------------------------------- //
 // Tail SRAM interfaces
-, output wire logic [stk_pkg::BANKS_N - 1:0]      o_lk_ptr_tail_ce
-, output wire logic [stk_pkg::BANKS_N - 1:0]      o_lk_ptr_tail_oe
+, output wire logic [stk_pkg::BANKS_N - 1:0]      o_lk_prev_ptr_ce
+, output wire logic [stk_pkg::BANKS_N - 1:0]      o_lk_prev_ptr_oe
 , output wire stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
-                                                  o_lk_ptr_tail_addr
+                                                  o_lk_prev_ptr_addr
 , output wire stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
-                                                  o_lk_ptr_tail_din
+                                                  o_lk_prev_ptr_din
 
 // -------------------------------------------------------------------------- //
 // Data SRAM interfaces
@@ -139,6 +139,7 @@ stk_pkg::ptr_t                          rf_tail_rdata;
 
 // Empty Status
 //
+logic                                   engid_is_empty;
 `Q_DFFR(logic [cfg_pkg::ENGS_N - 1:0], empty, '1, clk);
 
 // ========================================================================== //
@@ -162,7 +163,7 @@ assign cmd_is_inv = (i_lk_opcode_r == stk_pkg::OPCODE_INV);
 
 // -------------------------------------------------------------------------- //
 //
-
+assign rf_head_ra = i_lk_engid_r;
 
 // -------------------------------------------------------------------------- //
 //
@@ -186,6 +187,10 @@ rf #(.W(stk_pkg::PTR_W), .N(cfg_pkg::ENGS_N)) u_rf_head (
 
 // -------------------------------------------------------------------------- //
 //
+assign rf_tail_ra = i_lk_engid_r;
+
+// -------------------------------------------------------------------------- //
+//
 rf #(.W(stk_pkg::PTR_W), .N(cfg_pkg::ENGS_N)) u_rf_tail (
 //
   .i_ra                       (rf_tail_ra)
@@ -205,12 +210,14 @@ rf #(.W(stk_pkg::PTR_W), .N(cfg_pkg::ENGS_N)) u_rf_tail (
 // ========================================================================== //
 
 // -------------------------------------------------------------------------- //
-//
-
+// Compute empty status of currently addressed engine context.
+sel #(.W(cfg_pkg::ENGS_N)) u_empty_sel (
+  .i_x(empty_r), .i_sel(i_lk_engid_r), .o_y(engid_is_empty)
+);
 
 // ========================================================================== //
 //                                                                            //
-//  Head SRAM                                                                 //
+//  NEXT SRAM                                                                 //
 //                                                                            //
 // ========================================================================== //
 
@@ -219,7 +226,7 @@ rf #(.W(stk_pkg::PTR_W), .N(cfg_pkg::ENGS_N)) u_rf_tail (
 
 // ========================================================================== //
 //                                                                            //
-//  Tail SRAM                                                                 //
+//  PREV SRAM                                                                 //
 //                                                                            //
 // ========================================================================== //
 

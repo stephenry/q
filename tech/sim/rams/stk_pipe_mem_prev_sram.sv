@@ -25,7 +25,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //========================================================================== //
 
-module stk_pipe_mem_tail_sram (
+module stk_pipe_mem_prev_sram (
 // -------------------------------------------------------------------------- //
 //
   input wire logic [9:0]                             i_addr
@@ -53,4 +53,4 @@ generic_sram_1rw #(.W(10), .N(1024)) mem (
 , .clk                        (clk)
 );
 
-endmodule : stk_pipe_mem_tail_sram
+endmodule : stk_pipe_mem_prev_sram

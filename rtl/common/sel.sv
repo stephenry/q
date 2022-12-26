@@ -32,15 +32,15 @@ module sel #(
 // Width of selection vector
   parameter int              W
 // Number of selection bits
-, parameter int              N
+, parameter int              OUT_W = 1
 
-, localparam int             OUT_W = (W / N)
+, localparam int             N = (W / OUT_W)
 ) (
 // -------------------------------------------------------------------------- //
 // Selection Vector
   input wire logic [W - 1:0]                     i_x
 //
-, input wire logic [$clog(N) - 1:0]              i_sel
+, input wire logic [$clog2(N) - 1:0]             i_sel
 
 // -------------------------------------------------------------------------- //
 // Encoded output
@@ -58,7 +58,7 @@ assign grp [i] = i_x [(OUT_W * i) +: OUT_W];
 
 end
 
-mux #(.N, .W(OUT_W)) u_idx_mux (.i_x(grp), .i_sel, .o_y(y));
+muxe #(.N, .W(OUT_W)) u_idx_mux (.i_x(grp), .i_sel(i_sel), .o_y(y));
 
 // ========================================================================== //
 //                                                                            //
