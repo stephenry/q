@@ -51,6 +51,7 @@ module stk_pipe_ad (
 // -------------------------------------------------------------------------- //
 // Allocation Interface:
 , input wire logic                                i_al_empty_r
+, input wire logic                                i_al_full_r
 , input wire logic                                i_al_busy_r
 //
 , output wire logic                               o_al_alloc
@@ -100,7 +101,6 @@ logic [127:0]                           qpush_push_dat_dat;
 logic                                   qpush_pop;
 qpush_t                                 qpush_push_dat;
 qpush_t                                 qpush_pop_dat;
-logic [cfg_pkg::ENGS_N - 1:0]           qpush_pop_dat_engid_d;
 `Q_DFFR(logic, qpush_full, 1'b0, clk);
 `Q_DFFR(logic, qpush_empty, 1'b1, clk);
 
@@ -112,7 +112,6 @@ logic                                   qpop_pop;
 stk_pkg::engid_t                        qpop_pop_dat;
 `Q_DFFR(logic, qpop_full, 1'b0, clk);
 `Q_DFFR(logic, qpop_empty, 1'b1, clk);
-logic [cfg_pkg::ENGS_N - 1:0]           qpop_pop_dat_engid_d;
 
 // "Invalidation" Command Queue:
 //
@@ -134,6 +133,8 @@ localparam int IDX_PUSH = 0;
 localparam int IDX_POP = 1;
 localparam int IDX_INV = 2;
 //
+logic                                   qpush_id_active;
+logic                                   qpop_id_active;
 logic [2:0]                             deq_req_d;
 logic [2:0]                             deq_gnt_d;
 logic                                   deq_ack;
@@ -234,11 +235,6 @@ queue_rf #(.N(2), .W(QPUSH_W)) u_qpush (
 , .arst_n                     (arst_n)
 );
 
-dec #(.W(cfg_pkg::ENGS_N)) u_dec_qpush_engid (
-  .i_x(qpush_pop_dat.id), .o_y(qpush_pop_dat_engid_d)
-);
-
-
 // ========================================================================== //
 //                                                                            //
 //  "Pop" Opcode Queue                                                        //
@@ -266,10 +262,6 @@ queue_rf #(.N(2), .W(stk_pkg::ENGID_W)) u_qpop (
 //
 , .clk                        (clk)
 , .arst_n                     (arst_n)
-);
-
-dec #(.W(cfg_pkg::ENGS_N)) u_dec_qpop_engid (
-  .i_x(qpop_pop_dat), .o_y(qpop_pop_dat_engid_d)
 );
 
 // ========================================================================== //
@@ -313,14 +305,39 @@ stk_pipe_ad_inv u_stk_pipe_ad_inv (
 
 dec #(.W(cfg_pkg::ENGS_N)) u_dec (.i_x(o_lk_engid_w), .o_y(lk_engid_d));
 
+// ========================================================================== //
+//                                                                            //
+//  Requester Arbitration                                                     //
+//                                                                            //
+// We determining whether a push/pop command may issue, we do not             //
+// consider the occupancy of the allocation unit. It would appear             //
+// logical that we would hold-off push operations in favor of pop             //
+// where all slots have been allocated, but we specifically allow             //
+// these operations to fail to avoid possible deadlock conditions. We         //
+// rely upon the high-levels of control, the issuing agent to                 //
+// appropriately enforcing a logically correct ordering of push and           //
+// pop operations.                                                            //
+//                                                                            //
+// ========================================================================== //
+
 // -------------------------------------------------------------------------- //
 //
-assign deq_req_d [IDX_PUSH] =
-  (~qpush_empty_r) & (~i_al_empty_r) & ((active_r & qpush_pop_dat_engid_d) == '0);
+sel #(.W(cfg_pkg::ENGS_N)) u_qpush_active_sel (
+  .i_x(active_r), .i_sel(qpush_pop_dat.id), .o_y(qpush_id_active)
+);
 
-assign deq_req_d [IDX_POP] =
-  (~qpop_empty_r) & ((active_r & qpop_pop_dat_engid_d) == '0);
+assign deq_req_d [IDX_PUSH] = (~qpush_empty_r) & (~qpush_id_active);
 
+// -------------------------------------------------------------------------- //
+//
+sel #(.W(cfg_pkg::ENGS_N)) u_qpop_active_sel (
+  .i_x(active_r), .i_sel(qpop_pop_dat), .o_y(qpop_id_active)
+);
+
+assign deq_req_d [IDX_POP] = (~qpop_empty_r) & (~qpop_id_active);
+
+// -------------------------------------------------------------------------- //
+//
 assign deq_req_d [IDX_INV] =
   1'b0; // TODO
 

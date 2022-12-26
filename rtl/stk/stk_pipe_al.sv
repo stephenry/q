@@ -35,6 +35,7 @@ module stk_pipe_al (
 // Admission ("ad") Stage Interface
   input wire logic                                i_ad_alloc
 , output wire logic                               o_ad_empty_r
+, output wire logic                               o_ad_full_r
 , output wire logic                               o_ad_busy_r
 
 // -------------------------------------------------------------------------- //
@@ -85,7 +86,9 @@ logic [stk_pkg::BANKS_N - 1:0]               stk_bnk_mem_wen;
 logic [stk_pkg::BANKS_N - 1:0]               stk_bnk_mem_ren;
 stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]  stk_bnk_mem_addr;
 `Q_DFF(logic [stk_pkg::BANKS_N - 1:0], stk_bnk_empty, clk);
+`Q_DFF(logic [stk_pkg::BANKS_N - 1:0], stk_bnk_full, clk);
 `Q_DFF(logic, ad_empty, clk);
+`Q_DFF(logic, ad_full, clk);
 
 // Memory
 //
@@ -208,7 +211,7 @@ stack_cntrl #(.N(stk_pkg::C_BANK_LINES_N)) u_stack_cntrl (
 , .o_mem_ren                  (stk_bnk_mem_ren [bnk])
 , .o_mem_addr                 (stk_bnk_mem_addr [bnk])
 //
-, .o_full_w                   ()
+, .o_full_w                   (stk_bnk_full_w [bnk])
 , .o_empty_w                  (stk_bnk_empty_w [bnk])
 //
 , .clk                        (clk)
@@ -219,7 +222,9 @@ end : stack_cntrl_GEN
 
 // -------------------------------------------------------------------------- //
 // Allocation is empty when all banks report empty status.
-assign ad_empty_w = (stk_bnk_empty_w != '1);
+assign ad_empty_w = (stk_bnk_empty_w == '1);
+
+assign ad_full_w = (stk_bnk_full_w == '1);
 
 // ========================================================================== //
 //                                                                            //
