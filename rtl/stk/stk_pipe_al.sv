@@ -67,16 +67,18 @@ stk_pkg::line_id_t                           init_waddr_r;
 stk_pkg::line_id_t                           init_wdata_r;
 logic                                        init_busy_r;
 
-// Descriptor Return Logic
-//
-logic [stk_pkg::BANKS_N - 1:0]               dealloc_ptr_bnk_id_d;
-
-// Stack Logical Operation Logic
+// -------------------------------------------------------------------------- //
+// Bank Selection Logic
 //
 logic                                        stk_collision;
 logic [stk_pkg::BANKS_N - 1:0]               stk_bnk_popsel_req_d;
 logic                                        stk_bnk_popsel_ack;
 logic [stk_pkg::BANKS_N - 1:0]               stk_bnk_popsel_gnt_d;
+
+// -------------------------------------------------------------------------- //
+// Free Pool Stack Control
+//
+logic [stk_pkg::BANKS_N - 1:0]               dealloc_ptr_bnk_id_d;
 logic [stk_pkg::BANKS_N - 1:0]               stk_bnk_push;
 logic [stk_pkg::BANKS_N - 1:0]               stk_bnk_pop;
 logic [stk_pkg::BANKS_N - 1:0]               stk_bnk_mem_wen;
@@ -138,13 +140,6 @@ stk_pipe_al_init u_stk_pipe_al_init (
 // ========================================================================== //
 
 // -------------------------------------------------------------------------- //
-// Decode line field of deallocated descriptor to identify home bank.
-//
-dec #(.W(stk_pkg::BANKS_N)) u_dec_qpush_engid (
-  .i_x(i_dealloc_ptr.bnk_id), .o_y(dealloc_ptr_bnk_id_d)
-);
-
-// -------------------------------------------------------------------------- //
 // An allocation request occurs in the same cycle as a deallocation. In this
 // case, immediately the deallocated descriptor to the request to avoid having
 // to touch the allocators.
@@ -158,7 +153,9 @@ assign stk_collision = (i_ad_alloc & i_dealloc_vld);
 //
 assign stk_bnk_popsel_req_d = (~stk_bnk_empty_r);
 
+// -------------------------------------------------------------------------- //
 // Load balance across banks whenever a descriptor is allocated.
+//
 assign stk_bnk_popsel_ack = i_ad_alloc & (~i_dealloc_vld);
 
 // -------------------------------------------------------------------------- //
@@ -179,6 +176,13 @@ rr #(.W(stk_pkg::BANKS_N)) u_rr (
 //  Free Pool Stack control                                                   //
 //                                                                            //
 // ========================================================================== //
+
+// -------------------------------------------------------------------------- //
+// Decode line field of deallocated descriptor to identify home bank.
+//
+dec #(.W(stk_pkg::BANKS_N)) u_dec_qpush_engid (
+  .i_x(i_dealloc_ptr.bnk_id), .o_y(dealloc_ptr_bnk_id_d)
+);
 
 for (genvar bnk = 0; bnk < stk_pkg::BANKS_N; bnk++) begin : stack_logical_GEN
 
@@ -213,6 +217,8 @@ stack_cntrl #(.N(stk_pkg::C_BANK_LINES_N)) u_stack_cntrl (
 
 end : stack_cntrl_GEN
 
+// -------------------------------------------------------------------------- //
+// Allocation is empty when all banks report empty status.
 assign ad_empty_w = (stk_bnk_empty_w != '1);
 
 // ========================================================================== //
@@ -307,6 +313,7 @@ assign lk_ptr_w =
 
 assign o_lk_ptr_w = lk_ptr_w;
 assign o_ad_busy_r = init_busy_r;
+assign o_ad_empty_r = ad_empty_r;
 
 endmodule : stk_pipe_al
 

@@ -55,15 +55,6 @@ module stk_pipe_lk (
 //
 
 // -------------------------------------------------------------------------- //
-// Head SRAM interfaces
-, output wire logic [stk_pkg::BANKS_N - 1:0]      o_lk_next_ptr_ce
-, output wire logic [stk_pkg::BANKS_N - 1:0]      o_lk_next_ptr_oe
-, output wire stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
-                                                  o_lk_next_ptr_addr
-, output wire stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
-                                                  o_lk_next_ptr_din
-
-// -------------------------------------------------------------------------- //
 // Tail SRAM interfaces
 , output wire logic [stk_pkg::BANKS_N - 1:0]      o_lk_prev_ptr_ce
 , output wire logic [stk_pkg::BANKS_N - 1:0]      o_lk_prev_ptr_oe

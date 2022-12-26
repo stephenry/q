@@ -32,20 +32,8 @@
 module stk_pipe_mem (
 
 // -------------------------------------------------------------------------- //
-// Head SRAM interfaces
-  input wire logic [stk_pkg::BANKS_N - 1:0]       i_lk_next_ptr_ce
-, input wire logic [stk_pkg::BANKS_N - 1:0]       i_lk_next_ptr_oe
-, input wire stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
-                                                  i_lk_next_ptr_addr
-, input wire stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
-                                                  i_lk_next_ptr_din
-//
-, output wire stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
-                                                  o_lk_next_ptr_dout
-
-// -------------------------------------------------------------------------- //
 // Tail SRAM interfaces
-, input wire logic [stk_pkg::BANKS_N - 1:0]       i_lk_prev_ptr_ce
+  input wire logic [stk_pkg::BANKS_N - 1:0]       i_lk_prev_ptr_ce
 , input wire logic [stk_pkg::BANKS_N - 1:0]       i_lk_prev_ptr_oe
 , input wire stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
                                                   i_lk_prev_ptr_addr
@@ -94,30 +82,6 @@ module stk_pipe_mem (
 // Clk/Reset
 , input wire logic                                clk
 );
-
-// ========================================================================== //
-//                                                                            //
-//  Subsequent (NEXT) Pointer SRAM                                            //
-//                                                                            //
-// ========================================================================== //
-
-// -------------------------------------------------------------------------- //
-//
-for (genvar bnk = 0; bnk < stk_pkg::BANKS_N; bnk++) begin : next_sram_GEN
-
-stk_pipe_mem_next_sram u_stk_pipe_mem_next_sram (
-//
-  .i_addr                     (i_lk_next_ptr_addr [bnk])
-, .i_din                      (i_lk_next_ptr_din [bnk])
-, .i_ce                       (i_lk_next_ptr_ce [bnk])
-, .i_oe                       (i_lk_next_ptr_oe [bnk])
-//
-, .o_dout                     (o_lk_next_ptr_dout [bnk])
-//
-, .clk                        (clk)
-);
-
-end : next_sram_GEN
 
 // ========================================================================== //
 //                                                                            //
