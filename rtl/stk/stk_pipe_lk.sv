@@ -65,10 +65,8 @@ module stk_pipe_lk (
 // Data SRAM interfaces
 , output wire logic [stk_pkg::BANKS_N - 1:0]      o_lk_dat_ce_w
 , output wire logic [stk_pkg::BANKS_N - 1:0]      o_lk_dat_oe_w
-, output wire stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
-                                                  o_lk_dat_addr_w
-, output wire logic [stk_pkg::BANKS_N - 1:0][127:0]
-                                                  o_lk_dat_din_w
+, output wire stk_pkg::line_id_t                  o_lk_dat_addr_w
+, output wire logic [127:0]                       o_lk_dat_din_w
 
 // -------------------------------------------------------------------------- //
 // MEM microcode update (nxt).
@@ -160,9 +158,8 @@ stk_pkg::ptr_t [stk_pkg::BANKS_N - 1:0]
 // Data SRAM
 logic [stk_pkg::BANKS_N - 1:0]          lk_dat_ce_w;
 logic [stk_pkg::BANKS_N - 1:0]          lk_dat_oe_w;
-stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
-                                        lk_dat_addr_w;
-logic [stk_pkg::BANKS_N - 1:0][127:0]   lk_dat_din_w;
+stk_pkg::line_id_t                      lk_dat_addr_w;
+logic [127:0]                           lk_dat_din_w;
 
 // ========================================================================== //
 //                                                                            //
@@ -172,9 +169,9 @@ logic [stk_pkg::BANKS_N - 1:0][127:0]   lk_dat_din_w;
 
 // -------------------------------------------------------------------------- //
 // Command decoder
-assign cmd_is_push = (i_lk_opcode_r == stk_pkg::OPCODE_PUSH);
-assign cmd_is_pop = (i_lk_opcode_r == stk_pkg::OPCODE_POP);
-assign cmd_is_inv = (i_lk_opcode_r == stk_pkg::OPCODE_INV);
+assign cmd_is_push = i_lk_vld_r & (i_lk_opcode_r == stk_pkg::OPCODE_PUSH);
+assign cmd_is_pop = i_lk_vld_r & (i_lk_opcode_r == stk_pkg::OPCODE_POP);
+assign cmd_is_inv = i_lk_vld_r & (i_lk_opcode_r == stk_pkg::OPCODE_INV);
 
 // ========================================================================== //
 //                                                                            //
@@ -188,7 +185,7 @@ assign rf_head_ra = i_lk_engid_r;
 
 // -------------------------------------------------------------------------- //
 // Write Interface:
-assign rf_head_wen = i_wrbk_uc_head_vld_r;
+assign rf_head_wen = i_wrbk_uc_vld_r & i_wrbk_uc_head_vld_r;
 assign rf_head_wa = i_wrbk_uc_engid_r;
 assign rf_head_wdata = i_wrbk_uc_head_ptr_r;
 
@@ -218,7 +215,7 @@ assign rf_tail_ra = i_lk_engid_r;
 
 // -------------------------------------------------------------------------- //
 // Write Interface
-assign rf_tail_wen = i_wrbk_uc_tail_vld_r;
+assign rf_tail_wen = i_wrbk_uc_vld_r & i_wrbk_uc_tail_vld_r;
 assign rf_tail_wa = i_wrbk_uc_engid_r;
 assign rf_tail_wdata = i_wrbk_uc_tail_ptr_r;
 
@@ -377,15 +374,15 @@ assign lk_dat_ce_w [bank] =
 assign lk_dat_oe_w [bank] =
     (cmd_is_pop                    & head_ptr_bank_id_d [bank]); // (2)
 
+end : data_bank_GEN
+
 //
-assign lk_dat_addr_w [bank] =
+assign lk_dat_addr_w =
     ({stk_pkg::LINE_ID_W{cmd_is_push}} & i_lk_ptr.line_id)       // (1)
   | ({stk_pkg::LINE_ID_W{ cmd_is_pop}} & rf_head_rdata.line_id); // (2)
 
 //
-assign lk_dat_din_w [bank] = i_lk_dat_r;
-
-end : data_bank_GEN
+assign lk_dat_din_w  = i_lk_dat_r;
 
 // ========================================================================== //
 //                                                                            //

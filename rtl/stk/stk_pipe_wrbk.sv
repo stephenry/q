@@ -26,52 +26,59 @@
 //========================================================================== //
 
 `include "common_defs.vh"
-
-`include "q_pkg.vh"
-`include "cfg_pkg.vh"
 `include "stk/stk_pkg.vh"
+`include "macros.vh"
 
-module stk (
+module stk_pipe_wrbk (
 // -------------------------------------------------------------------------- //
-//
-  input wire logic [cfg_pkg::ENGS_N - 1:0]        i_cmd_vld
-, input wire stk_pkg::opcode_t [cfg_pkg::ENGS_N - 1:0]
-                                                  i_cmd_opcode
-, input wire logic [cfg_pkg::ENGS_N - 1:0][127:0] i_cmd_dat
-//
-, output wire logic [cfg_pkg::ENGS_N - 1:0]       o_cmd_ack
-//
+// Writeback ("WRBK") microcode
+  input wire logic                                i_wrbk_uc_vld_r
+, input wire stk_pkg::engid_t                     i_wrbk_uc_engid_r
+, input wire stk_pkg::status_t                    i_wrbk_uc_status_r
+, input wire logic [127:0]                        i_wrbk_uc_dat_r
+
+// -------------------------------------------------------------------------- //
+// Response
 , output wire logic [cfg_pkg::ENGS_N - 1:0]       o_rsp_vld
 , output wire logic [127:0]                       o_rsp_dat
 , output wire stk_pkg::status_t                   o_rsp_status
-
-// -------------------------------------------------------------------------- //
-// Clk/Reset
-, input wire logic                                clk
-, input wire logic                                arst_n
 );
 
 // ========================================================================== //
 //                                                                            //
-//  Instances                                                                 //
+//  Wires                                                                     //
+//                                                                            //
+// ========================================================================== //
+
+// Response Interface
+//
+logic [cfg_pkg::ENGS_N - 1:0]                     engid_d;
+logic [cfg_pkg::ENGS_N - 1:0]                     rsp_vld;
+
+// ========================================================================== //
+//                                                                            //
+//  Response Interface                                                        //
 //                                                                            //
 // ========================================================================== //
 
 // -------------------------------------------------------------------------- //
 //
-stk_pipe u_stk_pipe (
-//
-  .i_cmd_vld                  (i_cmd_vld)
-, .i_cmd_opcode               (i_cmd_opcode)
-, .i_cmd_dat                  (i_cmd_dat)
-, .o_cmd_ack                  (o_cmd_ack)
-//
-, .o_rsp_vld                  (o_rsp_vld)
-, .o_rsp_dat                  (o_rsp_dat)
-, .o_rsp_status               (o_rsp_status)
-//
-, .clk                        (clk)
-, .arst_n                     (arst_n)
+dec #(.W(stk_pkg::BANKS_N)) u_rsp_dec (
+  .i_x(i_wrbk_uc_engid_r), .o_y(engid_d)
 );
 
-endmodule : stk
+assign rsp_vld = ({stk_pkg::BANKS_N{i_wrbk_uc_vld_r}} & engid_d);
+
+// ========================================================================== //
+//                                                                            //
+//  Outputs                                                                   //
+//                                                                            //
+// ========================================================================== //
+
+// -------------------------------------------------------------------------- //
+//
+assign o_rsp_vld = rsp_vld;
+assign o_rsp_dat = i_wrbk_uc_dat_r;
+assign o_rsp_status = i_wrbk_uc_status_r;
+
+endmodule : stk_pipe_wrbk

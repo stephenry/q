@@ -30,11 +30,11 @@
 
 #include "test.h"
 #include "tb.h"
+#include "tb_stk/tb_stk.h"
 #include "tb_stk/cfg.h"
 #include "verilated.h"
 #include "tb_stk/Vobj/Vtb_stk.h"
 #include <deque>
-#include <array>
 
 // Forwards:
 class TestRegistry;
@@ -43,13 +43,6 @@ class Vtb_stk;
 namespace tb_stk {
 
 class Model;
-
-enum class Opcode : CData {
-  Nop    = 0b00,
-  Push   = 0b01,
-  Pop    = 0b10,
-  Inv    = 0b11,
-};
 
 class Driver {
 public:
@@ -78,31 +71,24 @@ public:
 
   bool ack(std::size_t ch) const;
 
-  bool sample_issue(vluint8_t& engid, CData& opcode, VlWide<4>& dat);
+  bool tb_sample_issue(vluint8_t& engid, Opcode& opcode, VlWide<4>& dat);
+
+  bool tb_sample_response(Status& status, VlWide<4>& dat);
 
 private:
   Vtb_stk* tb_stk_;
 };
 
 class Model {
+  class Impl;
 public:
-  explicit Model() = default;
+  explicit Model(KernelVerilated<Vtb_stk, Driver>* k);
+  ~Model();
 
-  void issue(vluint8_t engid, CData& opcode, VlWide<4>& dat) {}
-
-  bool empty(std::size_t ch) const { return stks_[ch].empty(); }
-
-  void push(std::size_t ch, const VlWide<4>& w) {
-    stks_[ch].push_back(w);
-  }
-
-  void pop(std::size_t ch, VlWide<4>& w) {
-    w = stks_[ch].back();
-    stks_[ch].pop_back();
-  }
+  bool on_negedge_clk();
 
 private:
-  std::array<std::vector<VlWide<4>>, cfg::ENGS_N> stks_;
+  std::unique_ptr<Impl> impl_;
 };
 
 class StkTest : public Test {

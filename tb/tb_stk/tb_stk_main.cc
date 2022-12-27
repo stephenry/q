@@ -33,6 +33,10 @@
 #include "tb.h"
 #include <exception>
 #include <utility>
+#include <array>
+#include <vector>
+#include <deque>
+#include <optional>
 
 using namespace tb_stk;
 
@@ -65,9 +69,10 @@ bool Driver::busy_r() const {
 }
 
 void Driver::idle() {
-  for (std::size_t ch = 0; ch < cfg::ENGS_N; ch++) {
-    issue(ch, Opcode::Nop);
-  }
+  VSupport::logic(&tb_stk_->i_cmd0_vld, false);
+  VSupport::logic(&tb_stk_->i_cmd1_vld, false);
+  VSupport::logic(&tb_stk_->i_cmd2_vld, false);
+  VSupport::logic(&tb_stk_->i_cmd3_vld, false);
 }
 
 void Driver::issue(std::size_t ch, Opcode opcode) {
@@ -75,10 +80,22 @@ void Driver::issue(std::size_t ch, Opcode opcode) {
     return static_cast<std::underlying_type_t<Opcode>>(opcode);
   };
   switch (ch) {
-  case 0: tb_stk_->i_cmd0_opcode = to_underlying(opcode); break;
-  case 1: tb_stk_->i_cmd1_opcode = to_underlying(opcode); break;
-  case 2: tb_stk_->i_cmd2_opcode = to_underlying(opcode); break;
-  case 3: tb_stk_->i_cmd3_opcode = to_underlying(opcode); break;
+  case 0: {
+    VSupport::logic(&tb_stk_->i_cmd0_vld, true);
+    tb_stk_->i_cmd0_opcode = to_underlying(opcode);
+  } break;
+  case 1: {
+    VSupport::logic(&tb_stk_->i_cmd1_vld, true);
+    tb_stk_->i_cmd1_opcode = to_underlying(opcode);
+  } break;
+  case 2: {
+    VSupport::logic(&tb_stk_->i_cmd2_vld, true);
+    tb_stk_->i_cmd2_opcode = to_underlying(opcode);
+  } break;
+  case 3: {
+    VSupport::logic(&tb_stk_->i_cmd3_vld, true);
+    tb_stk_->i_cmd3_opcode = to_underlying(opcode);
+  } break;
   }
 }
 
@@ -102,23 +119,164 @@ bool Driver::ack(std::size_t ch) const {
   return false;
 }
 
-bool Driver::sample_issue(vluint8_t& engid, CData& opcode, VlWide<4>& dat) {
+bool Driver::tb_sample_issue(vluint8_t& engid, Opcode& opcode, VlWide<4>& dat) {
   const bool did_issue = VSupport::logic(&tb_stk_->o_lk_vld_w);
   if (did_issue) {
     engid = tb_stk_->o_lk_engid_w;
-    opcode = tb_stk_->o_lk_opcode_w;
+    opcode = Opcode{tb_stk_->o_lk_opcode_w};
     dat = tb_stk_->o_lk_dat_w;
   }
   return did_issue;
 }
 
-namespace tb_stk {
-
-StkTest::StkTest() {
-  model_ = std::make_unique<Model>();
+bool Driver::tb_sample_response(Status& status, VlWide<4>& dat) {
+  const bool has_response = VSupport::logic(&tb_stk_->o_rsp_vld);
+  if (has_response) {
+    status = Status{tb_stk_->o_rsp_status};
+    dat = tb_stk_->o_rsp_dat;
+  }
+  return has_response;
 }
 
+namespace tb_stk {
+
+StkTest::StkTest() {}
+
 StkTest::~StkTest() {}
+
+class Model::Impl {
+
+  // Expected Response Data Type
+  struct Expected {
+    std::optional<VlWide<4>> data;
+    Status status;
+  };
+
+  // End-to-End latency of a command to response (in cycles).
+  static constexpr vluint64_t LATENCY_N = 4;
+
+  // Total number of lines that can be retained by the STK block.
+  static constexpr vluint64_t CAPACITY_N =
+    (cfg::LINES_PER_BANK_N * cfg::BANKS_N);
+
+public:
+  explicit Impl(KernelVerilated<Vtb_stk, Driver>* k)
+    : k_(k)
+  {}
+
+  bool on_negedge_clk() {
+    bool good = true;
+
+    if (!sample_response())
+      good = false;
+
+    if (!sample_issue())
+      good = false;
+
+    return good;
+  }
+
+private:
+  bool sample_issue() {
+    vluint8_t engid;
+    Opcode opcode;
+    VlWide<4> dat;
+
+    if (!k_->driver()->tb_sample_issue(engid, opcode, dat))
+      return true;
+
+    bool error = false;
+    Status status = Status::Okay;
+    const vluint64_t cycle = k_->tb_cycle();
+    switch (opcode) {
+    case Opcode::Push: {
+      Expected e;
+      // TODO(stephenry); qualify on collisions.
+      status = (size_ == CAPACITY_N) ? Status::ErrFull : Status::Okay;
+      e.status = status;
+      if (e.status == Status::Okay) {
+        stks_[engid].push_back(dat);
+        ++size_;
+      }
+      expect_.push_back(std::make_pair(cycle + LATENCY_N, e));
+    } break;
+    case Opcode::Pop: {
+      Expected e;
+      status = stks_[engid].empty() ? Status::ErrEmpty : Status::Okay;
+      e.status = status;
+      if (e.status == Status::Okay) {
+        e.data = stks_[engid].back();
+        stks_[engid].pop_back();
+        --size_;
+      }
+      expect_.push_back(std::make_pair(cycle + LATENCY_N, e));
+    } break;
+    case Opcode::Inv: {
+      // TBD
+    } break;
+    case Opcode::Nop: {
+      // TBD
+    } break;
+    }
+
+    return (status == Status::Okay);
+  }
+
+  bool sample_response() {
+    Status status;
+    VlWide<4> data;
+
+    const bool got_response =
+      k_->driver()->tb_sample_response(status, data);
+
+    const bool expect_response =
+      !expect_.empty() && (expect_.front().first == k_->tb_cycle());
+
+    if (got_response != expect_response) {
+      // Expected response mismatch.
+      return false;
+    }
+
+    if (!got_response) {
+      // No response received.
+      return true;
+    }
+
+    const Expected& e{expect_.front().second};
+
+    bool success = true;
+    if (e.status != status) {
+      // Invalid response received.
+      std::cout << "ERROR STATUS\n";
+      success = false;
+    }
+
+    if (e.data && !VSupport::eq(*e.data, data)) {
+      // Invalid data received on a pop.
+      std::cout << "ERROR DATA\n";
+      success = false;
+    }
+
+    expect_.pop_front();
+
+    // Otherwise, no mismatches, comparsion has succeeded.
+    return success;
+  }
+
+  // Pointer to UUT kernel.
+  KernelVerilated<Vtb_stk, Driver>* k_;
+  std::array<std::vector<VlWide<4>>, cfg::ENGS_N> stks_;
+  std::deque<std::pair<vluint64_t, Expected> > expect_;
+  std::size_t size_;
+};
+
+Model::Model(KernelVerilated<Vtb_stk, Driver>* k) {
+  impl_ = std::make_unique<Impl>(k);
+}
+
+Model::~Model() {}
+
+bool Model::on_negedge_clk() { return impl_->on_negedge_clk(); }
 
 void StkTest::issue(std::size_t ch, Opcode opcode) {
   struct IssueNonDataOpcode : Event {
@@ -200,16 +358,11 @@ bool StkTest::on_negedge_clk() {
     event_queue_.pop_front();
   }
 
-  // Update Model
-  vluint8_t engid;
-  CData opcode;
-  VlWide<4> dat;
-  if (driver->sample_issue(engid, opcode, dat)) {
-    //    model->issue(engid, opcode, dat);
-  }
+  // Update Model (and error out if necessary)
+  if (!model_->on_negedge_clk()) return false;
 
-  // If more events to go, reschedule, otherwise, try to reprogram
-  // further stimulus, and then reschedule iff more arrives.
+  // Otherise, If more events to go, reschedule, otherwise, try to
+  // reprogram further stimulus, and then reschedule iff more arrives.
   //
   return !event_queue_.empty() || program();
 }

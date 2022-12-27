@@ -52,6 +52,7 @@ set(STK_SOURCES
     "${SRC_ROOT}/stk/stk_pipe_ad_inv.sv"
     "${SRC_ROOT}/stk/stk_pipe_ad.sv"
     "${SRC_ROOT}/stk/stk_pipe_mem.sv"
+    "${SRC_ROOT}/stk/stk_pipe_wrbk.sv"
     "${SRC_ROOT}/stk/stk_pipe.sv"
     "${SRC_ROOT}/stk/stk.sv")
 

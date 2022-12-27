@@ -29,13 +29,15 @@ module tb_stk (
 
 // -------------------------------------------------------------------------- //
 // Command Interface 0
-  input wire stk_pkg::opcode_t                    i_cmd0_opcode
+  input wire logic                                i_cmd0_vld
+, input wire stk_pkg::opcode_t                    i_cmd0_opcode
 , input wire logic [127:0]                        i_cmd0_dat
 //
 , output wire logic                               o_cmd0_ack
 
 // -------------------------------------------------------------------------- //
 // Command Interface 1
+, input wire logic                                i_cmd1_vld
 , input wire stk_pkg::opcode_t                    i_cmd1_opcode
 , input wire logic [127:0]                        i_cmd1_dat
 //
@@ -43,6 +45,7 @@ module tb_stk (
 
 // -------------------------------------------------------------------------- //
 // Command Interface 2
+, input wire logic                                i_cmd2_vld
 , input wire stk_pkg::opcode_t                    i_cmd2_opcode
 , input wire logic [127:0]                        i_cmd2_dat
 //
@@ -50,6 +53,7 @@ module tb_stk (
 
 // -------------------------------------------------------------------------- //
 // Command Interface 3
+, input wire logic                                i_cmd3_vld
 , input wire stk_pkg::opcode_t                    i_cmd3_opcode
 , input wire logic [127:0]                        i_cmd3_dat
 //
@@ -59,6 +63,7 @@ module tb_stk (
 // Response Interface
 , output wire logic [cfg_pkg::ENGS_N - 1:0]       o_rsp_vld
 , output wire logic [127:0]                       o_rsp_dat
+, output wire stk_pkg::status_t                   o_rsp_status
 
 // -------------------------------------------------------------------------- //
 // Testbench State
@@ -84,6 +89,7 @@ module tb_stk (
 // ========================================================================== //
 
 int                                             tb_cycle;
+logic [cfg_pkg::ENGS_N - 1:0]                   cmd_vld;
 stk_pkg::opcode_t [cfg_pkg::ENGS_N - 1:0]       cmd_opcode;
 logic [cfg_pkg::ENGS_N - 1:0][127:0]            cmd_dat;
 logic [cfg_pkg::ENGS_N - 1:0]                   cmd_ack;
@@ -98,6 +104,11 @@ assign cmd_opcode [0] = i_cmd0_opcode;
 assign cmd_opcode [1] = i_cmd1_opcode;
 assign cmd_opcode [2] = i_cmd2_opcode;
 assign cmd_opcode [3] = i_cmd3_opcode;
+
+assign cmd_vld [0] = i_cmd0_vld;
+assign cmd_vld [1] = i_cmd1_vld;
+assign cmd_vld [2] = i_cmd2_vld;
+assign cmd_vld [3] = i_cmd3_vld;
 
 assign cmd_dat [0] = i_cmd0_dat;
 assign cmd_dat [1] = i_cmd1_dat;
@@ -114,13 +125,15 @@ assign cmd_dat [3] = i_cmd3_dat;
 //
 stk u_stk (
 //
-  .i_cmd_opcode                         (cmd_opcode)
+  .i_cmd_vld                            (cmd_vld)
+, .i_cmd_opcode                         (cmd_opcode)
 , .i_cmd_dat                            (cmd_dat)
 //
 , .o_cmd_ack                            (cmd_ack)
 //
 , .o_rsp_vld                            (o_rsp_vld)
 , .o_rsp_dat                            (o_rsp_dat)
+, .o_rsp_status                         (o_rsp_status)
 //
 , .clk                                  (clk)
 , .arst_n                               (arst_n)

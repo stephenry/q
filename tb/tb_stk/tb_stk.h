@@ -28,10 +28,25 @@
 #ifndef Q_TB_STK_TB_STK_H
 #define Q_TB_STK_TB_STK_H
 
+#include "verilated.h"
+
 // Forwards:
 class TestRegistry;
 
 namespace tb_stk {
+
+enum class Opcode : CData {
+  Nop    = 0b00,
+  Push   = 0b01,
+  Pop    = 0b10,
+  Inv    = 0b11,
+};
+
+enum class Status : CData {
+  Okay     = 0b00,
+  ErrFull  = 0b10,
+  ErrEmpty = 0b11,
+};
 
 void init(TestRegistry& tr);
 

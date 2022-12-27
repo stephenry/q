@@ -30,39 +30,60 @@
 
 struct tb_stk::smoke::Test::Impl {
 
-  explicit Impl(StkTest* t) : t_(t), done_(false) {}
+  enum class State {
+    WaitForInitialization,
+    IssueForChannelN,
+    WindDown,
+    Terminate
+  };
+
+  explicit Impl(StkTest* t)
+    : t_(t), state_(State::WaitForInitialization)
+  {}
 
   bool program() {
-    if (done_) return false;
+    switch (state_) {
+    case State::WaitForInitialization: {
+      // Wait until internal Stack initialization has completed;
+      // probably unnecessary as RTL will back-pressure anyway.
+      //
+      t_->wait_until(StkTest::EventType::EndOfInitialization);
+      ch_ = 0;
+      state_ = State::IssueForChannelN;
+    } break;
+    case State::IssueForChannelN: {
 
-    // Wait until internal Stack initialization has completed;
-    // probably unnecessary as RTL will back-pressure anyway.
-    //
-    t_->wait_until(StkTest::EventType::EndOfInitialization);
+      // Push data to channel 0,
+      //
+      push_random_to_ch(ch_);
 
-    // Push data to channel 0,
-    //
-    push_random_to_ch(0);
+      // Wait some number of cycles to allow command to be issued.  (On
+      // an empty queue, admission stage scheduler ought to choose the
+      // Push opcode queue over Pop, but for the purpose of the smoke
+      // test, we don't want to rely upon this constraint).
+      //
+      t_->wait(10);
 
-    // Wait some number of cycles to allow command to be issued.  (On
-    // an empty queue, admission stage scheduler ought to choose the
-    // Push opcode queue over Pop, but for the purpose of the smoke
-    // test, we don't want to rely upon this constraint).
-    //
-    t_->wait(10);
+      // Pop data from channel 0; expect the same data back.
+      //
+      pop_from_ch(ch_);
 
-    // Pop data from channel 0; expect the same data back.
-    //
-    pop_from_ch(0);
+      // Wait some cycles to allow the prior instructions to execute.
+      //
+      t_->wait(100);
 
-    // Wait some cycles to allow the prior instructions to execute.
-    //
-    t_->wait(100);
+      if (++ch_ == cfg::ENGS_N) {
+        state_ = State::WindDown;
+      }
+    } break;
+    case State::WindDown: {
+      state_ = State::Terminate;
+    } break;
+    case State::Terminate: {
+    } break;
+    }
 
-    // No further stimulus
-    //
-    done_ = true;
-    return false;
+    return (state_ != State::Terminate);
   }
 
   // Issue Push command to channel 'ch'
@@ -80,8 +101,9 @@ struct tb_stk::smoke::Test::Impl {
   }
 
 private:
-  bool done_;
   StkTest* t_;
+  State state_;
+  std::size_t ch_;
 };
 
 namespace tb_stk::smoke {

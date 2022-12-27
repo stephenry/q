@@ -36,7 +36,9 @@ namespace cfg {
 
   static constexpr std::size_t CONTEXTS_N = @Q_CONTEXTS_N@;
 
-  static constexpr std::size_t CAPACITY = 1024;
+  static constexpr std::size_t LINES_PER_BANK_N = 1024;
+
+  static constexpr std::size_t BANKS_N = 4;
 
 } // namespace cfg_pkg
 

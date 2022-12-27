@@ -44,10 +44,8 @@ module stk_pipe_mem (
 // Data SRAM interfaces
 , input wire logic [stk_pkg::BANKS_N - 1:0]       i_lk_dat_ce_r
 , input wire logic [stk_pkg::BANKS_N - 1:0]       i_lk_dat_oe_r
-, input wire stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
-                                                  i_lk_dat_addr_r
-, input wire [stk_pkg::BANKS_N - 1:0][127:0]
-                                                  i_lk_dat_din_r
+, input wire stk_pkg::line_id_t                   i_lk_dat_addr_r
+, input wire [127:0]                              i_lk_dat_din_r
 
 // -------------------------------------------------------------------------- //
 // Lookup ("LK") microcode
@@ -71,7 +69,7 @@ module stk_pipe_mem (
 , output wire stk_pkg::ptr_t                      o_wrbk_uc_head_ptr_w
 , output wire logic                               o_wrbk_uc_tail_vld_w
 , output wire stk_pkg::ptr_t                      o_wrbk_uc_tail_ptr_w
-, output wire logic                               o_wrbk_uc_dat_en
+, output wire logic                               o_wrbk_uc_dat_vld
 , output wire logic [127:0]                       o_wrbk_uc_dat_w
 
 // -------------------------------------------------------------------------- //
@@ -135,7 +133,7 @@ logic                                   wrbk_uc_head_upt;
 stk_pkg::ptr_t                          wrbk_uc_head_ptr;
 logic                                   wrbk_uc_tail_vld;
 stk_pkg::ptr_t                          wrbk_uc_tail_ptr;
-logic                                   wrbk_uc_dat_en;
+logic                                   wrbk_uc_dat_vld;
 logic [127:0]                           wrbk_uc_dat;
 
 // ========================================================================== //
@@ -180,8 +178,8 @@ for (genvar bnk = 0; bnk < stk_pkg::BANKS_N; bnk++) begin : data_sram_GEN
 
 stk_pipe_mem_data_sram u_stk_pipe_mem_data_sram (
 //
-  .i_addr                     (i_lk_dat_addr_r [bnk])
-, .i_din                      (i_lk_dat_din_r [bnk])
+  .i_addr                     (i_lk_dat_addr_r)
+, .i_din                      (i_lk_dat_din_r)
 , .i_ce                       (i_lk_dat_ce_r [bnk])
 , .i_oe                       (i_lk_dat_oe_r [bnk])
 //
@@ -248,7 +246,7 @@ assign wrbk_uc_head_ptr =
 assign wrbk_uc_tail_vld = mdat_uc_tail_vld_r;
 assign wrbk_uc_tail_ptr = mdat_uc_tail_ptr_r;
 
-assign wrbk_uc_dat_en = mdat_cmd_is_pop;
+assign wrbk_uc_dat_vld = mdat_cmd_is_pop;
 assign wrbk_uc_dat = lk_dat;
 
 // ========================================================================== //
@@ -264,7 +262,7 @@ assign o_wrbk_uc_head_vld_w = wrbk_uc_head_vld;
 assign o_wrbk_uc_head_ptr_w = wrbk_uc_head_ptr;
 assign o_wrbk_uc_tail_vld_w = wrbk_uc_tail_vld;
 assign o_wrbk_uc_tail_ptr_w = wrbk_uc_tail_ptr;
-assign o_wrbk_uc_dat_en = wrbk_uc_dat_en;
+assign o_wrbk_uc_dat_vld = wrbk_uc_dat_vld;
 assign o_wrbk_uc_dat_w = wrbk_uc_dat;
 
 endmodule : stk_pipe_mem

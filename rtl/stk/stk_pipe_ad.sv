@@ -34,7 +34,8 @@
 module stk_pipe_ad (
 // -------------------------------------------------------------------------- //
 // Command Interface:
-  input wire stk_pkg::opcode_t [cfg_pkg::ENGS_N - 1:0]
+  input wire logic [cfg_pkg::ENGS_N - 1:0]        i_cmd_vld
+, input wire stk_pkg::opcode_t [cfg_pkg::ENGS_N - 1:0]
                                                   i_cmd_opcode
 , input wire logic [cfg_pkg::ENGS_N - 1:0][127:0] i_cmd_dat
 //
@@ -82,7 +83,6 @@ localparam int QPUSH_W = $bits(qpush_t);
 
 // Command Logic:
 //
-logic [cfg_pkg::ENGS_N - 1:0]           cmd_vld;
 logic [cfg_pkg::ENGS_N - 1:0]           cmd_is_push;
 logic [cfg_pkg::ENGS_N - 1:0]           cmd_is_pop;
 logic [cfg_pkg::ENGS_N - 1:0]           cmd_is_inv;
@@ -155,10 +155,14 @@ logic                                   al_alloc;
 // Command decoder:
 for (genvar ch = 0; ch < cfg_pkg::ENGS_N; ch++) begin : cmd_decoder
 
-assign cmd_vld [ch] = (i_cmd_opcode [ch] != stk_pkg::OPCODE_NOP);
-assign cmd_is_push [ch] = (i_cmd_opcode [ch] == stk_pkg::OPCODE_PUSH);
-assign cmd_is_pop [ch] = (i_cmd_opcode [ch] == stk_pkg::OPCODE_POP);
-assign cmd_is_inv [ch] = (i_cmd_opcode [ch] == stk_pkg::OPCODE_INV);
+assign cmd_is_push [ch] =
+  i_cmd_vld [ch] & (i_cmd_opcode [ch] == stk_pkg::OPCODE_PUSH);
+
+assign cmd_is_pop [ch] =
+  i_cmd_vld [ch] & (i_cmd_opcode [ch] == stk_pkg::OPCODE_POP);
+
+assign cmd_is_inv [ch] =
+  i_cmd_vld [ch] & (i_cmd_opcode [ch] == stk_pkg::OPCODE_INV);
 
 end : cmd_decoder
 
@@ -170,7 +174,7 @@ end : cmd_decoder
 
 // -------------------------------------------------------------------------- //
 //
-assign enq_req_d = cmd_vld &
+assign enq_req_d = i_cmd_vld &
   ((cmd_is_push & {cfg_pkg::ENGS_N{~qpush_full_r}}) |
    (cmd_is_pop  & {cfg_pkg::ENGS_N{~qpop_full_r}}));
 

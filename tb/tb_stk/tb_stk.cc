@@ -53,7 +53,7 @@ public:
     std::unique_ptr<StkTest> t{
       StkTest::Factory::construct(Globals::test_name)};
     t->kernel_ = std::make_unique<KernelVerilated<Vtb_stk, Driver>>();
-    t->model_ = std::make_unique<Model>();
+    t->model_ = std::make_unique<Model>(t->kernel_.get());
     return t;
   }
 

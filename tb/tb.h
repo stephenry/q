@@ -47,6 +47,19 @@ struct VSupport {
   static void zero(VlWide<T_Words>& d) {
     std::fill_n(d.data(), T_Words, 0);
   }
+
+  template<std::size_t T_Size>
+  static bool eq(const VlWide<T_Size>& lhs, const VlWide<T_Size>& rhs) {
+    const WData* lhs_wdata{lhs.data()};
+    const WData* rhs_wdata{rhs.data()};
+    for (std::size_t i = 0; i < T_Size; i++) {
+      if (lhs.at(i) != rhs.at(i)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
 };
 
 struct KernelCallBack {

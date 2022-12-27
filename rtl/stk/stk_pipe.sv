@@ -33,7 +33,9 @@
 
 module stk_pipe (
 // -------------------------------------------------------------------------- //
-  input wire stk_pkg::opcode_t [cfg_pkg::ENGS_N - 1:0]
+//
+  input wire logic [cfg_pkg::ENGS_N - 1:0]        i_cmd_vld
+, input wire stk_pkg::opcode_t [cfg_pkg::ENGS_N - 1:0]
                                                   i_cmd_opcode
 , input wire logic [cfg_pkg::ENGS_N - 1:0][127:0] i_cmd_dat
 //
@@ -42,6 +44,8 @@ module stk_pipe (
 // -------------------------------------------------------------------------- //
 //
 , output wire logic [cfg_pkg::ENGS_N - 1:0]       o_rsp_vld
+, output wire logic [127:0]                       o_rsp_dat
+, output wire stk_pkg::status_t                   o_rsp_status
 
 // -------------------------------------------------------------------------- //
 // Clk/Reset
@@ -97,8 +101,8 @@ stk_pkg::ptr_t                al_lk_ptr;
 //
 `Q_DFF(logic [stk_pkg::BANKS_N - 1:0], lk_dat_ce, clk);
 `Q_DFF(logic [stk_pkg::BANKS_N - 1:0], lk_dat_oe, clk);
-`Q_DFF(stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0], lk_dat_addr, clk);
-`Q_DFF(logic [stk_pkg::BANKS_N - 1:0][127:0], lk_dat_din, clk);
+`Q_DFF(stk_pkg::line_id_t, lk_dat_addr, clk);
+`Q_DFF(logic [127:0], lk_dat_din, clk);
 
 // -------------------------------------------------------------------------- //
 // MEM -> WRBK
@@ -111,8 +115,15 @@ stk_pkg::ptr_t                al_lk_ptr;
 `Q_DFFE(stk_pkg::ptr_t, wrbk_uc_head_ptr, wrbk_uc_vld_w, clk);
 `Q_DFFE(logic, wrbk_uc_tail_vld, wrbk_uc_vld_w, clk);
 `Q_DFFE(stk_pkg::ptr_t, wrbk_uc_tail_ptr, wrbk_uc_vld_w, clk);
-logic wrbk_uc_dat_en;
+logic                                             wrbk_uc_dat_vld;
+logic                                             wrbk_uc_dat_en;
 `Q_DFFE(logic [127:0], wrbk_uc_dat, wrbk_uc_dat_en, clk);
+
+// -------------------------------------------------------------------------- //
+// WRBK -> RSP
+logic [cfg_pkg::ENGS_N - 1:0]                     rsp_vld;
+logic [127:0]                                     rsp_dat;
+stk_pkg::status_t                                 rsp_status;
 
 // ========================================================================== //
 //                                                                            //
@@ -124,7 +135,8 @@ logic wrbk_uc_dat_en;
 //
 stk_pipe_ad u_stk_pipe_ad (
 //
-  .i_cmd_opcode               (i_cmd_opcode)
+  .i_cmd_vld                  (i_cmd_vld)
+, .i_cmd_opcode               (i_cmd_opcode)
 , .i_cmd_dat                  (i_cmd_dat)
 , .o_cmd_ack                  (o_cmd_ack)
 //
@@ -262,11 +274,47 @@ stk_pipe_mem u_stk_pipe_mem (
 , .o_wrbk_uc_head_ptr_w       (wrbk_uc_head_ptr_w)
 , .o_wrbk_uc_tail_vld_w       (wrbk_uc_tail_vld_w)
 , .o_wrbk_uc_tail_ptr_w       (wrbk_uc_tail_ptr_w)
-, .o_wrbk_uc_dat_en           (wrbk_uc_dat_en)
+, .o_wrbk_uc_dat_vld          (wrbk_uc_dat_vld)
 , .o_wrbk_uc_dat_w            (wrbk_uc_dat_w)
 //
 , .clk                        (clk)
 , .arst_n                     (arst_n)
 );
+
+// -------------------------------------------------------------------------- //
+//
+assign wrbk_uc_dat_en = wrbk_uc_vld_w & wrbk_uc_dat_vld;
+
+// ========================================================================== //
+//                                                                            //
+//  Memory (MEM) Stage                                                        //
+//                                                                            //
+// ========================================================================== //
+
+// -------------------------------------------------------------------------- //
+//
+stk_pipe_wrbk u_stk_pipe_wrbk (
+//
+  .i_wrbk_uc_vld_r            (wrbk_uc_vld_r)
+, .i_wrbk_uc_engid_r          (wrbk_uc_engid_r)
+, .i_wrbk_uc_status_r         (wrbk_uc_status_r)
+, .i_wrbk_uc_dat_r            (wrbk_uc_dat_r)
+//
+, .o_rsp_vld                  (rsp_vld)
+, .o_rsp_dat                  (rsp_dat)
+, .o_rsp_status               (rsp_status)
+);
+
+// ========================================================================== //
+//                                                                            //
+//  Outputs                                                                   //
+//                                                                            //
+// ========================================================================== //
+
+// -------------------------------------------------------------------------- //
+//
+assign o_rsp_vld = rsp_vld;
+assign o_rsp_dat = rsp_dat;
+assign o_rsp_status = rsp_status;
 
 endmodule : stk_pipe
