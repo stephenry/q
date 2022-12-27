@@ -35,6 +35,7 @@ module stk_pipe_lk (
   input wire logic                                i_lk_vld_r
 , input wire stk_pkg::engid_t                     i_lk_engid_r
 , input wire stk_pkg::opcode_t                    i_lk_opcode_r
+, input wire logic                                i_lk_isfull_r
 , input wire logic                                i_lk_dat_vld_r
 , input wire logic [127:0]                        i_lk_dat_r
 
@@ -62,19 +63,22 @@ module stk_pipe_lk (
 
 // -------------------------------------------------------------------------- //
 // Data SRAM interfaces
-, output wire logic [stk_pkg::BANKS_N - 1:0]      o_lk_ptr_dat_ce_w
-, output wire logic [stk_pkg::BANKS_N - 1:0]      o_lk_ptr_dat_oe_w
+, output wire logic [stk_pkg::BANKS_N - 1:0]      o_lk_dat_ce_w
+, output wire logic [stk_pkg::BANKS_N - 1:0]      o_lk_dat_oe_w
 , output wire stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
-                                                  o_lk_ptr_dat_addr_w
+                                                  o_lk_dat_addr_w
 , output wire logic [stk_pkg::BANKS_N - 1:0][127:0]
-                                                  o_lk_ptr_dat_din_w
+                                                  o_lk_dat_din_w
 
 // -------------------------------------------------------------------------- //
 // MEM microcode update (nxt).
 , output wire logic                               o_mem_uc_vld_w
 , output wire stk_pkg::engid_t                    o_mem_uc_engid_w
-, output wire stk_pkg::bank_id_t                  o_mem_uc_bankid_w
+, output wire [stk_pkg::BANKS_N - 1:0]            o_mem_uc_bankid_w
+, output wire stk_pkg::opcode_t                   o_mem_uc_opcode_w
+, output wire stk_pkg::status_t                   o_mem_uc_status_w
 , output wire logic                               o_mem_uc_head_vld_w
+, output wire logic                               o_mem_uc_head_upt_w
 , output wire stk_pkg::ptr_t                      o_mem_uc_head_ptr_w
 , output wire logic                               o_mem_uc_tail_vld_w
 , output wire stk_pkg::ptr_t                      o_mem_uc_tail_ptr_w
@@ -94,7 +98,6 @@ module stk_pipe_lk (
 // -------------------------------------------------------------------------- //
 // Decoder:
 //
-logic                                   cmd_vld;
 logic                                   cmd_is_push;
 logic                                   cmd_is_pop;
 logic                                   cmd_is_inv;
@@ -102,7 +105,11 @@ logic                                   cmd_is_inv;
 //
 logic                                   mem_uc_vld;
 stk_pkg::engid_t                        mem_uc_engid;
+logic [stk_pkg::BANKS_N - 1:0]          mem_uc_bankid;
+stk_pkg::opcode_t                       mem_uc_opcode;
+stk_pkg::status_t                       mem_uc_status;
 logic                                   mem_uc_head_vld;
+logic                                   mem_uc_head_upt;
 stk_pkg::ptr_t                          mem_uc_head_ptr;
 logic                                   mem_uc_tail_vld;
 stk_pkg::ptr_t                          mem_uc_tail_ptr;
@@ -120,6 +127,17 @@ stk_pkg::engid_t                        rf_tail_wa;
 stk_pkg::ptr_t                          rf_tail_wdata;
 stk_pkg::engid_t                        rf_tail_ra;
 stk_pkg::ptr_t                          rf_tail_rdata;
+
+// Pointer Decoders
+//
+logic [stk_pkg::BANKS_N - 1:0]          lk_ptr_bank_id_d;
+logic [stk_pkg::BANKS_N - 1:0]          head_ptr_bank_id_d;
+
+// Command Status
+//
+logic                                   status_pop_from_empty;
+logic                                   status_push_to_full;
+logic                                   status_okay;
 
 // Empty Status
 //
@@ -140,11 +158,11 @@ stk_pkg::ptr_t [stk_pkg::BANKS_N - 1:0]
                                         lk_prev_ptr_din_w;
 
 // Data SRAM
-logic [stk_pkg::BANKS_N - 1:0]          lk_ptr_dat_ce_w;
-logic [stk_pkg::BANKS_N - 1:0]          lk_ptr_dat_oe_w;
+logic [stk_pkg::BANKS_N - 1:0]          lk_dat_ce_w;
+logic [stk_pkg::BANKS_N - 1:0]          lk_dat_oe_w;
 stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
-                                        lk_ptr_dat_addr_w;
-logic [stk_pkg::BANKS_N - 1:0][127:0]   lk_ptr_dat_din_w;
+                                        lk_dat_addr_w;
+logic [stk_pkg::BANKS_N - 1:0][127:0]   lk_dat_din_w;
 
 // ========================================================================== //
 //                                                                            //
@@ -154,7 +172,6 @@ logic [stk_pkg::BANKS_N - 1:0][127:0]   lk_ptr_dat_din_w;
 
 // -------------------------------------------------------------------------- //
 // Command decoder
-assign cmd_vld = (i_lk_opcode_r != stk_pkg::OPCODE_NOP);
 assign cmd_is_push = (i_lk_opcode_r == stk_pkg::OPCODE_PUSH);
 assign cmd_is_pop = (i_lk_opcode_r == stk_pkg::OPCODE_POP);
 assign cmd_is_inv = (i_lk_opcode_r == stk_pkg::OPCODE_INV);
@@ -221,6 +238,48 @@ rf #(.W(stk_pkg::PTR_W), .N(cfg_pkg::ENGS_N)) u_rf_tail (
 
 // ========================================================================== //
 //                                                                            //
+//  Pointer Decoders                                                          //
+//                                                                            //
+// ========================================================================== //
+
+// -------------------------------------------------------------------------- //
+//
+dec #(.W(stk_pkg::BANKS_N)) u_lk_ptr_bank_id_dec (
+  .i_x(i_lk_ptr.bnk_id), .o_y(lk_ptr_bank_id_d)
+);
+
+// -------------------------------------------------------------------------- //
+//
+dec #(.W(stk_pkg::BANKS_N)) u_head_ptr_bank_id_dec (
+  .i_x(rf_head_rdata.bnk_id), .o_y(head_ptr_bank_id_d)
+);
+
+// ========================================================================== //
+//                                                                            //
+//  Command Status                                                            //
+//                                                                            //
+// ========================================================================== //
+
+// -------------------------------------------------------------------------- //
+//
+// Error: Attempt to pop from empty stack.
+assign status_pop_from_empty = (cmd_is_pop | cmd_is_inv) & engid_is_empty;
+
+// Error: Attempt to push to full stack (no free slots exist).
+assign status_push_to_full = (cmd_is_push & i_lk_isfull_r);
+
+// Success: No error conditions!
+assign status_okay = ~(status_pop_from_empty | status_push_to_full);
+
+// -------------------------------------------------------------------------- //
+//
+assign mem_uc_status =
+    ({stk_pkg::STATUS_W{status_okay}}           & stk_pkg::STATUS_OKAY)
+  | ({stk_pkg::STATUS_W{status_pop_from_empty}} & stk_pkg::STATUS_ERREMPTY)
+  | ({stk_pkg::STATUS_W{status_push_to_full}}   & stk_pkg::STATUS_ERRFULL);
+
+// ========================================================================== //
+//                                                                            //
 //  Empty Status                                                              //
 //                                                                            //
 // ========================================================================== //
@@ -242,8 +301,7 @@ sel #(.W(cfg_pkg::ENGS_N)) u_empty_sel (
 // -------------------------------------------------------------------------- //
 // Compute update to EMPTY set.
 //
-assign empty_clr_engid =
-  (cmd_is_push & (rf_head_rdata != rf_tail_rdata) & engid_is_empty);
+assign empty_clr_engid = (cmd_is_push & engid_is_empty);
 
 assign empty_clr = lk_engid_d & {cfg_pkg::ENGS_N{empty_clr_engid}};
 
@@ -263,19 +321,32 @@ assign empty_w = (~empty_clr) & (empty_r | empty_set);
 
 // -------------------------------------------------------------------------- //
 //
+// Operations to PREV table for each command:
+//
+//  (1) PUSH - Write old head to newly allocated slot.
+//
+//  (2) POP  - Read current head to retrieve new (prior) head.
+//
+//  (3) INV  - As in (2), except access to DAT ram is killed.
+//
 for (genvar bank = 0; bank < stk_pkg::BANKS_N; bank++) begin : prev_bank_GEN
 
 //
-assign lk_prev_ptr_ce_w [bank] = '0;
+assign lk_prev_ptr_ce_w [bank] =
+    ( cmd_is_push                  & lk_ptr_bank_id_d [bank])    // (1)
+  | ((cmd_is_pop | cmd_is_inv)     & head_ptr_bank_id_d [bank]); // (2, 3)
 
 //
-assign lk_prev_ptr_oe_w [bank] = '0;
+assign lk_prev_ptr_oe_w [bank] =
+    ((cmd_is_pop | cmd_is_inv)     & head_ptr_bank_id_d [bank]); // (2, 3)
 
 //
-assign lk_prev_ptr_addr_w [bank] = '0;
+assign lk_prev_ptr_addr_w [bank] =
+    ({stk_pkg::LINE_ID_W{ cmd_is_push}} & i_lk_ptr.line_id)      // (1)
+  | ({stk_pkg::LINE_ID_W{~cmd_is_push}} & rf_head_rdata.line_id);// (2, 3)
 
 //
-assign lk_prev_ptr_din_w [bank] = i_lk_ptr;
+assign lk_prev_ptr_din_w [bank] = i_lk_ptr;                      // (1)
 
 end : prev_bank_GEN
 
@@ -287,19 +358,32 @@ end : prev_bank_GEN
 
 // -------------------------------------------------------------------------- //
 //
+// Operations to DATA table for each command:
+//
+//  (1) PUSH - Write new descriptor to HEAD pointer.
+//
+//  (2) POP  - Read descriptor from current HEAD pointer.
+//
+//  (3) INV  - NOP
+
 for (genvar bank = 0; bank < stk_pkg::BANKS_N; bank++) begin : data_bank_GEN
 
 //
-assign lk_ptr_dat_ce_w [bank] = '0;
+assign lk_dat_ce_w [bank] =
+    (cmd_is_push                   & lk_ptr_bank_id_d [bank])    // (1)
+  | (cmd_is_pop                    & head_ptr_bank_id_d [bank]); // (2)
 
 //
-assign lk_ptr_dat_oe_w [bank] = '0;
+assign lk_dat_oe_w [bank] =
+    (cmd_is_pop                    & head_ptr_bank_id_d [bank]); // (2)
 
 //
-assign lk_ptr_dat_addr_w [bank] = '0;
+assign lk_dat_addr_w [bank] =
+    ({stk_pkg::LINE_ID_W{cmd_is_push}} & i_lk_ptr.line_id)       // (1)
+  | ({stk_pkg::LINE_ID_W{ cmd_is_pop}} & rf_head_rdata.line_id); // (2)
 
 //
-assign lk_ptr_dat_din_w [bank] = i_lk_dat_r;
+assign lk_dat_din_w [bank] = i_lk_dat_r;
 
 end : data_bank_GEN
 
@@ -311,12 +395,24 @@ end : data_bank_GEN
 
 // -------------------------------------------------------------------------- //
 //
-assign mem_uc_vld = 0;
-assign mem_uc_engid = 0;
-assign mem_uc_head_vld = 0;
-assign mem_uc_head_ptr = 0;
-assign mem_uc_tail_vld = 0;
-assign mem_uc_tail_vld = 0;
+assign mem_uc_vld = i_lk_vld_r;
+assign mem_uc_engid = i_lk_engid_r;
+assign mem_uc_bankid = cmd_is_push ? lk_ptr_bank_id_d : head_ptr_bank_id_d;
+assign mem_uc_opcode = i_lk_opcode_r;
+
+// -------------------------------------------------------------------------- //
+//
+assign mem_uc_head_vld = (cmd_is_push | cmd_is_pop | cmd_is_inv);
+assign mem_uc_head_upt = (~engid_is_empty);
+assign mem_uc_head_ptr = i_lk_ptr;
+
+// -------------------------------------------------------------------------- //
+// The TAIL pointer remains largely invariant over time with the exception
+// of the case where a PUSH is made to the empty stack. In this case, both
+// head and tail pointers are updated simultaneously.
+//
+assign mem_uc_tail_vld = (cmd_is_push & engid_is_empty);
+assign mem_uc_tail_ptr = i_lk_ptr;
 
 // ========================================================================== //
 //                                                                            //
@@ -328,7 +424,11 @@ assign mem_uc_tail_vld = 0;
 // Microcode (WRBK) output
 assign o_mem_uc_vld_w = mem_uc_vld;
 assign o_mem_uc_engid_w = mem_uc_engid;
+assign o_mem_uc_bankid_w = mem_uc_bankid;
+assign o_mem_uc_opcode_w = mem_uc_opcode;
+assign o_mem_uc_status_w = mem_uc_status;
 assign o_mem_uc_head_vld_w = mem_uc_head_vld;
+assign o_mem_uc_head_upt_w = mem_uc_head_upt;
 assign o_mem_uc_head_ptr_w = mem_uc_head_ptr;
 assign o_mem_uc_tail_vld_w = mem_uc_tail_vld;
 assign o_mem_uc_tail_ptr_w = mem_uc_tail_ptr;
@@ -338,10 +438,10 @@ assign o_lk_prev_ptr_oe_w = lk_prev_ptr_oe_w;
 assign o_lk_prev_ptr_addr_w = lk_prev_ptr_addr_w;
 assign o_lk_prev_ptr_din_w = lk_prev_ptr_din_w;
 
-assign o_lk_ptr_dat_ce_w = lk_ptr_dat_ce_w;
-assign o_lk_ptr_dat_oe_w = lk_ptr_dat_oe_w;
-assign o_lk_ptr_dat_addr_w = lk_ptr_dat_addr_w;
-assign o_lk_ptr_dat_din_w = lk_ptr_dat_din_w;
+assign o_lk_dat_ce_w = lk_dat_ce_w;
+assign o_lk_dat_oe_w = lk_dat_oe_w;
+assign o_lk_dat_addr_w = lk_dat_addr_w;
+assign o_lk_dat_din_w = lk_dat_din_w;
 
 endmodule : stk_pipe_lk
 

@@ -58,8 +58,10 @@ typedef enum logic [OPCODE_W - 1:0] {
 localparam int STATUS_W = 2;
 
 typedef enum logic [STATUS_W - 1:0] {
-  STATUS_OKAY   = STATUS_W'('b00)
-} response_t;
+  STATUS_OKAY     = STATUS_W'('b00)
+, STATUS_ERRFULL  = STATUS_W'('b10)
+, STATUS_ERREMPTY = STATUS_W'('b11)
+} status_t;
 
 // ========================================================================== //
 //                                                                            //
@@ -90,6 +92,9 @@ typedef struct packed {
 } ptr_t;
 
 localparam int PTR_W = $bits(ptr_t);
+
+// TODO(stephenry): invert
+localparam int LINE_ID_W = $bits(line_id_t);
 
 endpackage // stk_pkg
 

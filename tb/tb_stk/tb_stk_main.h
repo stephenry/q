@@ -78,6 +78,8 @@ public:
 
   bool ack(std::size_t ch) const;
 
+  bool sample_issue(vluint8_t& engid, CData& opcode, VlWide<4>& dat);
+
 private:
   Vtb_stk* tb_stk_;
 };
@@ -85,6 +87,8 @@ private:
 class Model {
 public:
   explicit Model() = default;
+
+  void issue(vluint8_t engid, CData& opcode, VlWide<4>& dat) {}
 
   bool empty(std::size_t ch) const { return stks_[ch].empty(); }
 

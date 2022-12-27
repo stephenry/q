@@ -45,6 +45,7 @@ module stk_pipe_ad (
 , output wire logic                               o_lk_vld_w
 , output wire stk_pkg::engid_t                    o_lk_engid_w
 , output wire stk_pkg::opcode_t                   o_lk_opcode_w
+, output wire logic                               o_lk_isfull_w
 , output wire logic                               o_lk_dat_vld_w
 , output wire logic [127:0]                       o_lk_dat_w
 
@@ -419,6 +420,10 @@ assign o_lk_engid_w =
 assign o_lk_opcode_w =
     ({stk_pkg::OPCODE_W{deq_gnt_d[IDX_PUSH]}} & stk_pkg::OPCODE_PUSH)
   | ({stk_pkg::OPCODE_W{deq_gnt_d[IDX_POP]}} & stk_pkg::OPCODE_POP);
+
+// -------------------------------------------------------------------------- //
+//
+assign o_lk_isfull_w = (deq_gnt_d[IDX_PUSH] & i_al_full_r);
 
 // -------------------------------------------------------------------------- //
 //

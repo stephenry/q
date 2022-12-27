@@ -102,6 +102,16 @@ bool Driver::ack(std::size_t ch) const {
   return false;
 }
 
+bool Driver::sample_issue(vluint8_t& engid, CData& opcode, VlWide<4>& dat) {
+  const bool did_issue = VSupport::logic(&tb_stk_->o_lk_vld_w);
+  if (did_issue) {
+    engid = tb_stk_->o_lk_engid_w;
+    opcode = tb_stk_->o_lk_opcode_w;
+    dat = tb_stk_->o_lk_dat_w;
+  }
+  return did_issue;
+}
+
 namespace tb_stk {
 
 StkTest::StkTest() {
@@ -188,6 +198,14 @@ bool StkTest::on_negedge_clk() {
 
   if (!event_queue_.front()->execute(driver)) {
     event_queue_.pop_front();
+  }
+
+  // Update Model
+  vluint8_t engid;
+  CData opcode;
+  VlWide<4> dat;
+  if (driver->sample_issue(engid, opcode, dat)) {
+    //    model->issue(engid, opcode, dat);
   }
 
   // If more events to go, reschedule, otherwise, try to reprogram

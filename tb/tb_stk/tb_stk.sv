@@ -65,6 +65,11 @@ module tb_stk (
 , output wire logic [31:0]                        o_tb_cycle
 //
 , output wire logic                               o_busy_r
+//
+, output wire logic                               o_lk_vld_w
+, output wire stk_pkg::engid_t                    o_lk_engid_w
+, output wire stk_pkg::opcode_t                   o_lk_opcode_w
+, output wire logic [127:0]                       o_lk_dat_w
 
 // -------------------------------------------------------------------------- //
 // Clk/Reset
@@ -143,6 +148,11 @@ always_ff @(posedge clk)
 // Allocation Stage, Initialization Logic busy flag.
 //
 assign o_busy_r = u_stk.u_stk_pipe.u_stk_pipe_al.u_stk_pipe_al_init.busy_r;
+
+assign o_lk_vld_w = u_stk.u_stk_pipe.u_stk_pipe_ad.o_lk_vld_w;
+assign o_lk_engid_w = u_stk.u_stk_pipe.u_stk_pipe_ad.o_lk_engid_w;
+assign o_lk_opcode_w = u_stk.u_stk_pipe.u_stk_pipe_ad.o_lk_opcode_w;
+assign o_lk_dat_w = u_stk.u_stk_pipe.u_stk_pipe_ad.o_lk_dat_w;
 
 // ========================================================================== //
 //                                                                            //
