@@ -1,0 +1,20 @@
+name: CI
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/stephenry/vdev-v5.0
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.github_token }}
+    steps:
+    - uses: actions/checkout@v3
+    - name: Configure CMake
+      run: cmake .
+    - name: Build
+      run: cmake --build .
+    - name: Test
+      run: ctest .
