@@ -29,6 +29,7 @@
 #define Q_TB_STK_CFG_PKG_V
 
 #include "cfg_common.h"
+#include <cstddef>
 
 namespace cfg {
 
