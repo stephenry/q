@@ -65,5 +65,5 @@ target_include_directories(driver
   "${VERILATOR_ROOT}/include")
 
 target_link_libraries(driver
-  vlib
-  stk)
+  stk
+  vlib)
