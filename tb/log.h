@@ -157,6 +157,7 @@ struct StreamRenderer<vluint8_t> {
   __func(vlsint64_t) \
   __func(vluint32_t) \
   __func(int) \
+  __func(std::size_t) \
   __func(std::string) \
   __func(std::string_view)
 

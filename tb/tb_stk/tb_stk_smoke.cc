@@ -32,6 +32,7 @@ struct tb_stk::smoke::Test::Impl {
 
   enum class State {
     WaitForInitialization,
+    CheckStacksAreEmpty,
     IssueForChannelN,
     WindDown,
     Terminate
@@ -52,13 +53,20 @@ struct tb_stk::smoke::Test::Impl {
       //
       t_->wait_until(StkTest::EventType::EndOfInitialization);
       ch_ = 0;
+      state_ = State::CheckStacksAreEmpty;
+    } break;
+    case State::CheckStacksAreEmpty: {
+      // Check test pre-conditions.
+      for (std::size_t ch = 0; ch < cfg::ENGS_N; ch++) {
+        t_->check_stack_state(StateType::IsEmpty, ch);
+      }
       state_ = State::IssueForChannelN;
     } break;
     case State::IssueForChannelN: {
 
       // Push data to channel 0,
       //
-      for (int i = 0; i < N; i++) {
+      for (std::size_t i = 0; i < N; i++) {
         push_random_to_ch(ch_);
       }
 
@@ -69,9 +77,13 @@ struct tb_stk::smoke::Test::Impl {
       //
       t_->wait(10);
 
+      // Stack for current channel should report non-empty.
+      //
+      t_->check_stack_state(StateType::IsNonEmpty, ch_);
+
       // Pop data from channel 0; expect the same data back.
       //
-      for (int i = 0; i < N; i++) {
+      for (std::size_t i = 0; i < N; i++) {
         pop_from_ch(ch_);
       }
 
@@ -85,6 +97,10 @@ struct tb_stk::smoke::Test::Impl {
     } break;
     case State::WindDown: {
       t_->wait(10);
+      // Check end of test status.
+      for (std::size_t ch = 0; ch < cfg::ENGS_N; ch++) {
+        t_->check_stack_state(StateType::IsEmpty, ch);
+      }
       state_ = State::Terminate;
     } break;
     case State::Terminate: {
@@ -100,13 +116,13 @@ struct tb_stk::smoke::Test::Impl {
   void push_random_to_ch(std::size_t ch) {
     VlWide<4> dat;
     Globals::random->uniform(dat);
-    t_->issue(ch, Opcode::Push, dat);
+    t_->issue(ch, Opcode::Push, dat, true);
   }
 
   // Issue Pop command to channel 'ch'
   //
   void pop_from_ch(std::size_t ch) {
-    t_->issue(ch, Opcode::Pop);
+    t_->issue(ch, Opcode::Pop, true);
   }
 
 private:

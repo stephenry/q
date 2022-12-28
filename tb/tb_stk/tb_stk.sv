@@ -76,6 +76,13 @@ module tb_stk (
 , output wire stk_pkg::opcode_t                   o_lk_opcode_w
 , output wire logic [127:0]                       o_lk_dat_w
 
+, output wire logic                               o_empty0_r
+, output wire logic                               o_empty1_r
+, output wire logic                               o_empty2_r
+, output wire logic                               o_empty3_r
+
+, output wire logic                               o_full_r
+
 // -------------------------------------------------------------------------- //
 // Clk/Reset
 , input wire logic                                clk
@@ -166,6 +173,13 @@ assign o_lk_vld_w = u_stk.u_stk_pipe.u_stk_pipe_ad.o_lk_vld_w;
 assign o_lk_engid_w = u_stk.u_stk_pipe.u_stk_pipe_ad.o_lk_engid_w;
 assign o_lk_opcode_w = u_stk.u_stk_pipe.u_stk_pipe_ad.o_lk_opcode_w;
 assign o_lk_dat_w = u_stk.u_stk_pipe.u_stk_pipe_ad.o_lk_dat_w;
+
+assign o_empty0_r = u_stk.u_stk_pipe.u_stk_pipe_lk.empty_r [0];
+assign o_empty1_r = u_stk.u_stk_pipe.u_stk_pipe_lk.empty_r [1];
+assign o_empty2_r = u_stk.u_stk_pipe.u_stk_pipe_lk.empty_r [2];
+assign o_empty3_r = u_stk.u_stk_pipe.u_stk_pipe_lk.empty_r [3];
+
+assign o_full_r = u_stk.u_stk_pipe.u_stk_pipe_al.o_ad_full_r;
 
 // ========================================================================== //
 //                                                                            //

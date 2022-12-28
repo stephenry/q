@@ -77,6 +77,21 @@ void Driver::idle() {
   VSupport::logic(&tb_stk_->i_cmd3_vld, false);
 }
 
+bool Driver::is_empty(std::size_t ch) const {
+  switch (ch) {
+  case 0: return VSupport::logic(&tb_stk_->o_empty0_r);
+  case 1: return VSupport::logic(&tb_stk_->o_empty1_r);
+  case 2: return VSupport::logic(&tb_stk_->o_empty2_r);
+  case 3: return VSupport::logic(&tb_stk_->o_empty3_r);
+  }
+  // Never reached.
+  return false;
+}
+
+bool Driver::is_full() const {
+  return VSupport::logic(&tb_stk_->o_full_r);
+}
+
 void Driver::issue(std::size_t ch, Opcode opcode) {
   auto to_underlying = [](Opcode opcode) {
     return static_cast<std::underlying_type_t<Opcode>>(opcode);
@@ -146,7 +161,11 @@ void Driver::eval() const {
 
 namespace tb_stk {
 
-StkTest::StkTest() {}
+StkTest::StkTest() {
+  if (Globals::logger) {
+    test_scope_ = Globals::logger->top()->create_child("test");
+  }
+}
 
 StkTest::~StkTest() {}
 
@@ -293,48 +312,95 @@ void Model::scope(Scope* scope) { return impl_->scope(scope); }
 
 bool Model::on_negedge_clk() { return impl_->on_negedge_clk(); }
 
-void StkTest::issue(std::size_t ch, Opcode opcode) {
-  struct IssueNonDataOpcode : Event {
-    explicit IssueNonDataOpcode(std::size_t ch, Opcode opcode)
-      : ch_(ch), opcode_(opcode)
+void StkTest::issue(std::size_t ch, Opcode opcode, bool is_blocking) {
+  class IssueNonDataOpcode : public Event {
+    enum State {
+      IssueCommand,
+      WaitForResponse,
+    };
+  public:
+    explicit IssueNonDataOpcode(std::size_t ch, Opcode opcode, bool is_blocking)
+      : ch_(ch), opcode_(opcode), is_blocking_(is_blocking),
+        state_(State::IssueCommand)
     {}
     bool execute(Driver* d) override {
-      d->issue(ch_, opcode_);
-      // See note for IssueEvent
-      d->eval();
-      return d->ack(ch_);
+      switch (state_) {
+      case State::IssueCommand: {
+        d->issue(ch_, opcode_);
+        // See note for IssueEvent
+        d->eval();
+        if (d->ack(ch_)) {
+          state_ = State::WaitForResponse;
+          return !is_blocking_;
+        }
+      } break;
+      case State::WaitForResponse: {
+        // Discard oprnands, simply awaiting response to be received.
+        Status status;
+        VlWide<4> dat;
+        return d->tb_sample_response(status, dat);
+      } break;
+      }
+      return true;
     }
   private:
+    State state_;
     std::size_t ch_;
     Opcode opcode_;
+    bool is_blocking_;
   };
-  event_queue_.push_back(std::make_unique<IssueNonDataOpcode>(ch, opcode));
+  event_queue_.push_back(
+    std::make_unique<IssueNonDataOpcode>(ch, opcode, is_blocking));
 }
 
-void StkTest::issue(std::size_t ch, Opcode opcode, const VlWide<4>& dat) {
-  struct IssueEvent : Event {
+void StkTest::issue(std::size_t ch, Opcode opcode, const VlWide<4>& dat,
+                    bool is_blocking) {
+  class IssueEvent : public Event {
+    enum State {
+      IssueCommand,
+      WaitForResponse,
+    };
+  public:
     explicit IssueEvent(
-      std::size_t ch, Opcode opcode, const VlWide<4>& dat)
-      : ch_(ch), opcode_(opcode), dat_(dat)
+      std::size_t ch, Opcode opcode, const VlWide<4>& dat, bool is_blocking)
+      : ch_(ch), opcode_(opcode), dat_(dat), is_blocking_(is_blocking),
+        state_(State::IssueCommand)
     {}
     bool execute(Driver* d) override {
-      d->issue(ch_, opcode_, dat_);
-      // The path between valid to ack is combinatorial. This violates
-      // commonly accepted constraints seen in interfaces such as AXI.
-      // This is intentional. Admission logic in the pipeline
-      // conditionally admits incoming commands based upon their
-      // opcode and the occpuancy of the destination command queue. As
-      // the STK block does not exist as a separate block, the
-      // comb. path is fine in this circumstances.
-      d->eval();
-      return d->ack(ch_);
+      switch (state_) {
+      case State::IssueCommand: {
+        d->issue(ch_, opcode_, dat_);
+        // The path between valid to ack is combinatorial. This violates
+        // commonly accepted constraints seen in interfaces such as AXI.
+        // This is intentional. Admission logic in the pipeline
+        // conditionally admits incoming commands based upon their
+        // opcode and the occpuancy of the destination command queue. As
+        // the STK block does not exist as a separate block, the
+        // comb. path is fine in this circumstances.
+        d->eval();
+        if (d->ack(ch_)) {
+          state_ = State::WaitForResponse;
+          return !is_blocking_;
+        }
+      } break;
+      case State::WaitForResponse: {
+        // Discard oprnands, simply awaiting response to be received.
+        Status status;
+        VlWide<4> dat;
+        return d->tb_sample_response(status, dat);
+      } break;
+      }
+      return true;
     }
   private:
+    State state_;
     std::size_t ch_;
     Opcode opcode_;
     VlWide<4> dat_;
+    bool is_blocking_;
   };
-  event_queue_.push_back(std::make_unique<IssueEvent>(ch, opcode, dat));
+  event_queue_.push_back(
+    std::make_unique<IssueEvent>(ch, opcode, dat, is_blocking));
 }
 
 void StkTest::wait(std::size_t cycles) {
@@ -373,8 +439,47 @@ void StkTest::wait_until(EventType et) {
   event_queue_.push_back(std::make_unique<WaitUntilEvent>(et));
 }
 
+void StkTest::check_stack_state(StateType st, std::size_t ch) {
+  struct CheckStackStateEvent : Event {
+    explicit CheckStackStateEvent(StateType st, std::size_t ch = 0)
+      : st_(st), ch_(ch), test_scope_(nullptr)
+    {}
+    void test_scope(Scope* test_scope) { test_scope_ = test_scope; }
+    bool execute(Driver* d) override {
+      switch (st_) {
+      case StateType::IsFull: {
+        if (!d->is_full()) {
+          test_scope_->Error(
+            "Stack is non-full; expected to be full.");
+        }
+      } break;
+      case StateType::IsNonEmpty: {
+        if (d->is_empty(ch_)) {
+          test_scope_->Error(
+            "Stack ID ", ch_, " expected to be non-empty, but is empty.");
+        }
+      } break;
+      case StateType::IsEmpty: {
+        if (!d->is_empty(ch_)) {
+          test_scope_->Error(
+            "Stack ID ", ch_, " expected to be empty, but is non-empty.");
+        }
+      } break;
+      }
+      return true;
+    }
+  private:
+    std::size_t ch_;
+    StateType st_;
+    Scope* test_scope_;
+  };
+
+  auto e = std::make_unique<CheckStackStateEvent>(st, ch);
+  e->test_scope(test_scope_);
+  event_queue_.push_back(std::move(e));
+}
+
 bool StkTest::on_negedge_clk() {
-  // TODO(stephenry): should be an assertion.
   if (event_queue_.empty()) return false;
 
   Driver* driver{kernel_->driver()};

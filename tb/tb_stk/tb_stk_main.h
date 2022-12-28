@@ -64,6 +64,10 @@ public:
 
   void idle();
 
+  bool is_empty(std::size_t ch) const;
+
+  bool is_full() const;
+
   void issue(std::size_t ch, Opcode opcode);
 
   void issue(std::size_t ch, Opcode opcode, VlWide<4>& dat);
@@ -108,7 +112,13 @@ public:
   class Builder;
 
   enum class EventType {
-    EndOfInitialization
+    EndOfInitialization,
+  };
+
+  enum class StateType {
+    IsFull,
+    IsEmpty,
+    IsNonEmpty,
   };
 
   explicit StkTest();
@@ -122,9 +132,12 @@ public:
 
   void wait_until(EventType et);
 
-  void issue(std::size_t ch, Opcode opcode);
+  void check_stack_state(StateType st, std::size_t ch = 0);
 
-  void issue(std::size_t ch, Opcode opcode, const VlWide<4>& v);
+  void issue(std::size_t ch, Opcode opcode, bool is_blocking = false);
+
+  void issue(std::size_t ch, Opcode opcode, const VlWide<4>& v,
+             bool is_blocking = false);
 
 protected:
   std::unique_ptr<KernelVerilated<Vtb_stk, Driver> > kernel_;
@@ -132,6 +145,7 @@ protected:
 
   bool on_negedge_clk() override;
   std::deque<std::unique_ptr<Event> > event_queue_;
+  Scope*  test_scope_{nullptr};
 };
 
 } // namespace tb_stk
