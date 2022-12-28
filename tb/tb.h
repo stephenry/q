@@ -28,7 +28,6 @@
 #ifndef Q_TB_TB_H
 #define Q_TB_TB_H
 
-#include "cfg.h"
 #include "sim.h"
 #include "verilated.h"
 #ifdef ENABLE_VCD
