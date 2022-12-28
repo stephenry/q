@@ -38,11 +38,10 @@
 
 // Forwards:
 class TestRegistry;
+class Scope;
 class Vtb_stk;
 
 namespace tb_stk {
-
-class Model;
 
 class Driver {
 public:
@@ -75,6 +74,8 @@ public:
 
   bool tb_sample_response(Status& status, VlWide<4>& dat);
 
+  void eval() const;
+
 private:
   Vtb_stk* tb_stk_;
 };
@@ -84,6 +85,8 @@ class Model {
 public:
   explicit Model(KernelVerilated<Vtb_stk, Driver>* k);
   ~Model();
+
+  void scope(Scope* scope);
 
   bool on_negedge_clk();
 

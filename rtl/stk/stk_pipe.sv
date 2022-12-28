@@ -89,7 +89,7 @@ stk_pkg::ptr_t                al_lk_ptr;
 `Q_DFFE(stk_pkg::status_t, mem_uc_status, mem_uc_vld_w, clk);
 `Q_DFFE(stk_pkg::opcode_t, mem_uc_opcode, mem_uc_vld_w, clk);
 `Q_DFFE(logic, mem_uc_head_vld, mem_uc_vld_w, clk);
-`Q_DFFE(logic, mem_uc_head_upt, mem_uc_vld_w, clk);
+`Q_DFFE(logic, mem_uc_head_dord, mem_uc_vld_w, clk);
 `Q_DFFE(stk_pkg::ptr_t, mem_uc_head_ptr, mem_uc_vld_w, clk);
 `Q_DFFE(logic, mem_uc_tail_vld, mem_uc_vld_w, clk);
 `Q_DFFE(stk_pkg::ptr_t, mem_uc_tail_ptr, mem_uc_vld_w, clk);
@@ -227,7 +227,7 @@ stk_pipe_lk u_stk_pipe_lk (
 , .o_mem_uc_status_w          (mem_uc_status_w)
 , .o_mem_uc_opcode_w          (mem_uc_opcode_w)
 , .o_mem_uc_head_vld_w        (mem_uc_head_vld_w)
-, .o_mem_uc_head_upt_w        (mem_uc_head_upt_w)
+, .o_mem_uc_head_dord_w       (mem_uc_head_dord_w)
 , .o_mem_uc_head_ptr_w        (mem_uc_head_ptr_w)
 , .o_mem_uc_tail_vld_w        (mem_uc_tail_vld_w)
 , .o_mem_uc_tail_ptr_w        (mem_uc_tail_ptr_w)
@@ -262,7 +262,7 @@ stk_pipe_mem u_stk_pipe_mem (
 , .i_mem_uc_opcode_r          (mem_uc_opcode_r)
 , .i_mem_uc_status_r          (mem_uc_status_r)
 , .i_mem_uc_head_vld_r        (mem_uc_head_vld_r)
-, .i_mem_uc_head_upt_r        (mem_uc_head_upt_r)
+, .i_mem_uc_head_dord_r       (mem_uc_head_dord_r)
 , .i_mem_uc_head_ptr_r        (mem_uc_head_ptr_r)
 , .i_mem_uc_tail_vld_r        (mem_uc_tail_vld_r)
 , .i_mem_uc_tail_ptr_r        (mem_uc_tail_ptr_r)

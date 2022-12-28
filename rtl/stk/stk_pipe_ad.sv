@@ -204,7 +204,6 @@ assign enq_ack = (qpush_push | qpop_push | qinv_push);
 //
 assign cmd_ack = (enq_gnt_d & {cfg_pkg::ENGS_N{enq_ack}});
 
-
 // ========================================================================== //
 //                                                                            //
 //  "Push" Opcode Queue                                                       //

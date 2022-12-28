@@ -50,6 +50,8 @@ add_subdirectory(tb_stk)
 #
 target_sources(driver
   PRIVATE
+  "${CMAKE_SOURCE_DIR}/tb/vsupport.cc"
+  "${CMAKE_SOURCE_DIR}/tb/log.cc"
   "${CMAKE_SOURCE_DIR}/tb/test.cc"
   "${CMAKE_SOURCE_DIR}/tb/tb.cc"
   "${CMAKE_SOURCE_DIR}/tb/driver.cc")

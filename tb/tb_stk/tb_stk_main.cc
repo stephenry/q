@@ -31,6 +31,8 @@
 #include "rnd.h"
 #include "test.h"
 #include "tb.h"
+#include "log.h"
+#include "vsupport.h"
 #include <exception>
 #include <utility>
 #include <array>
@@ -138,6 +140,10 @@ bool Driver::tb_sample_response(Status& status, VlWide<4>& dat) {
   return has_response;
 }
 
+void Driver::eval() const {
+  tb_stk_->eval();
+}
+
 namespace tb_stk {
 
 StkTest::StkTest() {}
@@ -161,8 +167,12 @@ class Model::Impl {
 
 public:
   explicit Impl(KernelVerilated<Vtb_stk, Driver>* k)
-    : k_(k)
+    : k_(k), scope_(nullptr)
   {}
+
+  void scope(Scope* scope) {
+    scope_ = scope;
+  }
 
   bool on_negedge_clk() {
     bool good = true;
@@ -247,13 +257,15 @@ private:
     bool success = true;
     if (e.status != status) {
       // Invalid response received.
-      std::cout << "ERROR STATUS\n";
+      scope_->Error(
+        "Unexpected status response. ", "Expected: ", 0, " Actual: ", 0);
       success = false;
     }
 
     if (e.data && !VSupport::eq(*e.data, data)) {
       // Invalid data received on a pop.
-      std::cout << "ERROR DATA\n";
+      scope_->Error(
+        "Unexpected data response. ", "Expected: ", 0, " Actual: ", 0);
       success = false;
     }
 
@@ -268,6 +280,7 @@ private:
   std::array<std::vector<VlWide<4>>, cfg::ENGS_N> stks_;
   std::deque<std::pair<vluint64_t, Expected> > expect_;
   std::size_t size_;
+  Scope* scope_;
 };
 
 Model::Model(KernelVerilated<Vtb_stk, Driver>* k) {
@@ -275,6 +288,8 @@ Model::Model(KernelVerilated<Vtb_stk, Driver>* k) {
 }
 
 Model::~Model() {}
+
+void Model::scope(Scope* scope) { return impl_->scope(scope); }
 
 bool Model::on_negedge_clk() { return impl_->on_negedge_clk(); }
 
@@ -285,6 +300,8 @@ void StkTest::issue(std::size_t ch, Opcode opcode) {
     {}
     bool execute(Driver* d) override {
       d->issue(ch_, opcode_);
+      // See note for IssueEvent
+      d->eval();
       return d->ack(ch_);
     }
   private:
@@ -302,6 +319,14 @@ void StkTest::issue(std::size_t ch, Opcode opcode, const VlWide<4>& dat) {
     {}
     bool execute(Driver* d) override {
       d->issue(ch_, opcode_, dat_);
+      // The path between valid to ack is combinatorial. This violates
+      // commonly accepted constraints seen in interfaces such as AXI.
+      // This is intentional. Admission logic in the pipeline
+      // conditionally admits incoming commands based upon their
+      // opcode and the occpuancy of the destination command queue. As
+      // the STK block does not exist as a separate block, the
+      // comb. path is fine in this circumstances.
+      d->eval();
       return d->ack(ch_);
     }
   private:
@@ -318,7 +343,7 @@ void StkTest::wait(std::size_t cycles) {
       : cycles_(cycles)
     {}
     bool execute(Driver*) override {
-      return (--cycles_ != 0);
+      return (--cycles_ == 0);
     }
   private:
     std::size_t cycles_;
@@ -333,11 +358,12 @@ void StkTest::wait_until(EventType et) {
     {}
     bool execute(Driver* d) override {
       switch (et_) {
-      case EventType::EndOfInitialization:
+      case EventType::EndOfInitialization: {
         // Wait until after 10th cycle before sampling busy to allow
         // time for the initialization process to have been kicked off.
-        return (d->tb_cycle() < 10) || d->busy_r();
-        break;
+        const bool in_initialization = (d->tb_cycle() < 10) || d->busy_r();
+        return !in_initialization;
+      } break;
       }
     }
   private:
@@ -354,7 +380,7 @@ bool StkTest::on_negedge_clk() {
   Driver* driver{kernel_->driver()};
   driver->idle();
 
-  if (!event_queue_.front()->execute(driver)) {
+  if (event_queue_.front()->execute(driver)) {
     event_queue_.pop_front();
   }
 

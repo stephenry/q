@@ -55,7 +55,7 @@ module stk_pipe_mem (
 , input wire stk_pkg::opcode_t                    i_mem_uc_opcode_r
 , input wire stk_pkg::status_t                    i_mem_uc_status_r
 , input wire logic                                i_mem_uc_head_vld_r
-, input wire logic                                i_mem_uc_head_upt_r
+, input wire logic                                i_mem_uc_head_dord_r
 , input wire stk_pkg::ptr_t                       i_mem_uc_head_ptr_r
 , input wire logic                                i_mem_uc_tail_vld_r
 , input wire stk_pkg::ptr_t                       i_mem_uc_tail_ptr_r
@@ -98,7 +98,7 @@ logic [127:0]                           lk_dat;
 `Q_DFFE(stk_pkg::opcode_t, mdat_uc_opcode, mdat_uc_vld_w, clk);
 `Q_DFFE(stk_pkg::status_t, mdat_uc_status, mdat_uc_vld_w, clk);
 `Q_DFFE(logic, mdat_uc_head_vld, mdat_uc_vld_w, clk);
-`Q_DFFE(logic, mdat_uc_head_upt, mdat_uc_vld_w, clk);
+`Q_DFFE(logic, mdat_uc_head_dord, mdat_uc_vld_w, clk);
 `Q_DFFE(stk_pkg::ptr_t, mdat_uc_head_ptr, mdat_uc_vld_w, clk);
 `Q_DFFE(logic, mdat_uc_tail_vld, mdat_uc_vld_w, clk);
 `Q_DFFE(stk_pkg::ptr_t, mdat_uc_tail_ptr, mdat_uc_vld_w, clk);
@@ -111,7 +111,7 @@ logic [stk_pkg::BANKS_N - 1:0]          mem_uc_bankid;
 stk_pkg::opcode_t                       mem_uc_opcode;
 stk_pkg::status_t                       mem_uc_status;
 logic                                   mem_uc_head_vld;
-logic                                   mem_uc_head_upt;
+logic                                   mem_uc_head_dord;
 stk_pkg::ptr_t                          mem_uc_head_ptr;
 logic                                   mem_uc_tail_vld;
 stk_pkg::ptr_t                          mem_uc_tail_ptr;
@@ -129,7 +129,7 @@ stk_pkg::status_t                       wrbk_uc_status;
 logic [stk_pkg::BANKS_N - 1:0]          wrbk_uc_bankid;
 stk_pkg::opcode_t                       wrbk_uc_opcode;
 logic                                   wrbk_uc_head_vld;
-logic                                   wrbk_uc_head_upt;
+logic                                   wrbk_uc_head_dord;
 stk_pkg::ptr_t                          wrbk_uc_head_ptr;
 logic                                   wrbk_uc_tail_vld;
 stk_pkg::ptr_t                          wrbk_uc_tail_ptr;
@@ -210,7 +210,7 @@ assign mdat_uc_bankid_w = i_mem_uc_bankid_r;
 assign mdat_uc_opcode_w = i_mem_uc_opcode_r;
 assign mdat_uc_status_w = i_mem_uc_status_r;
 assign mdat_uc_head_vld_w = i_mem_uc_head_vld_r;
-assign mdat_uc_head_upt_w = i_mem_uc_head_upt_r;
+assign mdat_uc_head_dord_w = i_mem_uc_head_dord_r;
 assign mdat_uc_head_ptr_w = i_mem_uc_head_ptr_r;
 assign mdat_uc_tail_vld_w = i_mem_uc_tail_vld_r;
 assign mdat_uc_tail_ptr_w = i_mem_uc_tail_ptr_r;
@@ -241,7 +241,7 @@ assign wrbk_uc_status = mdat_uc_status_r;
 
 assign wrbk_uc_head_vld = mdat_uc_head_vld_r;
 assign wrbk_uc_head_ptr =
-  mdat_uc_head_upt_r ? lk_prev_ptr : mdat_uc_head_ptr_r;
+  mdat_uc_head_dord_r ? lk_prev_ptr : mdat_uc_head_ptr_r;
 
 assign wrbk_uc_tail_vld = mdat_uc_tail_vld_r;
 assign wrbk_uc_tail_ptr = mdat_uc_tail_ptr_r;

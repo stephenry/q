@@ -35,6 +35,7 @@
 class TestBuilder;
 class Random;
 class Kernel;
+class Logger;
 
 struct Globals {
 
@@ -49,6 +50,8 @@ struct Globals {
   inline static Random* random = nullptr;
 
   inline static Kernel* kernel = nullptr;
+
+  inline static Logger* logger = nullptr;
 
 };
 

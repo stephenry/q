@@ -29,6 +29,7 @@
 #include "sim.h"
 #include "test.h"
 #include "rnd.h"
+#include "log.h"
 #include "tb_stk/tb_stk.h"
 #include <iostream>
 #include <vector>
@@ -57,6 +58,7 @@ private:
 
   TestRegistry tr_;
   Random rnd_;
+  std::unique_ptr<Logger> logger_;
 };
 
 Driver::Driver(int argc, const char** argv) {
@@ -76,6 +78,9 @@ void Driver::parse_args(int argc, const char** argv) {
     if (is_one_of(argstr, "-h", "--help")) {
       print_usage(std::cout);
       std::exit(1);
+    } else if (is_one_of(argstr, "-v", "--verbose")) {
+      logger_ = std::make_unique<Logger>();
+      Globals::logger = logger_.get();
     } else if (is_one_of(argstr, "-s", "--seed")) {
       const std::string sstr{vs.at(++i)};
       Globals::random->seed(std::stoi(sstr));
@@ -112,6 +117,7 @@ int Driver::execute() {
 void Driver::print_usage(std::ostream& os) const {
   os << "Usage is:\n"
      << "   -h|--help         Print help and quit.\n"
+     << "   -v|--verbose      Verbose logging.\n"
      << "   -t|--test         Select testcase.\n"
      << "   -s|--seed         Randomization seed.\n"
      << "      --vcd          Trace VCD waveform.\n"

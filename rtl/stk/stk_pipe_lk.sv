@@ -76,7 +76,7 @@ module stk_pipe_lk (
 , output wire stk_pkg::opcode_t                   o_mem_uc_opcode_w
 , output wire stk_pkg::status_t                   o_mem_uc_status_w
 , output wire logic                               o_mem_uc_head_vld_w
-, output wire logic                               o_mem_uc_head_upt_w
+, output wire logic                               o_mem_uc_head_dord_w
 , output wire stk_pkg::ptr_t                      o_mem_uc_head_ptr_w
 , output wire logic                               o_mem_uc_tail_vld_w
 , output wire stk_pkg::ptr_t                      o_mem_uc_tail_ptr_w
@@ -107,7 +107,7 @@ logic [stk_pkg::BANKS_N - 1:0]          mem_uc_bankid;
 stk_pkg::opcode_t                       mem_uc_opcode;
 stk_pkg::status_t                       mem_uc_status;
 logic                                   mem_uc_head_vld;
-logic                                   mem_uc_head_upt;
+logic                                   mem_uc_head_dord;
 stk_pkg::ptr_t                          mem_uc_head_ptr;
 logic                                   mem_uc_tail_vld;
 stk_pkg::ptr_t                          mem_uc_tail_ptr;
@@ -343,7 +343,7 @@ assign lk_prev_ptr_addr_w [bank] =
   | ({stk_pkg::LINE_ID_W{~cmd_is_push}} & rf_head_rdata.line_id);// (2, 3)
 
 //
-assign lk_prev_ptr_din_w [bank] = i_lk_ptr;                      // (1)
+assign lk_prev_ptr_din_w [bank] = rf_head_rdata;
 
 end : prev_bank_GEN
 
@@ -400,7 +400,7 @@ assign mem_uc_opcode = i_lk_opcode_r;
 // -------------------------------------------------------------------------- //
 //
 assign mem_uc_head_vld = (cmd_is_push | cmd_is_pop | cmd_is_inv);
-assign mem_uc_head_upt = (~engid_is_empty);
+assign mem_uc_head_dord = (cmd_is_pop | cmd_is_inv);
 assign mem_uc_head_ptr = i_lk_ptr;
 
 // -------------------------------------------------------------------------- //
@@ -425,7 +425,7 @@ assign o_mem_uc_bankid_w = mem_uc_bankid;
 assign o_mem_uc_opcode_w = mem_uc_opcode;
 assign o_mem_uc_status_w = mem_uc_status;
 assign o_mem_uc_head_vld_w = mem_uc_head_vld;
-assign o_mem_uc_head_upt_w = mem_uc_head_upt;
+assign o_mem_uc_head_dord_w = mem_uc_head_dord;
 assign o_mem_uc_head_ptr_w = mem_uc_head_ptr;
 assign o_mem_uc_tail_vld_w = mem_uc_tail_vld;
 assign o_mem_uc_tail_ptr_w = mem_uc_tail_ptr;

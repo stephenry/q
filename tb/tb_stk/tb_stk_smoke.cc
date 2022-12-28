@@ -37,11 +37,14 @@ struct tb_stk::smoke::Test::Impl {
     Terminate
   };
 
+  static constexpr std::size_t N = 5;
+
   explicit Impl(StkTest* t)
     : t_(t), state_(State::WaitForInitialization)
   {}
 
   bool program() {
+    bool done = false;
     switch (state_) {
     case State::WaitForInitialization: {
       // Wait until internal Stack initialization has completed;
@@ -55,7 +58,9 @@ struct tb_stk::smoke::Test::Impl {
 
       // Push data to channel 0,
       //
-      push_random_to_ch(ch_);
+      for (int i = 0; i < N; i++) {
+        push_random_to_ch(ch_);
+      }
 
       // Wait some number of cycles to allow command to be issued.  (On
       // an empty queue, admission stage scheduler ought to choose the
@@ -66,24 +71,28 @@ struct tb_stk::smoke::Test::Impl {
 
       // Pop data from channel 0; expect the same data back.
       //
-      pop_from_ch(ch_);
+      for (int i = 0; i < N; i++) {
+        pop_from_ch(ch_);
+      }
 
       // Wait some cycles to allow the prior instructions to execute.
       //
-      t_->wait(100);
+      t_->wait(10);
 
       if (++ch_ == cfg::ENGS_N) {
         state_ = State::WindDown;
       }
     } break;
     case State::WindDown: {
+      t_->wait(10);
       state_ = State::Terminate;
     } break;
     case State::Terminate: {
+      done = true;
     } break;
     }
 
-    return (state_ != State::Terminate);
+    return !done;
   }
 
   // Issue Push command to channel 'ch'
