@@ -25,7 +25,6 @@
 // POSSIBILITY OF SUCH DAMAGE.
 // ========================================================================== //
 
-#include "cfg.h"
 #include "sim.h"
 #include "test.h"
 #include "rnd.h"

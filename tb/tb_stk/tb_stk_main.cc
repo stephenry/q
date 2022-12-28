@@ -446,6 +446,7 @@ void StkTest::wait_until(EventType et) {
         return !in_initialization;
       } break;
       }
+      return true;
     }
   private:
     EventType et_;
