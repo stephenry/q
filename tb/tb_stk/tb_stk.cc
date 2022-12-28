@@ -37,6 +37,25 @@
 
 using namespace tb_stk;
 
+const char* to_string(Opcode opcode) {
+  switch (opcode) {
+  case Opcode::Nop:  return "Nop";
+  case Opcode::Push: return "Push";
+  case Opcode::Pop:  return "Pop";
+  case Opcode::Inv:  return "Inv";
+  default:           return "Invalid";
+  }
+}
+
+const char* to_string(Status status) {
+  switch (status) {
+  case Status::Okay:     return "Okay";
+  case Status::ErrFull:  return "ErrFull";
+  case Status::ErrEmpty: return "ErrEmpty";
+  default:               return "Invalid";
+  }
+}
+
 struct StkTest::Factory {
   static std::unique_ptr<StkTest> construct(const std::string& name) {
     std::unique_ptr<StkTest> p;

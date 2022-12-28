@@ -56,7 +56,7 @@ struct StreamRenderer<VlWide<T_Size>> {
     const WData* d = v.data();
     for (std::size_t i = 0; i < T_Size; i++) {
       const bool showbase = (i == 0);
-      StreamRenderer::write(os, AsHex{d[i], showbase});
+      StreamRenderer<AsHex<WData>>::write(os, AsHex{d[i], showbase});
     }
   }
 };

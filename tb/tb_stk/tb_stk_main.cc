@@ -39,6 +39,7 @@
 #include <vector>
 #include <deque>
 #include <optional>
+#include <sstream>
 
 using namespace tb_stk;
 
@@ -248,6 +249,18 @@ private:
     } break;
     }
 
+    if (scope_) {
+      std::ostringstream ss;
+      RecordRenderer rr{ss, "is"};
+      rr.add("opcode", opcode);
+      rr.add("engid", AsDec{engid});
+      if (opcode == Opcode::Push) {
+        rr.add("data", dat);
+      }
+      rr.finalize();
+      scope_->Info("Issue: ", ss.str());
+    }
+
     return (status == Status::Okay);
   }
 
@@ -277,14 +290,14 @@ private:
     if (e.status != status) {
       // Invalid response received.
       scope_->Error(
-        "Unexpected status response. ", "Expected: ", 0, " Actual: ", 0);
+        "Unexpected status response. ", "Expected: ", e.status, " Actual: ", status);
       success = false;
     }
 
     if (e.data && !VSupport::eq(*e.data, data)) {
       // Invalid data received on a pop.
       scope_->Error(
-        "Unexpected data response. ", "Expected: ", 0, " Actual: ", 0);
+        "Unexpected data response. ", "Expected: ", *e.data, " Actual: ", data);
       success = false;
     }
 

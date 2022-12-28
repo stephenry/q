@@ -82,14 +82,18 @@ class Logger;
 
 template<typename T>
 struct AsHex {
-  explicit AsHex(const T& t, bool showbase) : t(t), showbase(showbase) {}
+  explicit AsHex(const T& t, bool showbase = true)
+    : t(t), showbase(showbase)
+  {}
   const T& t;
   const bool showbase;
 };
 
 template<typename T>
 struct AsDec {
-  explicit AsDec(const T& t, bool showbase) : t(t), showbase(showbase) {}
+  explicit AsDec(const T& t, bool showbase = true)
+    : t(t), showbase(showbase)
+  {}
   const T& t;
   const bool showbase;
 };
@@ -191,6 +195,11 @@ public:
     writekey(t);
   }
 
+  void finalize() {
+    os_ << RPAREN;
+    finalized_ = true;
+  }
+
 private:
   void preamble(std::string_view k) {
     if (entries_n_++) os_ << ", ";
@@ -201,11 +210,6 @@ private:
   template<typename T>
   void writekey(T& t) {
     StreamRenderer<std::decay_t<T>>::write(os_, t);
-  }
-
-  void finalize() {
-    os_ << RPAREN;
-    finalized_ = true;
   }
   //! Record has been serialized.
   bool finalized_{false};
@@ -227,6 +231,8 @@ public:
   std::string name() { return name_; }
   //! Current scope path
   std::string path() const;
+
+  std::ostream& os() const;
 
 #define __declare_message(__level) \
   template<typename ...Ts> \
@@ -301,7 +307,7 @@ public:
   Scope* top();
 
   Level get_log_level() const { return log_level_; }
-  
+
   void set_log_level(Level log_level) { log_level_ = log_level; }
 
   void set_os(std::ostream* os) { os_ = os; }
@@ -309,7 +315,7 @@ public:
   Context create_context(const Scope* s) { return Context{s, this}; }
 
 private:
-  //! 
+  //!
   std::ostream& os() const { return *os_; }
   //!
   std::unique_ptr<Scope> parent_scope_;

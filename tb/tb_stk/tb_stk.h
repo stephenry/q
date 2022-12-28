@@ -28,6 +28,7 @@
 #ifndef Q_TB_STK_TB_STK_H
 #define Q_TB_STK_TB_STK_H
 
+#include "log.h"
 #include "verilated.h"
 
 // Forwards:
@@ -48,8 +49,27 @@ enum class Status : CData {
   ErrEmpty = 0b11,
 };
 
+
 void init(TestRegistry& tr);
 
 } // namespace tb_stk
+
+const char* to_string(tb_stk::Opcode opcode);
+
+const char* to_string(tb_stk::Status Status);
+
+template<>
+struct StreamRenderer<tb_stk::Opcode> {
+  static void write(std::ostream& os, tb_stk::Opcode opcode) {
+    StreamRenderer<const char*>::write(os, to_string(opcode));
+  }
+};
+
+template<>
+struct StreamRenderer<tb_stk::Status> {
+  static void write(std::ostream& os, tb_stk::Status status) {
+    StreamRenderer<const char*>::write(os, to_string(status));
+  }
+};
 
 #endif

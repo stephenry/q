@@ -86,6 +86,8 @@ std::string Scope::path() const {
   return *path_;
 }
 
+std::ostream& Scope::os() const { return logger_->os(); }
+
 Scope* Scope::create_child(const std::string& scope_name) {
   children_.emplace_back(
     std::unique_ptr<Scope>(new Scope(scope_name, logger_, this)));
