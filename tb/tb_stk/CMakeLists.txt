@@ -91,7 +91,8 @@ add_custom_target(verilate_stk
 add_library(stk STATIC
   "${CMAKE_SOURCE_DIR}/tb/tb_stk/tb_stk.cc"
   "${CMAKE_SOURCE_DIR}/tb/tb_stk/tb_stk_main.cc"
-  "${CMAKE_SOURCE_DIR}/tb/tb_stk/tb_stk_smoke.cc")
+  "${CMAKE_SOURCE_DIR}/tb/tb_stk/tb_stk_smoke.cc"
+  "${CMAKE_SOURCE_DIR}/tb/tb_stk/tb_stk_invalidate.cc")
 
 target_include_directories(stk
   PRIVATE
@@ -104,3 +105,6 @@ target_link_libraries(stk
   "${CMAKE_CURRENT_BINARY_DIR}/${VOUT_DIR}/V${VTOP}__ALL.a")
 
 add_dependencies(stk verilate_stk)
+
+# TODO(stephenry): verify return status of driver.
+add_test(NAME tb_stk_smoke COMMAND $<TARGET_FILE:driver> -t tb_stk_smoke)

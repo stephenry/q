@@ -33,16 +33,97 @@
 
 module stk_pipe_ad_inv (
 // -------------------------------------------------------------------------- //
-// Req.
-  output wire logic                               o_req_vld
+// Enqueue Interface
+  input wire logic                                i_push
+, input wire stk_pkg::engid_t                     i_push_dat
+
+, output wire logic                               o_full_r
 
 // -------------------------------------------------------------------------- //
-// Rsp.
+// Issue Interface
+, input wire logic                                i_iss_ack
+//
+, output wire logic                               o_iss_req
+, output wire stk_pkg::engid_t                    o_iss_engid
+, output wire logic                               o_iss_islast
+
+// -------------------------------------------------------------------------- //
+// Writeback Interface
+, input wire logic                                i_wrbk_uc_vld_r
+, input wire stk_pkg::engid_t                     i_wrbk_uc_engid_r
+, input wire logic                                i_wrbk_uc_nxtlast_r
+, input wire logic                                i_wrbk_uc_islast_r
 
 // -------------------------------------------------------------------------- //
 // Clk/Reset
 , input wire logic                                clk
 , input wire logic                                arst_n
 );
+
+
+// ========================================================================== //
+//                                                                            //
+//  Wires                                                                     //
+//                                                                            //
+// ========================================================================== //
+
+localparam int STATE_W = 3;
+
+typedef enum logic [STATE_W - 1:0] {
+  FSM_STATE_IDLE = STATE_W'('b001)
+} fsm_state_t;
+
+logic                                   fsm_state_en;
+`Q_DFFRE(fsm_state_t, fsm_state, fsm_state_en, FSM_STATE_IDLE, clk);
+
+`Q_DFFR(logic, full, 1'b0, clk);
+`Q_DFFR(logic, empty, 1'b1, clk);
+logic                                   inv_req_vld;
+
+// ========================================================================== //
+//                                                                            //
+//  Opcode Queue                                                              //
+//                                                                            //
+// ========================================================================== //
+
+// -------------------------------------------------------------------------- //
+//
+queue_rf #(.N(2), .W(stk_pkg::ENGID_W)) u_cmd_queue (
+//
+  .i_push                     (i_push)
+, .i_push_dat                 (i_push_dat)
+//
+, .i_pop                      ()
+, .o_pop_dat                  ()
+//
+, .o_full_w                   (full_w)
+, .o_empty_w                  (empty_w)
+//
+, .clk                        (clk)
+, .arst_n                     (arst_n)
+);
+
+// ========================================================================== //
+//                                                                            //
+//  FSM Logic                                                                 //
+//                                                                            //
+// ========================================================================== //
+
+// -------------------------------------------------------------------------- //
+//
+
+
+// ========================================================================== //
+//                                                                            //
+//  Outputs                                                                   //
+//                                                                            //
+// ========================================================================== //
+
+// -------------------------------------------------------------------------- //
+//
+assign o_full_r = full_r;
+
+assign o_iss_req = 'b0;
+assign o_iss_engid = '0;
 
 endmodule : stk_pipe_ad_inv

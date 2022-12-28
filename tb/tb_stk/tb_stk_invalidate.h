@@ -25,55 +25,25 @@
 // POSSIBILITY OF SUCH DAMAGE.
 // ========================================================================== //
 
-#include "tb_stk/tb_stk.h"
+#ifndef Q_TB_STK_TB_STK_INVALIDATE_H
+#define Q_TB_STK_TB_STK_INVALIDATE_H
+
 #include "tb_stk/tb_stk_main.h"
-#include "tb_stk/tb_stk_smoke.h"
-#include "tb_stk/tb_stk_invalidate.h"
-#include "test.h"
-#include "sim.h"
-#include "log.h"
-#include <memory>
-#include <string>
 
-using namespace tb_stk;
+namespace tb_stk::invalidate {
 
-struct StkTest::Factory {
-  static std::unique_ptr<StkTest> construct(const std::string& name) {
-    std::unique_ptr<StkTest> p;
-    if (Globals::test_name == "tb_stk_smoke") {
-      p = std::make_unique<smoke::Test>();
-    } else if (Globals::test_name == "tb_stk_invalidate") {
-      p = std::make_unique<invalidate::Test>();
-    }
-    return p;
-  }
-};
-
-class StkTest::Builder : public TestBuilder {
+class Test : public StkTest {
+  class Impl;
 public:
-  explicit Builder() = default;
+  explicit Test();
+  ~Test();
 
-  std::unique_ptr<Test> construct() override {
-    std::unique_ptr<StkTest> t{
-      StkTest::Factory::construct(Globals::test_name)};
-    t->kernel_ = std::make_unique<KernelVerilated<Vtb_stk, Driver>>();
-    Globals::kernel = t->kernel_.get();
-    t->model_ = std::make_unique<Model>(t->kernel_.get());
-    Scope* model_scope{nullptr};
-    if (Globals::logger) {
-      model_scope = Globals::logger->top()->create_child("model");
-    }
-    t->model_->scope(model_scope);
-    return t;
-  }
+  bool program() override;
 
+private:
+  std::unique_ptr<Impl> impl_;
 };
 
-namespace tb_stk {
+} // namespace tb_stk::invalidate
 
-void init(TestRegistry& tr) {
-  tr.add<StkTest::Builder>("tb_stk_smoke");
-  tr.add<StkTest::Builder>("tb_stk_invalidate");
-}
-
-} // namespace tb_stk
+#endif

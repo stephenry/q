@@ -324,6 +324,7 @@ void StkTest::issue(std::size_t ch, Opcode opcode, bool is_blocking) {
         state_(State::IssueCommand)
     {}
     bool execute(Driver* d) override {
+      bool discard = false;
       switch (state_) {
       case State::IssueCommand: {
         d->issue(ch_, opcode_);
@@ -331,17 +332,17 @@ void StkTest::issue(std::size_t ch, Opcode opcode, bool is_blocking) {
         d->eval();
         if (d->ack(ch_)) {
           state_ = State::WaitForResponse;
-          return !is_blocking_;
+          discard = !is_blocking_;
         }
       } break;
       case State::WaitForResponse: {
         // Discard oprnands, simply awaiting response to be received.
         Status status;
         VlWide<4> dat;
-        return d->tb_sample_response(status, dat);
+        discard = d->tb_sample_response(status, dat);
       } break;
       }
-      return true;
+      return discard;
     }
   private:
     State state_;
@@ -367,6 +368,7 @@ void StkTest::issue(std::size_t ch, Opcode opcode, const VlWide<4>& dat,
         state_(State::IssueCommand)
     {}
     bool execute(Driver* d) override {
+      bool discard = true;
       switch (state_) {
       case State::IssueCommand: {
         d->issue(ch_, opcode_, dat_);
@@ -380,17 +382,17 @@ void StkTest::issue(std::size_t ch, Opcode opcode, const VlWide<4>& dat,
         d->eval();
         if (d->ack(ch_)) {
           state_ = State::WaitForResponse;
-          return !is_blocking_;
+          discard = !is_blocking_;
         }
       } break;
       case State::WaitForResponse: {
         // Discard oprnands, simply awaiting response to be received.
         Status status;
         VlWide<4> dat;
-        return d->tb_sample_response(status, dat);
+        discard = d->tb_sample_response(status, dat);
       } break;
       }
-      return true;
+      return discard;
     }
   private:
     State state_;

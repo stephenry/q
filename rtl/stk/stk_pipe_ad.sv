@@ -60,8 +60,8 @@ module stk_pipe_ad (
 
 // -------------------------------------------------------------------------- //
 // Writeback ("WRBK") microcode
-, output wire logic                               i_wrbk_uc_vld_r
-, output wire stk_pkg::engid_t                    i_wrbk_uc_engid_r
+, input wire logic                                i_wrbk_uc_vld_r
+, input wire stk_pkg::engid_t                     i_wrbk_uc_engid_r
 
 // -------------------------------------------------------------------------- //
 // Clk/Reset
@@ -114,12 +114,16 @@ stk_pkg::engid_t                        qpop_pop_dat;
 `Q_DFFR(logic, qpop_full, 1'b0, clk);
 `Q_DFFR(logic, qpop_empty, 1'b1, clk);
 
+// -------------------------------------------------------------------------- //
 // "Invalidation" Command Queue:
 //
 logic                                   qinv_push;
 stk_pkg::engid_t                        qinv_push_dat;
-`Q_DFFR(logic, qinv_full, 1'b0, clk);
-`Q_DFFR(logic, qinv_empty, 1'b1, clk);
+logic                                   qinv_full_r;
+logic                                   qinv_iss_ack;
+logic                                   qinv_iss_req;
+stk_pkg::engid_t                        qinv_iss_engid;
+
 
 // "Active" Set:
 //
@@ -176,7 +180,8 @@ end : cmd_decoder
 //
 assign enq_req_d = i_cmd_vld &
   ((cmd_is_push & {cfg_pkg::ENGS_N{~qpush_full_r}}) |
-   (cmd_is_pop  & {cfg_pkg::ENGS_N{~qpop_full_r}}));
+   (cmd_is_pop  & {cfg_pkg::ENGS_N{ ~qpop_full_r}}) |
+   (cmd_is_inv  & {cfg_pkg::ENGS_N{~qinv_full_r}}));
 
 // -------------------------------------------------------------------------- //
 //
@@ -216,7 +221,7 @@ assign qpush_push = (enq_gnt_d & cmd_is_push) != '0;
 
 // -------------------------------------------------------------------------- //
 //
-assign qpush_pop = deq_ack & deq_gnt_d [0];
+assign qpush_pop = deq_ack & deq_gnt_d [IDX_PUSH];
 
 mux #(.N(cfg_pkg::ENGS_N), .W(128)) u_enq_mux (
   .i_x(i_cmd_dat), .i_sel(enq_gnt_d), .o_y(qpush_push_dat_dat)
@@ -249,7 +254,7 @@ queue_rf #(.N(2), .W(QPUSH_W)) u_qpush (
 //
 assign qpop_push = (enq_gnt_d & cmd_is_pop) != '0;
 
-assign qpop_pop = deq_ack & deq_gnt_d [1];
+assign qpop_pop = deq_ack & deq_gnt_d [IDX_POP];
 
 assign qpop_push_dat = enq_gnt;
 
@@ -276,29 +281,25 @@ queue_rf #(.N(2), .W(stk_pkg::ENGID_W)) u_qpop (
 
 // -------------------------------------------------------------------------- //
 //
-assign qinv_push = (enq_gnt_d & cmd_is_inv) != '0;
-assign qinv_push_dat = enq_gnt;
+assign qinv_iss_ack = (deq_ack & deq_gnt_d [IDX_INV]);
 
-queue_rf #(.N(2), .W(stk_pkg::ENGID_W)) u_qinv (
+stk_pipe_ad_inv u_stk_pipe_ad_inv (
 //
   .i_push                     (qinv_push)
 , .i_push_dat                 (qinv_push_dat)
 //
-, .i_pop                      ()
-, .o_pop_dat                  ()
+, .o_full_r                   (qinv_full_r)
 //
-, .o_full_w                   (qinv_full_w)
-, .o_empty_w                  (qinv_empty_w)
+, .i_iss_ack                  (qinv_iss_ack)
 //
-, .clk                        (clk)
-, .arst_n                     (arst_n)
-);
-
-// -------------------------------------------------------------------------- //
+, .o_iss_req                  (qinv_iss_req)
+, .o_iss_engid                (qinv_iss_engid)
+, .o_iss_islast               ()
 //
-stk_pipe_ad_inv u_stk_pipe_ad_inv (
-//
-  .o_req_vld                  ()
+, .i_wrbk_uc_vld_r            (i_wrbk_uc_vld_r)
+, .i_wrbk_uc_engid_r          (i_wrbk_uc_engid_r)
+, .i_wrbk_uc_nxtlast_r        ()
+, .i_wrbk_uc_islast_r         ()
 //
 , .clk                        (clk)
 , .arst_n                     (arst_n)
@@ -310,7 +311,6 @@ stk_pipe_ad_inv u_stk_pipe_ad_inv (
 dec #(.W(cfg_pkg::ENGS_N)) u_dec (.i_x(o_lk_engid_w), .o_y(lk_engid_d));
 
 // ========================================================================== //
-//                                                                            //
 //  Requester Arbitration                                                     //
 //                                                                            //
 // We determining whether a push/pop command may issue, we do not             //
@@ -341,9 +341,9 @@ sel #(.W(cfg_pkg::ENGS_N)) u_qpop_active_sel (
 assign deq_req_d [IDX_POP] = (~qpop_empty_r) & (~qpop_id_active);
 
 // -------------------------------------------------------------------------- //
-//
-assign deq_req_d [IDX_INV] =
-  1'b0; // TODO
+// Invalidation channel does not obey ACTIVE set scheduling constraint, as
+// this is managed internally within the invalidation controller itself.
+assign deq_req_d [IDX_INV] = qinv_iss_req;
 
 // -------------------------------------------------------------------------- //
 //
@@ -416,13 +416,15 @@ assign o_lk_vld_w = deq_ack;
 //
 assign o_lk_engid_w =
     ({stk_pkg::ENGID_W{deq_gnt_d[IDX_PUSH]}} & qpush_pop_dat.id)
-  | ({stk_pkg::ENGID_W{deq_gnt_d[IDX_POP]}} & qpop_pop_dat);
+  | ({stk_pkg::ENGID_W{deq_gnt_d[IDX_POP]}} & qpop_pop_dat)
+  | ({stk_pkg::ENGID_W{deq_gnt_d[IDX_INV]}} & qinv_iss_engid);
 
 // -------------------------------------------------------------------------- //
 //
 assign o_lk_opcode_w =
     ({stk_pkg::OPCODE_W{deq_gnt_d[IDX_PUSH]}} & stk_pkg::OPCODE_PUSH)
-  | ({stk_pkg::OPCODE_W{deq_gnt_d[IDX_POP]}} & stk_pkg::OPCODE_POP);
+  | ({stk_pkg::OPCODE_W{deq_gnt_d[IDX_POP]}} & stk_pkg::OPCODE_POP)
+  | ({stk_pkg::OPCODE_W{deq_gnt_d[IDX_INV]}} & stk_pkg::OPCODE_INV);
 
 // -------------------------------------------------------------------------- //
 //
