@@ -178,6 +178,11 @@ class Model::Impl {
     Status status;
   };
 
+  struct ActiveInvalidation {
+    vluint8_t engid;
+    vlsint64_t n;
+  };
+
   // End-to-End latency of a command to response (in cycles).
   static constexpr vluint64_t LATENCY_N = 4;
 
@@ -216,14 +221,13 @@ private:
       return true;
 
     bool error = false;
-    Status status = Status::Okay;
     const vluint64_t cycle = k_->tb_cycle();
     switch (opcode) {
     case Opcode::Push: {
       Expected e;
       // TODO(stephenry); qualify on collisions.
-      status = (size_ == CAPACITY_N) ? Status::ErrFull : Status::Okay;
-      e.status = status;
+      e.status = (size_ == CAPACITY_N) ? Status::ErrFull : Status::Okay;
+      error = (e.status != Status::Okay);
       if (e.status == Status::Okay) {
         stks_[engid].push_back(dat);
         ++size_;
@@ -232,17 +236,53 @@ private:
     } break;
     case Opcode::Pop: {
       Expected e;
-      status = stks_[engid].empty() ? Status::ErrEmpty : Status::Okay;
-      e.status = status;
+      e.status = stks_[engid].empty() ? Status::ErrEmpty : Status::Okay;
       if (e.status == Status::Okay) {
         e.data = stks_[engid].back();
         stks_[engid].pop_back();
         --size_;
       }
+      error = (e.status != Status::Okay);
       expect_.push_back(std::make_pair(cycle + LATENCY_N, e));
     } break;
     case Opcode::Inv: {
-      // TBD
+      if (!actinv_) {
+        Expected e;
+        // Attempt to invalidate empty Stack results in an ErrEmpty,
+        // event though arguably it is does an error case.
+        e.status = stks_[engid].empty() ? Status::ErrEmpty : Status::Okay;
+        error = (e.status != Status::Okay);
+        ActiveInvalidation ai;
+        ai.engid = engid;
+        ai.n = (stks_[engid].size() - 1);
+        actinv_ = ai;
+        stks_[engid].clear();
+      } else {
+        // Else, one invalidation is present in the system at any time.
+        // This invalidation must belong to the same engid. Additionally,
+        // the total invalidation count must equal the number of expected
+        // entries in the stack, minus the first popped entry.
+        //
+        if (actinv_->engid != engid) {
+          // We're seeing an invalidation request for engid that should
+          // not be active.
+          scope_->Error("Bad ENGID seen for active invalidation operation ",
+                        " Expected: ", actinv_->engid,
+                        " Actual: ", engid);
+          error = true;
+        } else if (actinv_->n-- == 0) {
+          // We're seeing more invalidation requests than we had
+          // predicted; we shouldn't be invalidating at this point.
+          scope_->Error("Unexpected invalidation request for engid: ",
+                        actinv_->engid);
+          error = true;
+        } else if (actinv_->n == 0) {
+          // This is the last invalidation; discard active
+          // invalidation state.
+          scope_->Info("INV operation completes for ENGID ", actinv_->engid);
+          actinv_.reset();
+        }
+      }
     } break;
     case Opcode::Nop: {
       // TBD
@@ -261,7 +301,7 @@ private:
       scope_->Info("Issue: ", ss.str());
     }
 
-    return (status == Status::Okay);
+    return !error;
   }
 
   bool sample_response() {
@@ -301,6 +341,14 @@ private:
       success = false;
     }
 
+    if (success) {
+      std::ostringstream ss;
+      RecordRenderer rr{ss, "rs"};
+      rr.add("status", status);
+      rr.finalize();
+      scope_->Info("Response: ", ss.str());
+    }
+
     expect_.pop_front();
 
     // Otherwise, no mismatches, comparsion has succeeded.
@@ -313,6 +361,7 @@ private:
   std::deque<std::pair<vluint64_t, Expected> > expect_;
   std::size_t size_;
   Scope* scope_;
+  std::optional<ActiveInvalidation> actinv_;
 };
 
 Model::Model(KernelVerilated<Vtb_stk, Driver>* k) {

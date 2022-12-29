@@ -30,6 +30,7 @@
 
 #include "sim.h"
 #include "verilated.h"
+#include "cfg_common.h"
 #ifdef ENABLE_VCD
 #include "verilated_vcd_c.h"
 #endif

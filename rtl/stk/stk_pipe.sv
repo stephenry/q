@@ -87,6 +87,7 @@ stk_pkg::ptr_t                al_lk_ptr;
 `Q_DFFE(stk_pkg::engid_t, mem_uc_engid, mem_uc_vld_w, clk);
 `Q_DFFE(logic [stk_pkg::BANKS_N - 1:0], mem_uc_bankid, mem_uc_vld_w, clk);
 `Q_DFFE(stk_pkg::status_t, mem_uc_status, mem_uc_vld_w, clk);
+`Q_DFFE(logic, mem_uc_islast, mem_uc_vld_w, clk);
 `Q_DFFE(stk_pkg::opcode_t, mem_uc_opcode, mem_uc_vld_w, clk);
 `Q_DFFE(logic, mem_uc_head_vld, mem_uc_vld_w, clk);
 `Q_DFFE(logic, mem_uc_head_dord, mem_uc_vld_w, clk);
@@ -110,6 +111,8 @@ stk_pkg::ptr_t                al_lk_ptr;
 `Q_DFFR(logic, wrbk_uc_vld, 1'b0, clk);
 `Q_DFFE(stk_pkg::engid_t, wrbk_uc_engid, wrbk_uc_vld_w, clk);
 `Q_DFFE(stk_pkg::status_t, wrbk_uc_status, wrbk_uc_vld_w, clk);
+`Q_DFFE(stk_pkg::opcode_t, wrbk_uc_opcode, wrbk_uc_vld_w, clk);
+`Q_DFFE(logic, wrbk_uc_islast, wrbk_uc_vld_w, clk);
 `Q_DFFE(stk_pkg::bank_id_t, wrbk_uc_bankid, wrbk_uc_vld_w, clk);
 `Q_DFFE(logic, wrbk_uc_head_vld, wrbk_uc_vld_w, clk);
 `Q_DFFE(stk_pkg::ptr_t, wrbk_uc_head_ptr, wrbk_uc_vld_w, clk);
@@ -117,6 +120,7 @@ stk_pkg::ptr_t                al_lk_ptr;
 `Q_DFFE(stk_pkg::ptr_t, wrbk_uc_tail_ptr, wrbk_uc_vld_w, clk);
 logic                                             wrbk_uc_dat_vld;
 logic                                             wrbk_uc_dat_en;
+logic                                             wrbk_rsp_inv_kill;
 `Q_DFFE(logic [127:0], wrbk_uc_dat, wrbk_uc_dat_en, clk);
 
 // -------------------------------------------------------------------------- //
@@ -154,6 +158,9 @@ stk_pipe_ad u_stk_pipe_ad (
 //
 , .i_wrbk_uc_vld_r            (wrbk_uc_vld_r)
 , .i_wrbk_uc_engid_r          (wrbk_uc_engid_r)
+, .i_wrbk_uc_islast_r         (wrbk_uc_islast_r)
+, .i_wrbk_uc_opcode_r         (wrbk_uc_opcode_r)
+, .o_wrbk_rsp_inv_kill        (wrbk_rsp_inv_kill)
 //
 , .clk                        (clk)
 , .arst_n                     (arst_n)
@@ -225,6 +232,7 @@ stk_pipe_lk u_stk_pipe_lk (
 , .o_mem_uc_engid_w           (mem_uc_engid_w)
 , .o_mem_uc_bankid_w          (mem_uc_bankid_w)
 , .o_mem_uc_status_w          (mem_uc_status_w)
+, .o_mem_uc_islast_w          (mem_uc_islast_w)
 , .o_mem_uc_opcode_w          (mem_uc_opcode_w)
 , .o_mem_uc_head_vld_w        (mem_uc_head_vld_w)
 , .o_mem_uc_head_dord_w       (mem_uc_head_dord_w)
@@ -261,6 +269,7 @@ stk_pipe_mem u_stk_pipe_mem (
 , .i_mem_uc_bankid_r          (mem_uc_bankid_r)
 , .i_mem_uc_opcode_r          (mem_uc_opcode_r)
 , .i_mem_uc_status_r          (mem_uc_status_r)
+, .i_mem_uc_islast_r          (mem_uc_islast_r)
 , .i_mem_uc_head_vld_r        (mem_uc_head_vld_r)
 , .i_mem_uc_head_dord_r       (mem_uc_head_dord_r)
 , .i_mem_uc_head_ptr_r        (mem_uc_head_ptr_r)
@@ -270,6 +279,8 @@ stk_pipe_mem u_stk_pipe_mem (
 , .o_wrbk_uc_vld_w            (wrbk_uc_vld_w)
 , .o_wrbk_uc_engid_w          (wrbk_uc_engid_w)
 , .o_wrbk_uc_status_w         (wrbk_uc_status_w)
+, .o_wrbk_uc_opcode_w         (wrbk_uc_opcode_w)
+, .o_wrbk_uc_islast_w         (wrbk_uc_islast_w)
 , .o_wrbk_uc_head_vld_w       (wrbk_uc_head_vld_w)
 , .o_wrbk_uc_head_ptr_w       (wrbk_uc_head_ptr_w)
 , .o_wrbk_uc_tail_vld_w       (wrbk_uc_tail_vld_w)
@@ -299,6 +310,7 @@ stk_pipe_wrbk u_stk_pipe_wrbk (
 , .i_wrbk_uc_engid_r          (wrbk_uc_engid_r)
 , .i_wrbk_uc_status_r         (wrbk_uc_status_r)
 , .i_wrbk_uc_dat_r            (wrbk_uc_dat_r)
+, .i_wrbk_rsp_inv_kill        (wrbk_rsp_inv_kill)
 //
 , .o_rsp_vld                  (rsp_vld)
 , .o_rsp_dat                  (rsp_dat)

@@ -29,6 +29,7 @@
 #include "test.h"
 #include "rnd.h"
 #include "log.h"
+#include "cfg_common.h"
 #include "tb_stk/tb_stk.h"
 #include <iostream>
 #include <vector>

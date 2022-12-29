@@ -62,6 +62,10 @@ module stk_pipe_ad (
 // Writeback ("WRBK") microcode
 , input wire logic                                i_wrbk_uc_vld_r
 , input wire stk_pkg::engid_t                     i_wrbk_uc_engid_r
+, input wire logic                                i_wrbk_uc_islast_r
+, input wire stk_pkg::opcode_t                    i_wrbk_uc_opcode_r
+//
+, output wire logic                               o_wrbk_rsp_inv_kill
 
 // -------------------------------------------------------------------------- //
 // Clk/Reset
@@ -128,8 +132,12 @@ stk_pkg::engid_t                        qinv_iss_engid;
 // "Active" Set:
 //
 logic [cfg_pkg::ENGS_N - 1:0]           wrbk_uc_engid_d;
-logic [cfg_pkg::ENGS_N - 1:0]           active_set;
-logic [cfg_pkg::ENGS_N - 1:0]           active_clr;
+logic [cfg_pkg::ENGS_N - 1:0]           active_set_d;
+logic                                   active_clr;
+logic [cfg_pkg::ENGS_N - 1:0]           active_clr_d;
+logic [cfg_pkg::ENGS_N - 1:0]           inv_active_set_d;
+logic [cfg_pkg::ENGS_N - 1:0]           inv_active_clr_d;
+logic                                   wrbk_is_inv;
 `Q_DFFR(logic [cfg_pkg::ENGS_N - 1:0], active, '0, clk);
 
 // Dequeue logic:
@@ -281,6 +289,9 @@ queue_rf #(.N(2), .W(stk_pkg::ENGID_W)) u_qpop (
 
 // -------------------------------------------------------------------------- //
 //
+assign qinv_push = (enq_gnt_d & cmd_is_inv) != '0;
+assign qinv_push_dat = enq_gnt;
+
 assign qinv_iss_ack = (deq_ack & deq_gnt_d [IDX_INV]);
 
 stk_pipe_ad_inv u_stk_pipe_ad_inv (
@@ -294,12 +305,15 @@ stk_pipe_ad_inv u_stk_pipe_ad_inv (
 //
 , .o_iss_req                  (qinv_iss_req)
 , .o_iss_engid                (qinv_iss_engid)
-, .o_iss_islast               ()
 //
 , .i_wrbk_uc_vld_r            (i_wrbk_uc_vld_r)
 , .i_wrbk_uc_engid_r          (i_wrbk_uc_engid_r)
-, .i_wrbk_uc_nxtlast_r        ()
-, .i_wrbk_uc_islast_r         ()
+, .i_wrbk_uc_islast_r         (i_wrbk_uc_islast_r)
+//
+, .o_active_set_d             (inv_active_set_d)
+, .o_active_clr_d             (inv_active_clr_d)
+//
+, .o_rsp_inv_kill             (o_wrbk_rsp_inv_kill)
 //
 , .clk                        (clk)
 , .arst_n                     (arst_n)
@@ -381,7 +395,10 @@ assign al_alloc = o_lk_vld_w & (o_lk_opcode_w == stk_pkg::OPCODE_PUSH);
 // -------------------------------------------------------------------------- //
 // On issue, set a bit in the active set to hold-off (backpressure) further
 // commands belonging to the same engine-id.
-assign active_set = (lk_engid_d & {cfg_pkg::ENGS_N{o_lk_vld_w}});
+//
+assign active_set_d =
+    inv_active_set_d
+  | (lk_engid_d & {cfg_pkg::ENGS_N{o_lk_vld_w}});
 
 // -------------------------------------------------------------------------- //
 // As responses egress the pipe, the engine-ID is decoded to clear the
@@ -392,11 +409,21 @@ dec #(.W(cfg_pkg::ENGS_N)) u_wrbk_uc_engid_dec (
   .i_x(i_wrbk_uc_engid_r), .o_y(wrbk_uc_engid_d)
 );
 
-assign active_clr = {cfg_pkg::ENGS_N{i_wrbk_uc_vld_r}} & wrbk_uc_engid_d;
+//
+assign wrbk_is_inv =
+  i_wrbk_uc_vld_r & (i_wrbk_uc_opcode_r == stk_pkg::OPCODE_INV);
+
+//
+assign active_clr = i_wrbk_uc_vld_r & (~wrbk_is_inv);
+
+//
+assign active_clr_d =
+    inv_active_clr_d
+  | {cfg_pkg::ENGS_N{active_clr}} & wrbk_uc_engid_d;
 
 // -------------------------------------------------------------------------- //
 // 'active' set derives as a standard set/clear update.
-assign active_w = (~active_clr) & (active_r | active_set);
+assign active_w = (~active_clr_d) & (active_r | active_set_d);
 
 // ========================================================================== //
 //                                                                            //

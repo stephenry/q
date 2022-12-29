@@ -36,6 +36,7 @@ struct tb_stk::invalidate::Test::Impl {
     PushSomeEntries,
     PassInvalidation,
     VerifyEmptyStatus,
+    WaitCompletion,
   };
 
   static constexpr std::size_t N = 5;
@@ -78,6 +79,9 @@ struct tb_stk::invalidate::Test::Impl {
     case State::VerifyEmptyStatus: {
       t_->wait(10);
       t_->check_stack_state(StateType::IsEmpty, 0);
+      state_ = State::WaitCompletion;
+    } break;
+    case State::WaitCompletion: {
       done = true;
     } break;
     }

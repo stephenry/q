@@ -36,6 +36,8 @@ module stk_pipe_wrbk (
 , input wire stk_pkg::engid_t                     i_wrbk_uc_engid_r
 , input wire stk_pkg::status_t                    i_wrbk_uc_status_r
 , input wire logic [127:0]                        i_wrbk_uc_dat_r
+//
+, input wire logic                                i_wrbk_rsp_inv_kill
 
 // -------------------------------------------------------------------------- //
 // Response
@@ -53,6 +55,7 @@ module stk_pipe_wrbk (
 // Response Interface
 //
 logic [cfg_pkg::ENGS_N - 1:0]                     engid_d;
+logic                                             rsp_emit_vld;
 logic [cfg_pkg::ENGS_N - 1:0]                     rsp_vld;
 
 // ========================================================================== //
@@ -63,11 +66,13 @@ logic [cfg_pkg::ENGS_N - 1:0]                     rsp_vld;
 
 // -------------------------------------------------------------------------- //
 //
+assign rsp_emit_vld = i_wrbk_uc_vld_r & (~i_wrbk_rsp_inv_kill);
+
 dec #(.W(stk_pkg::BANKS_N)) u_rsp_dec (
   .i_x(i_wrbk_uc_engid_r), .o_y(engid_d)
 );
 
-assign rsp_vld = ({stk_pkg::BANKS_N{i_wrbk_uc_vld_r}} & engid_d);
+assign rsp_vld = ({stk_pkg::BANKS_N{rsp_emit_vld}} & engid_d);
 
 // ========================================================================== //
 //                                                                            //

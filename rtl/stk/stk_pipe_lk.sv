@@ -75,6 +75,7 @@ module stk_pipe_lk (
 , output wire [stk_pkg::BANKS_N - 1:0]            o_mem_uc_bankid_w
 , output wire stk_pkg::opcode_t                   o_mem_uc_opcode_w
 , output wire stk_pkg::status_t                   o_mem_uc_status_w
+, output wire logic                               o_mem_uc_islast_w
 , output wire logic                               o_mem_uc_head_vld_w
 , output wire logic                               o_mem_uc_head_dord_w
 , output wire stk_pkg::ptr_t                      o_mem_uc_head_ptr_w
@@ -106,6 +107,7 @@ stk_pkg::engid_t                        mem_uc_engid;
 logic [stk_pkg::BANKS_N - 1:0]          mem_uc_bankid;
 stk_pkg::opcode_t                       mem_uc_opcode;
 stk_pkg::status_t                       mem_uc_status;
+logic                                   mem_uc_islast;
 logic                                   mem_uc_head_vld;
 logic                                   mem_uc_head_dord;
 stk_pkg::ptr_t                          mem_uc_head_ptr;
@@ -275,6 +277,24 @@ assign mem_uc_status =
   | ({stk_pkg::STATUS_W{status_pop_from_empty}} & stk_pkg::STATUS_ERREMPTY)
   | ({stk_pkg::STATUS_W{status_push_to_full}}   & stk_pkg::STATUS_ERRFULL);
 
+// -------------------------------------------------------------------------- //
+// Current operation is the last, iff:
+//
+//  (1) Stack is currently empty; current operation is a NOP (with
+//      appropriate status indication).
+//
+//  (2) Stack is non-empty, but there is only entry left and the current
+//      operation is either a pop (POP) or an invalidation (INV).
+//
+// Microcode flag is used only with invalidation operation and is used
+// to determine the final uop on which to emit the response.
+//
+assign mem_uc_islast =
+    (cmd_is_pop | cmd_is_inv)
+  & (    engid_is_empty                                          // (1)
+      | ((~engid_is_empty & (rf_head_rdata == rf_tail_rdata)))   // (2)
+    );
+
 // ========================================================================== //
 //                                                                            //
 //  Empty Status                                                              //
@@ -303,7 +323,8 @@ assign empty_clr_engid = (cmd_is_push & engid_is_empty);
 assign empty_clr = lk_engid_d & {cfg_pkg::ENGS_N{empty_clr_engid}};
 
 assign empty_set_engid =
-  (cmd_is_pop & (rf_head_rdata == rf_tail_rdata) & (~engid_is_empty));
+  (  (cmd_is_pop | cmd_is_inv)
+   & (rf_head_rdata == rf_tail_rdata) & (~engid_is_empty));
 
 assign empty_set = lk_engid_d & {cfg_pkg::ENGS_N{empty_set_engid}};
 
@@ -424,6 +445,7 @@ assign o_mem_uc_engid_w = mem_uc_engid;
 assign o_mem_uc_bankid_w = mem_uc_bankid;
 assign o_mem_uc_opcode_w = mem_uc_opcode;
 assign o_mem_uc_status_w = mem_uc_status;
+assign o_mem_uc_islast_w = mem_uc_islast;
 assign o_mem_uc_head_vld_w = mem_uc_head_vld;
 assign o_mem_uc_head_dord_w = mem_uc_head_dord;
 assign o_mem_uc_head_ptr_w = mem_uc_head_ptr;

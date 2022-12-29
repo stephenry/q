@@ -54,6 +54,7 @@ module stk_pipe_mem (
 , input wire logic [stk_pkg::BANKS_N - 1:0]       i_mem_uc_bankid_r
 , input wire stk_pkg::opcode_t                    i_mem_uc_opcode_r
 , input wire stk_pkg::status_t                    i_mem_uc_status_r
+, input wire logic                                i_mem_uc_islast_r
 , input wire logic                                i_mem_uc_head_vld_r
 , input wire logic                                i_mem_uc_head_dord_r
 , input wire stk_pkg::ptr_t                       i_mem_uc_head_ptr_r
@@ -65,6 +66,8 @@ module stk_pipe_mem (
 , output wire logic                               o_wrbk_uc_vld_w
 , output wire stk_pkg::engid_t                    o_wrbk_uc_engid_w
 , output wire stk_pkg::status_t                   o_wrbk_uc_status_w
+, output wire stk_pkg::opcode_t                   o_wrbk_uc_opcode_w
+, output wire logic                               o_wrbk_uc_islast_w
 , output wire logic                               o_wrbk_uc_head_vld_w
 , output wire stk_pkg::ptr_t                      o_wrbk_uc_head_ptr_w
 , output wire logic                               o_wrbk_uc_tail_vld_w
@@ -97,6 +100,7 @@ logic [127:0]                           lk_dat;
 `Q_DFFE(logic [stk_pkg::BANKS_N - 1:0], mdat_uc_bankid, mdat_uc_vld_w, clk);
 `Q_DFFE(stk_pkg::opcode_t, mdat_uc_opcode, mdat_uc_vld_w, clk);
 `Q_DFFE(stk_pkg::status_t, mdat_uc_status, mdat_uc_vld_w, clk);
+`Q_DFFE(logic, mdat_uc_islast, mdat_uc_vld_w, clk);
 `Q_DFFE(logic, mdat_uc_head_vld, mdat_uc_vld_w, clk);
 `Q_DFFE(logic, mdat_uc_head_dord, mdat_uc_vld_w, clk);
 `Q_DFFE(stk_pkg::ptr_t, mdat_uc_head_ptr, mdat_uc_vld_w, clk);
@@ -110,6 +114,7 @@ stk_pkg::engid_t                        mem_uc_engid;
 logic [stk_pkg::BANKS_N - 1:0]          mem_uc_bankid;
 stk_pkg::opcode_t                       mem_uc_opcode;
 stk_pkg::status_t                       mem_uc_status;
+logic                                   mem_uc_islast;
 logic                                   mem_uc_head_vld;
 logic                                   mem_uc_head_dord;
 stk_pkg::ptr_t                          mem_uc_head_ptr;
@@ -126,8 +131,9 @@ logic                                   mdat_cmd_is_inv;
 logic                                   wrbk_uc_vld;
 stk_pkg::engid_t                        wrbk_uc_engid;
 stk_pkg::status_t                       wrbk_uc_status;
-logic [stk_pkg::BANKS_N - 1:0]          wrbk_uc_bankid;
 stk_pkg::opcode_t                       wrbk_uc_opcode;
+logic [stk_pkg::BANKS_N - 1:0]          wrbk_uc_bankid;
+logic                                   wrbk_uc_islast;
 logic                                   wrbk_uc_head_vld;
 logic                                   wrbk_uc_head_dord;
 stk_pkg::ptr_t                          wrbk_uc_head_ptr;
@@ -209,6 +215,7 @@ assign mdat_uc_engid_w = i_mem_uc_engid_r;
 assign mdat_uc_bankid_w = i_mem_uc_bankid_r;
 assign mdat_uc_opcode_w = i_mem_uc_opcode_r;
 assign mdat_uc_status_w = i_mem_uc_status_r;
+assign mdat_uc_islast_w = i_mem_uc_islast_r;
 assign mdat_uc_head_vld_w = i_mem_uc_head_vld_r;
 assign mdat_uc_head_dord_w = i_mem_uc_head_dord_r;
 assign mdat_uc_head_ptr_w = i_mem_uc_head_ptr_r;
@@ -238,6 +245,8 @@ assign mdat_cmd_is_inv = (mdat_uc_opcode_r == stk_pkg::OPCODE_INV);
 assign wrbk_uc_vld = mdat_uc_vld_r;
 assign wrbk_uc_engid = mdat_uc_engid_r;
 assign wrbk_uc_status = mdat_uc_status_r;
+assign wrbk_uc_opcode = mdat_uc_opcode_r;
+assign wrbk_uc_islast = mdat_uc_islast_r;
 
 assign wrbk_uc_head_vld = mdat_uc_head_vld_r;
 assign wrbk_uc_head_ptr =
@@ -258,6 +267,8 @@ assign wrbk_uc_dat = lk_dat;
 assign o_wrbk_uc_vld_w = wrbk_uc_vld;
 assign o_wrbk_uc_engid_w = wrbk_uc_engid;
 assign o_wrbk_uc_status_w = wrbk_uc_status;
+assign o_wrbk_uc_opcode_w = wrbk_uc_opcode;
+assign o_wrbk_uc_islast_w = wrbk_uc_islast;
 assign o_wrbk_uc_head_vld_w = wrbk_uc_head_vld;
 assign o_wrbk_uc_head_ptr_w = wrbk_uc_head_ptr;
 assign o_wrbk_uc_tail_vld_w = wrbk_uc_tail_vld;
