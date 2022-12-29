@@ -114,3 +114,6 @@ add_test(NAME tb_stk_smoke COMMAND $<TARGET_FILE:driver> -t tb_stk_smoke)
 
 # Basic invalidation behaviour
 add_test(NAME tb_stk_invalidate COMMAND $<TARGET_FILE:driver> -t tb_stk_invalidate)
+
+# Error behaviour
+add_test(NAME tb_stk_error COMMAND $<TARGET_FILE:driver> -t tb_stk_error)
