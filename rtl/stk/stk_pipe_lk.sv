@@ -135,9 +135,9 @@ logic [stk_pkg::BANKS_N - 1:0]          head_ptr_bank_id_d;
 
 // Command Status
 //
-logic                                   status_pop_from_empty;
-logic                                   status_push_to_full;
-logic                                   status_okay;
+logic                                   failed_pop_from_empty;
+logic                                   failed_push_to_full;
+logic                                   failed;
 
 // Empty Status
 //
@@ -150,6 +150,8 @@ logic [cfg_pkg::ENGS_N - 1:0]           empty_clr;
 `Q_DFFR(logic [cfg_pkg::ENGS_N - 1:0], empty, '1, clk);
 
 // Tail SRAM
+logic [stk_pkg::BANKS_N - 1:0]          lk_prev_ptr_ce;
+logic [stk_pkg::BANKS_N - 1:0]          lk_prev_ptr_oe;
 logic [stk_pkg::BANKS_N - 1:0]          lk_prev_ptr_ce_w;
 logic [stk_pkg::BANKS_N - 1:0]          lk_prev_ptr_oe_w;
 stk_pkg::line_id_t [stk_pkg::BANKS_N - 1:0]
@@ -158,6 +160,8 @@ stk_pkg::ptr_t [stk_pkg::BANKS_N - 1:0]
                                         lk_prev_ptr_din_w;
 
 // Data SRAM
+logic [stk_pkg::BANKS_N - 1:0]          lk_dat_ce;
+logic [stk_pkg::BANKS_N - 1:0]          lk_dat_oe;
 logic [stk_pkg::BANKS_N - 1:0]          lk_dat_ce_w;
 logic [stk_pkg::BANKS_N - 1:0]          lk_dat_oe_w;
 stk_pkg::line_id_t                      lk_dat_addr_w;
@@ -262,20 +266,20 @@ dec #(.W(stk_pkg::BANKS_N)) u_head_ptr_bank_id_dec (
 // -------------------------------------------------------------------------- //
 //
 // Error: Attempt to pop from empty stack.
-assign status_pop_from_empty = (cmd_is_pop | cmd_is_inv) & engid_is_empty;
+assign failed_pop_from_empty = (cmd_is_pop | cmd_is_inv) & engid_is_empty;
 
 // Error: Attempt to push to full stack (no free slots exist).
-assign status_push_to_full = (cmd_is_push & i_lk_isfull_r);
+assign failed_push_to_full = (cmd_is_push & i_lk_isfull_r);
 
 // Success: No error conditions!
-assign status_okay = ~(status_pop_from_empty | status_push_to_full);
+assign failed = (failed_pop_from_empty | failed_push_to_full);
 
 // -------------------------------------------------------------------------- //
 //
 assign mem_uc_status =
-    ({stk_pkg::STATUS_W{status_okay}}           & stk_pkg::STATUS_OKAY)
-  | ({stk_pkg::STATUS_W{status_pop_from_empty}} & stk_pkg::STATUS_ERREMPTY)
-  | ({stk_pkg::STATUS_W{status_push_to_full}}   & stk_pkg::STATUS_ERRFULL);
+    ({stk_pkg::STATUS_W{~failed}}                & stk_pkg::STATUS_OKAY)
+  | ({stk_pkg::STATUS_W{ failed_pop_from_empty}} & stk_pkg::STATUS_ERREMPTY)
+  | ({stk_pkg::STATUS_W{ failed_push_to_full}}   & stk_pkg::STATUS_ERRFULL);
 
 // -------------------------------------------------------------------------- //
 // Current operation is the last, iff:
@@ -350,13 +354,20 @@ assign empty_w = (~empty_clr) & (empty_r | empty_set);
 for (genvar bank = 0; bank < stk_pkg::BANKS_N; bank++) begin : prev_bank_GEN
 
 //
-assign lk_prev_ptr_ce_w [bank] =
+assign lk_prev_ptr_ce [bank] =
     ( cmd_is_push                  & lk_ptr_bank_id_d [bank])    // (1)
   | ((cmd_is_pop | cmd_is_inv)     & head_ptr_bank_id_d [bank]); // (2, 3)
 
 //
-assign lk_prev_ptr_oe_w [bank] =
+assign lk_prev_ptr_ce_w [bank] =
+  (~failed) & lk_prev_ptr_ce [bank];
+
+//
+assign lk_prev_ptr_oe [bank] =
     ((cmd_is_pop | cmd_is_inv)     & head_ptr_bank_id_d [bank]); // (2, 3)
+
+//
+assign lk_prev_ptr_oe_w [bank] = lk_prev_ptr_oe [bank];
 
 //
 assign lk_prev_ptr_addr_w [bank] =
@@ -375,7 +386,6 @@ end : prev_bank_GEN
 // ========================================================================== //
 
 // -------------------------------------------------------------------------- //
-//
 // Operations to DATA table for each command:
 //
 //  (1) PUSH - Write new descriptor to HEAD pointer.
@@ -387,13 +397,19 @@ end : prev_bank_GEN
 for (genvar bank = 0; bank < stk_pkg::BANKS_N; bank++) begin : data_bank_GEN
 
 //
-assign lk_dat_ce_w [bank] =
+assign lk_dat_ce [bank] =
     (cmd_is_push                   & lk_ptr_bank_id_d [bank])    // (1)
   | (cmd_is_pop                    & head_ptr_bank_id_d [bank]); // (2)
 
 //
-assign lk_dat_oe_w [bank] =
+assign lk_dat_ce_w [bank] = (~failed) & lk_dat_ce [bank];
+
+//
+assign lk_dat_oe [bank] =
     (cmd_is_pop                    & head_ptr_bank_id_d [bank]); // (2)
+
+//
+assign lk_dat_oe_w [bank] = lk_dat_oe [bank];
 
 end : data_bank_GEN
 
@@ -420,7 +436,7 @@ assign mem_uc_opcode = i_lk_opcode_r;
 
 // -------------------------------------------------------------------------- //
 //
-assign mem_uc_head_vld = (cmd_is_push | cmd_is_pop | cmd_is_inv);
+assign mem_uc_head_vld = (~failed) & (cmd_is_push | cmd_is_pop | cmd_is_inv);
 assign mem_uc_head_dord = (cmd_is_pop | cmd_is_inv);
 assign mem_uc_head_ptr = i_lk_ptr;
 
@@ -429,7 +445,7 @@ assign mem_uc_head_ptr = i_lk_ptr;
 // of the case where a PUSH is made to the empty stack. In this case, both
 // head and tail pointers are updated simultaneously.
 //
-assign mem_uc_tail_vld = (cmd_is_push & engid_is_empty);
+assign mem_uc_tail_vld = (~failed) & (cmd_is_push & engid_is_empty);
 assign mem_uc_tail_ptr = i_lk_ptr;
 
 // ========================================================================== //

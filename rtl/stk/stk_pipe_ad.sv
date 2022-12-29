@@ -384,7 +384,8 @@ rr #(.W(3)) u_rr (
 // -------------------------------------------------------------------------- //
 // Request new line if outgoing request is a PUSH.
 //
-assign al_alloc = o_lk_vld_w & (o_lk_opcode_w == stk_pkg::OPCODE_PUSH);
+assign al_alloc =
+  o_lk_vld_w & (~i_al_empty_r) & (o_lk_opcode_w == stk_pkg::OPCODE_PUSH);
 
 // ========================================================================== //
 //                                                                            //
@@ -455,7 +456,7 @@ assign o_lk_opcode_w =
 
 // -------------------------------------------------------------------------- //
 //
-assign o_lk_isfull_w = (deq_gnt_d[IDX_PUSH] & i_al_full_r);
+assign o_lk_isfull_w = (deq_gnt_d[IDX_PUSH] & i_al_empty_r);
 
 // -------------------------------------------------------------------------- //
 //

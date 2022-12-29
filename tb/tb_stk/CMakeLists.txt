@@ -92,7 +92,8 @@ add_library(stk STATIC
   "${CMAKE_SOURCE_DIR}/tb/tb_stk/tb_stk.cc"
   "${CMAKE_SOURCE_DIR}/tb/tb_stk/tb_stk_main.cc"
   "${CMAKE_SOURCE_DIR}/tb/tb_stk/tb_stk_smoke.cc"
-  "${CMAKE_SOURCE_DIR}/tb/tb_stk/tb_stk_invalidate.cc")
+  "${CMAKE_SOURCE_DIR}/tb/tb_stk/tb_stk_invalidate.cc"
+  "${CMAKE_SOURCE_DIR}/tb/tb_stk/tb_stk_error.cc")
 
 target_include_directories(stk
   PRIVATE

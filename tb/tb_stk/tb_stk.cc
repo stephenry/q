@@ -29,6 +29,7 @@
 #include "tb_stk/tb_stk_main.h"
 #include "tb_stk/tb_stk_smoke.h"
 #include "tb_stk/tb_stk_invalidate.h"
+#include "tb_stk/tb_stk_error.h"
 #include "test.h"
 #include "sim.h"
 #include "log.h"
@@ -63,6 +64,8 @@ struct StkTest::Factory {
       p = std::make_unique<smoke::Test>();
     } else if (Globals::test_name == "tb_stk_invalidate") {
       p = std::make_unique<invalidate::Test>();
+    } else if (Globals::test_name == "tb_stk_error") {
+      p = std::make_unique<error::Test>();
     }
     return p;
   }
@@ -93,6 +96,7 @@ namespace tb_stk {
 void init(TestRegistry& tr) {
   tr.add<StkTest::Builder>("tb_stk_smoke");
   tr.add<StkTest::Builder>("tb_stk_invalidate");
+  tr.add<StkTest::Builder>("tb_stk_error");
 }
 
 } // namespace tb_stk

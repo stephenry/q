@@ -179,7 +179,9 @@ assign o_empty1_r = u_stk.u_stk_pipe.u_stk_pipe_lk.empty_r [1];
 assign o_empty2_r = u_stk.u_stk_pipe.u_stk_pipe_lk.empty_r [2];
 assign o_empty3_r = u_stk.u_stk_pipe.u_stk_pipe_lk.empty_r [3];
 
-assign o_full_r = u_stk.u_stk_pipe.u_stk_pipe_al.o_ad_full_r;
+// NOTE: terminology here is inverted; STK is full, if no further slots
+// exist; STK is empty, if the allocation unit is full.
+assign o_full_r = u_stk.u_stk_pipe.u_stk_pipe_al.o_ad_empty_r;
 
 // ========================================================================== //
 //                                                                            //

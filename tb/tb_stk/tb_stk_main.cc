@@ -226,23 +226,31 @@ private:
     case Opcode::Push: {
       Expected e;
       // TODO(stephenry); qualify on collisions.
-      e.status = (size_ == CAPACITY_N) ? Status::ErrFull : Status::Okay;
-      error = (e.status != Status::Okay);
-      if (e.status == Status::Okay) {
+      if (size_ != CAPACITY_N) {
+        e.status = Status::Okay;
         stks_[engid].push_back(dat);
         ++size_;
+      } else {
+        e.status = Status::ErrFull;
+        error = true;
       }
       expect_.push_back(std::make_pair(cycle + LATENCY_N, e));
     } break;
     case Opcode::Pop: {
       Expected e;
-      e.status = stks_[engid].empty() ? Status::ErrEmpty : Status::Okay;
-      if (e.status == Status::Okay) {
+      if (!stks_[engid].empty()) {
+        // Pop from non-empty stack; success.
+        e.status = Status::Okay;
         e.data = stks_[engid].back();
         stks_[engid].pop_back();
         --size_;
+      } else {
+        // Pop from empty stack; operation fails.
+        e.status = Status::ErrEmpty;
+        if (scope_) {
+          scope_->Warning("Attempt to pop from empty stack.");
+        }
       }
-      error = (e.status != Status::Okay);
       expect_.push_back(std::make_pair(cycle + LATENCY_N, e));
     } break;
     case Opcode::Inv: {
@@ -371,8 +379,8 @@ private:
   KernelVerilated<Vtb_stk, Driver>* k_;
   std::array<std::vector<VlWide<4>>, cfg::ENGS_N> stks_;
   std::deque<std::pair<vluint64_t, Expected> > expect_;
-  std::size_t size_;
-  Scope* scope_;
+  std::size_t size_ = 0;
+  Scope* scope_ = nullptr;
   std::optional<ActiveInvalidation> actinv_;
 };
 
