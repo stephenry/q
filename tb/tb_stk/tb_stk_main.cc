@@ -266,20 +266,26 @@ private:
         if (actinv_->engid != engid) {
           // We're seeing an invalidation request for engid that should
           // not be active.
-          scope_->Error("Bad ENGID seen for active invalidation operation ",
-                        " Expected: ", actinv_->engid,
-                        " Actual: ", engid);
+          if (scope_) {
+            scope_->Error("Bad ENGID seen for active invalidation operation ",
+                          " Expected: ", actinv_->engid,
+                          " Actual: ", engid);
+          }
           error = true;
         } else if (actinv_->n-- == 0) {
           // We're seeing more invalidation requests than we had
           // predicted; we shouldn't be invalidating at this point.
-          scope_->Error("Unexpected invalidation request for engid: ",
-                        actinv_->engid);
+          if (scope_) {
+            scope_->Error("Unexpected invalidation request for engid: ",
+                          actinv_->engid);
+          }
           error = true;
         } else if (actinv_->n == 0) {
           // This is the last invalidation; discard active
           // invalidation state.
-          scope_->Info("INV operation completes for ENGID ", actinv_->engid);
+          if (scope_) {
+            scope_->Info("INV operation completes for ENGID ", actinv_->engid);
+          }
           actinv_.reset();
         }
       }
@@ -329,19 +335,25 @@ private:
     bool success = true;
     if (e.status != status) {
       // Invalid response received.
-      scope_->Error(
-        "Unexpected status response. ", "Expected: ", e.status, " Actual: ", status);
+      if (scope_) {
+        scope_->Error(
+          "Unexpected status response.",
+          " Expected: ", e.status, " Actual: ", status);
+      }
       success = false;
     }
 
     if (e.data && !VSupport::eq(*e.data, data)) {
       // Invalid data received on a pop.
-      scope_->Error(
-        "Unexpected data response. ", "Expected: ", *e.data, " Actual: ", data);
+      if (scope_) {
+        scope_->Error(
+          "Unexpected data response.",
+          " Expected: ", *e.data, " Actual: ", data);
+      }
       success = false;
     }
 
-    if (success) {
+    if (scope_ && success) {
       std::ostringstream ss;
       RecordRenderer rr{ss, "rs"};
       rr.add("status", status);

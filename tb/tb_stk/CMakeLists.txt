@@ -107,4 +107,9 @@ target_link_libraries(stk
 add_dependencies(stk verilate_stk)
 
 # TODO(stephenry): verify return status of driver.
+
+# Basic smoke test
 add_test(NAME tb_stk_smoke COMMAND $<TARGET_FILE:driver> -t tb_stk_smoke)
+
+# Basic invalidation behaviour
+add_test(NAME tb_stk_invalidate COMMAND $<TARGET_FILE:driver> -t tb_stk_invalidate)
